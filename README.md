@@ -1,2 +1,2 @@
 OGPU.
-OGL meets WebGPU...
+OGL meets WebGPU... *BLAZINGLY FAST!*

@@ -216,7 +216,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 
 ### src/modules/GUI.js
 - **class GUI**
-  - constructor({ title = 'OGPU', expanded = true, container, pane } = {})
+  - constructor({ title = 'OGPU', expanded = false, container, pane } = {})
   - add(obj, key, opts = {})
   - monitor(obj, key, opts = {})
   - button(title, onClick)

@@ -187,7 +187,6 @@ export class ComputeShader {
         _pass.setPipeline(kernel);
         _pass.setBindGroup(bindGroupIndex, bindGroup);
         if (workgroupBuffer) {
-            console.log('dispatching with workgroup buffer');
             _pass.dispatchWorkgroupsIndirect(workgroupBuffer, 0);
         } else {
             _pass.dispatchWorkgroups(...dispatchCount);

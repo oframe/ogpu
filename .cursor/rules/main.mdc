@@ -1,0 +1,9 @@
+---
+description: OGPU project conventions and architecture — source of truth in AGENTS.md
+alwaysApply: true
+---
+
+Follow the repository guidance in @AGENTS.md for all work in this codebase. It
+holds the build commands, coding conventions, architecture model, and per-area
+gotchas. Cursor Agent mode reads AGENTS.md directly; this rule pulls the same
+file into Chat and Composer.

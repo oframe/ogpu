@@ -1,0 +1,5 @@
+dist
+node_modules
+public
+package-lock.json
+*.wgsl

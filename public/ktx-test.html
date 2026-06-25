@@ -1,0 +1,27 @@
+<!doctype html>
+<meta charset="utf-8">
+<!-- index.html -->
+<script src="/libktx_read.js"></script>
+<script type="module">
+  // Init the read-only module. No GL context needed.
+  const ktx = await window.createKtxReadModule({
+    locateFile: p => p.endsWith('.wasm') ? '/libktx_read.wasm' : p
+  });
+
+  // Load a KTX/KTX2 (Basis inside KTX2 is fine)
+  const ab   = await (await fetch('/assets/pbr/test/specular/test_radiance_negx.ktx')).arrayBuffer();
+  const u8   = new Uint8Array(ab);
+  const Ctor = ktx.texture ?? ktx.ktxTexture; // name varies by build
+
+  // OO wrapper (works in the official read build)
+  const tex  = new Ctor(u8);
+
+  console.log('dims/mips/faces:',
+    tex.baseWidth, tex.baseHeight, tex.numLevels, tex.numFaces);
+
+  // Grab bytes for (level=0, face=0). Loop mips/faces as needed.
+  const level0 = tex.getImage(1, /*layer*/0, /*face*/0); // Uint8Array
+  console.log('level1 len:', level0.byteLength);
+
+  // → Upload `level0` (and other mips/faces) to WebGPU.
+</script>

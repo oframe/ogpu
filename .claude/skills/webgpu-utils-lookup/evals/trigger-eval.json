@@ -1,0 +1,37 @@
+[
+    {
+        "query": "in RenderPipeline.js i call makeStructuredView on the uniforms def but i'm not sure — does the returned view's .set() write straight into the GPU buffer or do i still need to copy its arrayBuffer over with writeBuffer?",
+        "should_trigger": true
+    },
+    { "query": "i'm passing 6 png urls to createTextureFromImages for a skybox but it comes out as a 2d-array not a cube, what option am i missing", "should_trigger": true },
+    {
+        "query": "my normals are shading garbage in the pbr pass. geometry is declared {position, uv, normal}. does createBuffersAndAttributesFromArrays assign @location by the key name or by the order i list them?",
+        "should_trigger": true
+    },
+    { "query": "what exactly does makeShaderDataDefinitions give me back? i need the list of storage buffers and their byte sizes from a compute module", "should_trigger": true },
+    { "query": "whats the signature for generateMipmap — does it take the view dimension as a third arg or does it figure cube out on its own", "should_trigger": true },
+    { "query": "i want a uv sphere with like 64 segments for the ibl preview, which primitives call and what are its params", "should_trigger": true },
+    {
+        "query": "difference between setStructuredView and setStructuredValues? i already have a view from makeStructuredView and just want to overwrite a couple fields each frame",
+        "should_trigger": true
+    },
+    {
+        "query": "the thing we use to reflect the wgsl uniform block into a typed buffer view — can it also spit out the bind group layout descriptors so i don't hand-write them?",
+        "should_trigger": true
+    },
+    { "query": "my loaded texture is vertically flipped. is there a flag on the image-to-texture helper or do i flip the bytes myself", "should_trigger": true },
+    {
+        "query": "does copySourceToTexture re-upload into an existing texture or does it allocate a new one — trying to update a canvas-backed texture every frame without reallocating",
+        "should_trigger": true
+    },
+    { "query": "we're on webgpu-utils 1.11.0 in OGPU — did makeStructuredView's handling of runtime-sized arrays change vs the latest release, or is it the same", "should_trigger": true },
+    { "query": "in core/math/Mat4.js does wgpu-matrix's mat4.invert write into the out param i pass last or return a fresh matrix?", "should_trigger": false },
+    { "query": "Vec3 normalize is giving me NaN when the vector is zero length, how do i guard that in the curl noise field", "should_trigger": false },
+    { "query": "how do i set up a GPURenderPipelineDescriptor with a depth-stencil state and one color target by hand", "should_trigger": false },
+    { "query": "whats the right workgroup_size for a 1d reduction compute shader in wgsl, 64 or 256?", "should_trigger": false },
+    { "query": "porting an OrbitControls feel from three.js — how should damping interact with the rAF loop in our Orbit module", "should_trigger": false },
+    { "query": "in three.js i'd just set texture.generateMipmaps = true and forget it, whats the equivalent mental model for mip handling on a regular 2d texture", "should_trigger": false },
+    { "query": "the KTX cubemap loads fine but window.ktx is undefined if i call it before renderer.ready — where does OGPU bootstrap libktx", "should_trigger": false },
+    { "query": "parse-exr is returning the env map but the channels look swapped, is it RGBE or linear float coming out of IBLUtils", "should_trigger": false },
+    { "query": "add a spinning cube to the hellowebgpu scene with an orbit camera — just want something on screen to sanity check the device", "should_trigger": false }
+]

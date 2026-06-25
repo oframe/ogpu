@@ -1,0 +1,16 @@
+{
+    "hooks": {
+        "PostToolUse": [
+            {
+                "matcher": "Edit|Write|MultiEdit",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.wgsl) out=$(naga \"$f\" 2>&1) || { echo \"WGSL validation failed: $f\" >&2; echo \"$out\" >&2; exit 2; };; esac",
+                        "statusMessage": "Validating WGSL with naga"
+                    }
+                ]
+            }
+        ]
+    }
+}

@@ -1,0 +1,18 @@
+{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "checkJs": false,
+        "paths": {
+            "@core/*": ["src/core/*"],
+            "@math/*": ["src/math/*"],
+            "@modules/*": ["src/modules/*"],
+            "@utils/*": ["src/utils/*"],
+            "@examples/*": ["examples/*"],
+            "@/*": ["src/*"]
+        }
+    },
+    "include": ["src", "examples"],
+    "exclude": ["node_modules", "dist"]
+}

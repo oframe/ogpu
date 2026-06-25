@@ -1,0 +1,46 @@
+/* Overlay styling for example views (credit titles, status bars).
+   Pulled out of the per-example JS inline cssText. position:fixed pins to the
+   viewport corner regardless of body's flex centering. */
+
+/* Top-left credit title. */
+.Info {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    padding: 20px;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: #000;
+}
+
+.Info a {
+    color: rgb(39, 124, 235);
+}
+
+/* Zoom-style dropdown inside a credit (.Info). */
+.Info #dropdown {
+    margin: 1em 0;
+}
+.Info select {
+    border: none;
+    outline: none;
+    background: none;
+    font-family: inherit;
+    color: inherit;
+}
+
+/* Full-width status bar (frustum-culling counters). */
+.InfoBar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 8px;
+    text-align: center;
+    font-family: sans-serif;
+    font-size: 13px;
+    color: #222;
+    pointer-events: none;
+}

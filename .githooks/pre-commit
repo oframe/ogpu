@@ -1,0 +1,16 @@
+#!/bin/sh
+# Keep the agent-navigation repomap honest. Regenerate api-digest.md and
+# module-graph.json from the current source; if either drifted from the
+# committed copy, block the commit so the stale index never lands. A stale
+# digest/graph is worse than none — an agent will trust it over the code.
+set -e
+
+node scripts/build-api-digest.mjs >/dev/null
+node scripts/build-module-graph.mjs >/dev/null
+
+if ! git diff --quiet -- api-digest.md module-graph.json; then
+    echo "repomap drift: api-digest.md / module-graph.json regenerated and changed."
+    echo "Stage the regenerated files and recommit:"
+    echo "  git add api-digest.md module-graph.json"
+    exit 1
+fi

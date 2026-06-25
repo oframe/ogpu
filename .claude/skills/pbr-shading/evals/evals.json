@@ -1,0 +1,17 @@
+{
+    "skill_name": "pbr-shading",
+    "evals": [
+        {
+            "id": 0,
+            "prompt": "Add a new example to the engine: ?view=pbrtorus. A torus (webgpu-utils primitives has createTorusVertices). Shade it with the engine's PBR/IBL pipeline. I don't have any texture maps for it — just make it look like slightly rough plastic (non-metal), lit by the artist workshop environment. Wire it into src/main.js.",
+            "expected_output": "New example dir examples/pbrtorus/ using @modules/pbr/pbr.wgsl (or equivalent), IBL resources wired (specular cube, SH buffer, BRDF LUT, samplers), fallback white/black solid textures bound for the 5 material maps, hasNormalMap 0, sensible factor uniforms, registered in src/main.js, npm run build passes.",
+            "files": []
+        },
+        {
+            "id": 1,
+            "prompt": "Create example ?view=pbrwobble: a sphere whose vertices get displaced in the vertex shader by a sine wave along the normal (animated with time), but shaded with the engine's PBR lighting (IBL + metallic-roughness) in the fragment stage. No texture maps available. Register it in src/main.js.",
+            "expected_output": "Custom WGSL with sine displacement in vs and the PBR fragment flow folded in (IBL bindings, SH evaluation, fresnel), world position output reflects displacement, material handled without real textures (fallbacks or factor-only per skill guidance), build passes.",
+            "files": []
+        }
+    ]
+}

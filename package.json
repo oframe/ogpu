@@ -1,5 +1,81 @@
 {
     "name": "ogpu",
-    "version": "0.0.0",
-    "description": "WebGPU Library"
+    "version": "0.1.0",
+    "description": "A hand-rolled WebGPU engine starter",
+    "type": "module",
+    "main": "./src/index.js",
+    "exports": {
+        ".": {
+            "types": "./types/ogpu.d.ts",
+            "default": "./src/index.js"
+        },
+        "./src/*": "./src/*"
+    },
+    "sideEffects": false,
+    "types": "./types/ogpu.d.ts",
+    "directories": {
+        "example": "examples"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/oframe/ogpu.git"
+    },
+    "author": {
+        "name": "Douglas Lilliequist",
+        "email": "douglas.lilliequist@gmail.com"
+    },
+    "license": "Unlicense",
+    "bugs": {
+        "url": "https://github.com/oframe/ogpu/issues"
+    },
+    "homepage": "https://github.com/oframe/ogpu#readme",
+    "keywords": [
+        "webgpu",
+        "engine",
+        "graphics",
+        "starter",
+        "template",
+        "ogl"
+    ],
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "validate:shaders": "node scripts/validate-shaders.mjs",
+        "repomap": "node scripts/build-api-digest.mjs && node scripts/build-module-graph.mjs",
+        "repomap:check": "npm run repomap && git diff --exit-code -- api-digest.md module-graph.json",
+        "prepare": "git config core.hooksPath .githooks || true",
+        "generate:sh": "node tools/generateSH.mjs"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.39.4",
+        "eslint": "^9.39.4",
+        "eslint-config-prettier": "^10.1.8",
+        "globals": "^17.6.0",
+        "prettier": "^3.8.3",
+        "vite": "^6.0.1"
+    },
+    "dependencies": {
+        "parse-exr": "^1.0.2",
+        "tweakpane": "^4.0.5",
+        "webgpu-utils": "^1.10.3",
+        "wgpu-matrix": "^3.4.0"
+    },
+    "prettier": {
+        "arrowParens": "always",
+        "bracketSpacing": true,
+        "endOfLine": "lf",
+        "htmlWhitespaceSensitivity": "css",
+        "printWidth": 200,
+        "quoteProps": "as-needed",
+        "semi": true,
+        "singleQuote": true,
+        "tabWidth": 4,
+        "trailingComma": "es5",
+        "useTabs": false
+    }
 }

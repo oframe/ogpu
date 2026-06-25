@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <link rel="icon" type="image/png" href="./favicon.png" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>OGPU WebGPU Library</title>
+        <style>
+            /* Boot overlay — shown immediately (before any JS/WebGPU runs) to
+               hide the WebGPU pipeline-compile stall during the opening frames.
+               Renderer removes it once pipelines are compiled. See Renderer.js. */
+            #ogpu-loader {
+                position: fixed;
+                inset: 0;
+                z-index: 9999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: #fff;
+                transition: opacity 0.4s ease;
+            }
+            #ogpu-loader.is-hidden {
+                opacity: 0;
+                pointer-events: none;
+            }
+            /* "O" brand ring — fills clockwise by --p (0–100), set by Renderer. */
+            #ogpu-loader .ogpu-loader__ring {
+                --p: 0;
+                width: 56px;
+                height: 56px;
+                border-radius: 50%;
+                background: conic-gradient(#0b0b0d calc(var(--p) * 1%), rgba(11, 11, 13, 0.12) 0);
+                -webkit-mask: radial-gradient(closest-side, transparent 68%, #000 69%);
+                mask: radial-gradient(closest-side, transparent 68%, #000 69%);
+                transition: background 0.25s linear;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="ogpu-loader">
+            <div class="ogpu-loader__ring"></div>
+        </div>
+        <div id="app"></div>
+        <canvas id="web-gpu-canvas"></canvas>
+        <script src="./libktx_read.js"></script>
+        <script type="module" src="/src/main.js"></script>
+    </body>
+</html>

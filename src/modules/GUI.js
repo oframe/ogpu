@@ -15,7 +15,7 @@ import { Pane } from 'tweakpane';
  * `opts` are passed straight through to Tweakpane (min/max/step/label/options/…).
  */
 export class GUI {
-    constructor({ title = 'OGPU', expanded = true, container, pane } = {}) {
+    constructor({ title = 'OGPU', expanded = false, container, pane } = {}) {
         // Allow nesting: a folder hands its FolderApi in as `pane`.
         this.pane = pane ?? new Pane({ title, expanded, container });
         this._ownsPane = !pane;

@@ -1,6 +1,6 @@
 ---
 name: scaffold-app
-description: Scaffold a new OGPU example/app from scratch — a Renderer + Camera + Orbit + update loop and a single spinning cube wired through the vanilla Box primitive -> RenderPipeline -> Mesh setup. Use whenever the user wants a new OGPU example, a base/starter scene, a blank WebGPU sketch in this repo, "scaffold an app", "new example called X", "boilerplate a OGPU scene", "set me up a starting point", or just "new scene"/"new example" when OGPU is the implied target. Generates the example class + shader and wires it into src/main.js so it boots at ?view=<name>.
+description: Scaffold a new OGPU example/app from scratch — a Renderer + Camera + Orbit + update loop and a single spinning cube wired through the vanilla Box primitive -> RenderPipeline -> Mesh setup. Use whenever the user wants a new OGPU example, a base/starter scene, a blank WebGPU sketch in this repo, "scaffold an app", "new example called X", "boilerplate a OGPU scene", "set me up a starting point", or just "new scene"/"new example" when OGPU is the implied target. Generates the example class + shader and wires it into src/main.js so it boots at ?src=<name>.
 ---
 
 # Scaffold a OGPU example
@@ -19,7 +19,7 @@ an existing file (do them precisely with Edit).
 ## Workflow
 
 1. Get the example name. It's used verbatim as the class name; the directory and
-   `?view=` value are its lowercased form. Convention here is a PascalCase class
+   `?src=` value are its lowercased form. Convention here is a PascalCase class
    in a lowercase dir (e.g. `HelloWebGPU` in `hellowebgpu/`). If the user gives a
    casual name, PascalCase it for the class.
 2. Run the generator from anywhere (it resolves the repo root itself):
@@ -41,8 +41,8 @@ an existing file (do them precisely with Edit).
 4. Validate the shader without a browser: `node scripts/validate-shaders.mjs
 examples/<name>/cube.wgsl` (runs `naga`). The generated cube always
    passes; re-run after any edits.
-5. Tell the user it boots at `?view=<name>` (`npm run dev`, then
-   `http://localhost:5173/?view=<name>`).
+5. Tell the user it boots at `?src=<name>` (`npm run dev`, then
+   `http://localhost:5173/?src=<name>`).
 
 ## What the generated class does
 

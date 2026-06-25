@@ -113,7 +113,7 @@ button:focus-visible {
     border: 0;
 }
 
-/* Example gallery (root, no ?view=) — sidebar + iframe preview.
+/* Example gallery (root, no ?src=) — sidebar + iframe preview.
    Scoped under body.Gallery so live example views are untouched.
    (Raleway @import lives at the top of this file — @import must precede rules.) */
 body.Gallery {

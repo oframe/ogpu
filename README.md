@@ -63,7 +63,7 @@ The **Math** component (`src/math/`) is a set of chainable, ThreeJS-style wrappe
 
 **Modules** (`src/modules/`) are the optional higher-level pieces, kept out of Core to reduce bloat: `Orbit`, `Raycast`, `GUI`, `Animation`, `GLTFLoader`, `CubeMap`, `VideoTexture`, and a shader-only `pbr/` IBL library.
 
-Examples live in `examples/` (repo root, outside `src/`), switched by a `?view=` query string in `src/main.js`.
+Examples live in `examples/` (repo root, outside `src/`), switched by a `?src=` query string in `src/main.js`.
 
 ## PBR shading & IBL
 

@@ -24,7 +24,7 @@ import { MSAA } from '@examples/msaa/MSAA';
 import { CubeMapExample } from '@examples/cubemap/CubeMap';
 //TODO: Post FX WebGPU way
 
-const view = new URLSearchParams(window.location.search).get('view');
+const view = new URLSearchParams(window.location.search).get('src');
 const canvas = document.getElementById('web-gpu-canvas');
 
 switch (view) {
@@ -95,9 +95,9 @@ switch (view) {
         renderLanding();
 }
 
-// Example gallery shown at the root (no ?view=). OGL-style sidebar of links
+// Example gallery shown at the root (no ?src=). OGL-style sidebar of links
 // + an iframe that previews the selected example. Each example still boots
-// directly via its ?view= value — the iframe just loads `./?view=<name>`, and
+// directly via its ?src= value — the iframe just loads `./?src=<name>`, and
 // the switch above renders it on that document's own canvas. Deep-link the
 // parent with `?example=<name>`.
 function renderLanding() {
@@ -162,7 +162,7 @@ function renderLanding() {
 
     const show = (link) => {
         const { view, folder } = link.dataset;
-        iframe.src = `./?view=${view}`;
+        iframe.src = `./?src=${view}`;
         codeIcon.href = sourcePath + folder;
         history.replaceState(null, '', `?example=${view}`);
         exampleLinks.forEach((l) => l.classList.toggle('active', l === link));
@@ -172,7 +172,7 @@ function renderLanding() {
         link.addEventListener('click', (e) => {
             // cmd/ctrl-click opens the example standalone in a new tab.
             if (e.metaKey || e.ctrlKey) {
-                window.open(`./?view=${link.dataset.view}`, '_blank');
+                window.open(`./?src=${link.dataset.view}`, '_blank');
                 return;
             }
             e.preventDefault();
@@ -185,9 +185,10 @@ function renderLanding() {
         document.body.toggleAttribute('data-hideSidebar');
     });
 
-    // Deep-link via ?example=<name>, else show the first example.
+    // Deep-link via ?example=<name>, else show a random example.
     const wanted = new URLSearchParams(location.search).get('example');
-    show(exampleLinks.find((l) => l.dataset.view === wanted) ?? exampleLinks[0]);
+    const random = exampleLinks[Math.floor(Math.random() * exampleLinks.length)];
+    show(exampleLinks.find((l) => l.dataset.view === wanted) ?? random);
 }
 
 // new HelloWebGPU();

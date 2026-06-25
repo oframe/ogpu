@@ -40,15 +40,15 @@ Both are kept honest by a **drift gate**: `npm run repomap` regenerates both; `n
 
 ## Running examples
 
-`src/main.js` switches on a `view=` query string and instantiates a single example class. Examples available:
+`src/main.js` switches on a `src=` query string and instantiates a single example class. Examples available:
 
-- `?view=particles` → `Particles`
-- `?view=triangle` → `Triangle`
-- `?view=rendertargets` → `RenderToTexture`
-- `?view=pbrshader` → `PBRShader`
-- `?view=skinning` → `Skinning`
-- `?view=gltf` → `GLTF`
-- (no `view`) → `HelloWebGPU`
+- `?src=particles` → `Particles`
+- `?src=triangle` → `Triangle`
+- `?src=rendertargets` → `RenderToTexture`
+- `?src=pbrshader` → `PBRShader`
+- `?src=skinning` → `Skinning`
+- `?src=gltf` → `GLTF`
+- (no `src`) → `HelloWebGPU`
 
 To add a new example: drop a class under `examples/<name>/`, import it in `src/main.js`, and add a switch case.
 
@@ -75,7 +75,7 @@ Each source directory carries its own `CLAUDE.md` with that area's footguns — 
 - `src/math/` — chainable three.js-style wrappers over `wgpu-matrix` (Vec2–4, Quat, Mat3/4, Euler, Color), each a `Float32Array` subclass; alias `@math`. → **`src/math/CLAUDE.md`**
 - `src/modules/` — optional higher-level pieces: Orbit, Raycast, GUI, Animation, GLTFLoader, CubeMap, VideoTexture, `pbr/` (shader-only IBL library); alias `@modules`. → **`src/modules/CLAUDE.md`**.
 - `src/utils/` — standalone helpers; alias `@utils` (see "Assets and external deps").
-- `examples/` — runnable demos (repo root, outside `src/`), switched by `?view=` in `src/main.js` (see "Running examples").
+- `examples/` — runnable demos (repo root, outside `src/`), switched by `?src=` in `src/main.js` (see "Running examples").
 
 ### Cross-cutting model
 

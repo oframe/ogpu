@@ -74,16 +74,16 @@ struct VertexOutput {
 }
 
 @vertex
-fn vs(v : Vertex) -> VertexOutput {
+fn vs(in : Vertex) -> VertexOutput {
   var vsOut : VertexOutput;
-  let worldPos = uniforms.modelMatrix * vec4f(v.position, 1.0);
+  let worldPos = uniforms.modelMatrix * vec4f(in.position, 1.0);
   vsOut.vWorldPos = worldPos.xyz;
   vsOut.position = uniforms.projectionMatrix * uniforms.viewMatrix * worldPos;
-  vsOut.vNormal = normalize(uniforms.normalMatrix * v.normal);
-  vsOut.vUv = v.uv;
+  vsOut.vNormal = normalize(uniforms.normalMatrix * in.normal);
+  vsOut.vUv = in.uv;
   // tangent rotates with the model; keep w (handedness) for the bitangent.
-  let worldTangent = (uniforms.modelMatrix * vec4f(v.tangent.xyz, 0.0)).xyz;
-  vsOut.vTangent = vec4f(worldTangent, v.tangent.w);
+  let worldTangent = (uniforms.modelMatrix * vec4f(in.tangent.xyz, 0.0)).xyz;
+  vsOut.vTangent = vec4f(worldTangent, in.tangent.w);
   return vsOut;
 }
 

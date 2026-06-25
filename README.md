@@ -77,6 +77,8 @@ Lighting inputs are built once at init (see `initIBL` in `examples/pbrshader/PBR
 
 Composes as `kD · SH-irradiance · albedo + IBL-specular`, applies occlusion/emissive, then tonemaps (filmic) + gamma-encodes. Drop the tonemap tail if rendering into an intermediate target with its own display pass.
 
+> Working in Claude Code? The `pbr-shading` skill (`.claude/skills/pbr-shading/`) walks through folding this shader into a `RenderPipeline` — which WGSL blocks to copy, the full 0–12 bind group, IBL/fallback-texture wiring, and the things that break silently.
+
 ## Browser requirements
 
 Needs a browser with WebGPU. As of late 2025 it ships by default in:

@@ -22,15 +22,6 @@ export class Renderer {
         this.prevTime = 0;
         this.paused = false;
 
-        let _resolve, _reject;
-        // const promise = new Promise((resolve, reject) => {
-        //     _resolve = resolve;
-        //     _reject = reject;
-        // })
-
-        // promise.resolve = _resolve;
-        // promise.reject = _reject;
-
         this.callBacks = new Set();
         // Device-loss recovery hooks. App code registers here to rebuild its own
         // GPU resources after a lost device — pipelines/buffers/textures/bind

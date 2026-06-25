@@ -11,6 +11,5 @@ export { Box, Sphere, Plane, Torus, Cylinder, Disc, Cone, Quad, ThreeDF, Fullscr
 export { RenderPipeline } from './RenderPipeline.js';
 export { ComputeShader } from './ComputeShader.js';
 export { Texture } from './Texture.js';
-export { KTXTexture } from './KTXTexture.js';
 export { RenderTarget } from './RenderTarget.js';
 export { Skin } from './skin/Skin.js';

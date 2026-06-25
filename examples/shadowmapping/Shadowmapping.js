@@ -60,11 +60,14 @@ export class Shadowmapping {
 
         const [jsonData] = await Promise.all([loadJSON('./assets/shadowmapping/airplane.json'), airplaneTex.ready, waterTex.ready]);
 
+        // airplane.json uv's are top-left origin; flip v to match WebGPU's bottom-left sampling
+        const airplaneUV = Float32Array.from(jsonData.uv, (val, i) => (i % 2 ? 1 - val : val));
+
         const airplaneGeometry = new Geometry(this.gpu, {
             data: {
                 position: { data: new Float32Array(jsonData.position), numComponents: 3 },
                 normal: { data: new Float32Array(jsonData.normal), numComponents: 3 },
-                uv: { data: new Float32Array(jsonData.uv), numComponents: 2 },
+                uv: { data: airplaneUV, numComponents: 2 },
             },
         });
 

@@ -100,10 +100,5 @@ fn fs(in: VertexOutput) -> @location(0) vec4f {
 
     let outputCol = col;
 
-    // outputCol = RGBToHSV(outputCol);
-    // outputCol.x *= 0.4;
-    // outputCol.y *= 0.9;
-    // outputCol.z *= 0.8;
-    // outputCol = HSVToRGB(outputCol);
     return vec4f(outputCol, 1.0);
 }

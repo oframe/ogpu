@@ -126,7 +126,6 @@ fn curlNoise(p: vec3f, t: f32) -> vec3f {
         let a = dot(K_VEC[i], p) + OMEGA[i] * t + PHI[i];
         v += COEFF[i] * cos(a) + COEFF_B[i] * sin(a);
     }
-    // return v;
     return normalize(v);
 }
 

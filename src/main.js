@@ -191,6 +191,3 @@ function renderLanding() {
     show(exampleLinks.find((l) => l.dataset.view === wanted) ?? random);
 }
 
-// new HelloWebGPU();
-// new Particles();
-// new RenderToTexture();

@@ -17,7 +17,6 @@ struct Vertex {
   @location(0) position: vec3f,
   @location(1) normal: vec3f,
   @location(2) uv: vec2f,
-  // instanced attributes
   @location(3) offset: vec3f,
   @location(4) random: vec3f,
 }
@@ -38,18 +37,14 @@ fn rotate2d(v: vec2f, a: f32) -> vec2f {
 fn vs(in: Vertex) -> VertexOutput {
   var vsOut: VertexOutput;
 
-  // copy position so we can modify per-instance
   var pos = in.position;
 
-  // scale first
   pos *= 0.9 + in.random.y * 0.2;
 
-  // rotate around y axis
   let xz = rotate2d(pos.xz, in.random.x * 6.28 + 4.0 * uniforms.time * (in.random.y - 0.5));
   pos.x = xz.x;
   pos.z = xz.y;
 
-  // rotate around x axis for extra variation
   let zy = rotate2d(pos.zy, in.random.z * 0.5 * sin(uniforms.time * in.random.x + in.random.z * 3.14));
   pos.z = zy.x;
   pos.y = zy.y;

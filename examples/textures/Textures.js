@@ -28,7 +28,6 @@ export class Textures {
 
         const sampler = this.gpu.device.createSampler();
 
-        // --- Textured model (saddle.json + saddle.jpg) ---
         const data = await loadJSON('./assets/textures/saddle.json');
         const saddleGeo = new Geometry(this.gpu, {
             data: {
@@ -65,7 +64,6 @@ export class Textures {
         });
         this.scene.addChild(this.saddle);
 
-        // --- Video box (laputa.mp4) — double-sided, behind the model ---
         const boxGeo = new Box(this.gpu);
         const videoPipeline = new RenderPipeline(this.gpu, {
             label: 'video-box-pipeline',

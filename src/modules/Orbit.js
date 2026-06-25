@@ -67,17 +67,14 @@ export function Orbit(
             handleAutoRotate();
         }
 
-        // apply delta
         sphericalTarget.radius *= sphericalDelta.radius;
         sphericalTarget.theta += sphericalDelta.theta;
         sphericalTarget.phi += sphericalDelta.phi;
 
-        // apply boundaries
         sphericalTarget.theta = Math.max(minAzimuthAngle, Math.min(maxAzimuthAngle, sphericalTarget.theta));
         sphericalTarget.phi = Math.max(minPolarAngle + this.EPS, Math.min(maxPolarAngle - this.EPS, sphericalTarget.phi));
         sphericalTarget.radius = Math.max(this.minDistance, Math.min(this.maxDistance, sphericalTarget.radius));
 
-        // ease values
         spherical.phi += (sphericalTarget.phi - spherical.phi) * ease;
         spherical.theta += (sphericalTarget.theta - spherical.theta) * ease;
         spherical.radius += (sphericalTarget.radius - spherical.radius) * ease;
@@ -85,15 +82,10 @@ export function Orbit(
         // apply pan to target. As offset is relative to target, it also shifts
         this.target.add(panDelta);
 
-        // apply rotation to offset
         let sinPhiRadius = spherical.radius * Math.sin(Math.max(0.000001, spherical.phi));
         offset[0] = sinPhiRadius * Math.sin(spherical.theta);
         offset[1] = spherical.radius * Math.cos(spherical.phi);
         offset[2] = sinPhiRadius * Math.cos(spherical.theta);
-
-        // Apply updated values to object
-        // object.position.copy(this.target, object.position).add(offset, object.position, object.position);
-        // object.lookAt(this.target);
 
         object.position.copy(this.target).add(offset);
         object.lookAt(this.target);

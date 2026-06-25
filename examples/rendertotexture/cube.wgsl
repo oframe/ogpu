@@ -29,7 +29,6 @@ fn vs(v: Vertex) -> VertexOutput {
   var vsOut: VertexOutput;
 
   let localPos = v.position;
-  // localPos *= uniforms.uScale;
 
   vsOut.position = uniforms.projectionMatrix * uniforms.modelViewMatrix * vec4f(localPos, 1.0);
   vsOut.vNormal = uniforms.normalMatrix * v.normal;

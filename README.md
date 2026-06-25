@@ -2,6 +2,8 @@
 
 <p align="center"><b>Minimal WebGPU framework.</b></p>
 
+<p align="center"><a href="https://oframe.github.io/ogpu/">Examples</a></p>
+
 <br />
 
 OGPU is a small WebGPU framework that continues the ethos of [OGL](https://github.com/oframe/ogl): an approachable interface with a thin abstraction layer that keeps easy access to the metal — in this case, WebGPU. It belongs to the [OFrame](https://github.com/oframe) family, carrying the same minimal-abstraction philosophy that [Nathan Gordon](https://github.com/gordonnl) set with OGL.

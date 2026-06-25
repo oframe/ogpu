@@ -133,10 +133,6 @@ fn perturbNormal(N : vec3f, worldPos : vec3f, uv : vec2f, mapN : vec3f) -> vec3f
   // Disabled: hasNormalMap already skips this path when there is no normal map.
   // Source: Christian Schueler, "Followup: Normal Mapping Without Precomputed
   // Tangents" (2013) - http://www.thetenthplanet.de/archives/1180
-  // let det = max(dot(T, T), dot(B, B));
-  // if (det <= 0.0) {
-  //   return N;
-  // }
 
   let invmax = inverseSqrt(max(dot(T, T), dot(B, B)));
   let TBN = mat3x3f(T * invmax, B * invmax, N);

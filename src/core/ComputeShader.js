@@ -193,7 +193,6 @@ export class ComputeShader {
             _pass.dispatchWorkgroups(...dispatchCount);
         }
 
-        //if no explicit pass is passed, end the current one
         if (!pass) _pass.end();
 
         if (timing) {

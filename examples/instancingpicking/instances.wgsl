@@ -45,7 +45,6 @@ fn vs(in: Vertex) -> VertexOutput {
   var pos = in.position;
   var nor = in.normal;
 
-  // scale first
   pos *= 0.9 + random.y * 0.2;
 
   let a1 = random.x * 6.28 + 4.0 * uniforms.time * (random.y - 0.5);

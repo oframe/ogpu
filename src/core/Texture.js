@@ -146,7 +146,6 @@ export class Texture {
 
             let bytesPerPixel;
             switch (format) {
-                // 1 byte per pixel
                 case 'r8unorm':
                 case 'r8snorm':
                 case 'r8uint':
@@ -154,7 +153,6 @@ export class Texture {
                     bytesPerPixel = 1;
                     break;
 
-                // 2 bytes per pixel
                 case 'r16uint':
                 case 'r16sint':
                 case 'r16float':
@@ -165,7 +163,6 @@ export class Texture {
                     bytesPerPixel = 2;
                     break;
 
-                // 4 bytes per pixel
                 case 'r32uint':
                 case 'r32sint':
                 case 'r32float':
@@ -185,7 +182,6 @@ export class Texture {
                     bytesPerPixel = 4;
                     break;
 
-                // 8 bytes per pixel
                 case 'rg32uint':
                 case 'rg32sint':
                 case 'rg32float':
@@ -195,14 +191,12 @@ export class Texture {
                     bytesPerPixel = 8;
                     break;
 
-                // 16 bytes per pixel
                 case 'rgba32uint':
                 case 'rgba32sint':
                 case 'rgba32float':
                     bytesPerPixel = 16;
                     break;
 
-                // Fallback
                 default:
                     bytesPerPixel = 4;
                     break;

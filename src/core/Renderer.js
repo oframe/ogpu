@@ -29,7 +29,6 @@ export class Renderer {
         this.deviceLostHandlers = new Set();
         this.deviceRestoredHandlers = new Set();
         this.resizeHandlers = new Set();
-        // this.ready = promise;
         this.ready = getPromise();
         this.isReady = false;
         // first initDevice() runs init() (one-time canvas/handler setup); later
@@ -450,7 +449,6 @@ export class Renderer {
             const ui = []; // depthTest false
 
             this.renderQueue.forEach((node) => {
-                // Split into the 3 render groups
                 if (!node.pipeline.transparent) {
                     opaque.push(node);
                 } else if (node.pipeline.depthTest) {
@@ -464,7 +462,6 @@ export class Renderer {
                 // Only calculate z-depth if renderOrder unset and depthTest is true
                 if (node.renderOrder !== 0 || !node.pipeline.depthTest || !camera) return;
 
-                // update z-depth
                 node.worldMatrix.getTranslation(tempVec3);
                 tempVec3.applyMat4(camera.projectionViewMatrix);
                 node.zDepth = tempVec3[2];
@@ -592,7 +589,6 @@ export class Renderer {
 
         pass.end();
 
-        // const commandBuffer = encoder.finish();
         if (!encoder) {
             const commandBuffer = _encoder.finish();
             this.gpu.device.queue.submit([commandBuffer]);

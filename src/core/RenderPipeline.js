@@ -57,7 +57,6 @@ export class RenderPipeline {
 
         this.build(code);
 
-        // register for shader hot-reload (see ShaderReload.js)
         this._unregister = registerShader(this);
     }
 

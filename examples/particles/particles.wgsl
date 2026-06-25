@@ -67,7 +67,6 @@ fn fs(in: VertexOutPut) -> FragmentOutput {
 
     let z = max(0.0, sqrt(1.0 - mag));
 
-    //impostor normals
     surface = vec3f(surface.xy, z);
     let mat3View = mat3x3f(
         uniforms.viewMatrix[0].xyz,

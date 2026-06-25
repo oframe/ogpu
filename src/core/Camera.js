@@ -48,7 +48,6 @@ export class Camera extends Transform {
         this.viewMatrix.copy(this.worldMatrix).invert();
         this.worldMatrix.getTranslation(this.worldPosition);
 
-        // used for sorting
         this.projectionViewMatrix.copy(this.projectionMatrix).multiply(this.viewMatrix);
         return this;
     }

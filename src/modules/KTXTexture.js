@@ -1,4 +1,4 @@
-import { Texture } from './Texture.js';
+import { Texture } from '@core/Texture.js';
 import { parseKTXHeader, formatBlockInfo } from '@utils/ktxutils';
 
 // Pick a transcode target the device can actually sample. Basis Universal

@@ -440,13 +440,7 @@
       "id": "src/core/index.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 13
-    },
-    {
-      "id": "src/core/KTXTexture.js",
-      "type": "module",
-      "inDegree": 1,
-      "outDegree": 2
+      "outDegree": 12
     },
     {
       "id": "src/core/Mesh.js",
@@ -578,7 +572,7 @@
       "id": "src/index.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 15
+      "outDegree": 16
     },
     {
       "id": "src/main.js",
@@ -663,6 +657,12 @@
       "type": "module",
       "inDegree": 1,
       "outDegree": 1
+    },
+    {
+      "id": "src/modules/KTXTexture.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 2
     },
     {
       "id": "src/modules/Orbit.js",
@@ -1100,10 +1100,6 @@
     },
     {
       "from": "src/core/index.js",
-      "to": "src/core/KTXTexture.js"
-    },
-    {
-      "from": "src/core/index.js",
       "to": "src/core/Mesh.js"
     },
     {
@@ -1133,14 +1129,6 @@
     {
       "from": "src/core/index.js",
       "to": "src/core/Transform.js"
-    },
-    {
-      "from": "src/core/KTXTexture.js",
-      "to": "src/core/Texture.js"
-    },
-    {
-      "from": "src/core/KTXTexture.js",
-      "to": "src/utils/ktxutils.js"
     },
     {
       "from": "src/core/Mesh.js",
@@ -1369,6 +1357,10 @@
     {
       "from": "src/index.js",
       "to": "src/modules/GUI.js"
+    },
+    {
+      "from": "src/index.js",
+      "to": "src/modules/KTXTexture.js"
     },
     {
       "from": "src/index.js",
@@ -1609,6 +1601,14 @@
     {
       "from": "src/modules/GUI.js",
       "to": "pkg:tweakpane"
+    },
+    {
+      "from": "src/modules/KTXTexture.js",
+      "to": "src/core/Texture.js"
+    },
+    {
+      "from": "src/modules/KTXTexture.js",
+      "to": "src/utils/ktxutils.js"
     },
     {
       "from": "src/modules/Orbit.js",

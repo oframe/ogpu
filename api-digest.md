@@ -36,10 +36,6 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - computeBoundingSphere(attr = this._positionAttr())
   - destroy()
 
-### src/core/KTXTexture.js
-- **class KTXTexture** extends Texture
-  - constructor(gpu, { src, usage = GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST, label = '…)
-
 ### src/core/Mesh.js
 - **class Mesh** extends Transform
   - constructor(gpu, { label = 'basic mesh', pipeline, geometry, bindGroups, manualRender = false, render…)
@@ -124,7 +120,6 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { RenderPipeline } from './RenderPipeline.js'
 - re-export { ComputeShader } from './ComputeShader.js'
 - re-export { Texture } from './Texture.js'
-- re-export { KTXTexture } from './KTXTexture.js'
 - re-export { RenderTarget } from './RenderTarget.js'
 - re-export { Skin } from './skin/Skin.js'
 
@@ -223,6 +218,10 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - folder(title, { expanded = true } = {})
   - uniform(target, key, opts = {})
   - dispose()
+
+### src/modules/KTXTexture.js
+- **class KTXTexture** extends Texture
+  - constructor(gpu, { src, usage = GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST, label = '…)
 
 ### src/modules/Orbit.js
 - fn `Orbit(object, { element = document, enabled = true, target = new Vec3(0, 0, 0), ease = 0.25, in…)`
@@ -443,6 +442,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { GLTFLoader } from './modules/GLTFLoader.js'
 - re-export { CubeMap } from './modules/CubeMap.js'
 - re-export { VideoTexture } from './modules/VideoTexture.js'
+- re-export { KTXTexture } from './modules/KTXTexture.js'
 - re-export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js'
 - re-export { loadJSON, loadJSONAll } from './utils/JSONLoader.js'
 - re-export { loadIBLCubeMap, loadSphericalHarmonics } from './utils/IBLUtils/IBLUtils.js'

@@ -57,7 +57,7 @@
         "eslint-config-prettier": "^10.1.8",
         "globals": "^17.6.0",
         "prettier": "^3.8.3",
-        "vite": "^6.0.1"
+        "vite": "^6.4.3"
     },
     "dependencies": {
         "parse-exr": "^1.0.2",

@@ -1,4 +1,4 @@
-<p align="center"><img src="./public/ogpu.png" alt="OGPU" /></p>
+<p align="center"><img src="./public/ogpu.png" alt="OGPU" width="510" /></p>
 
 <p align="center"><b>Minimal WebGPU framework.</b></p>
 

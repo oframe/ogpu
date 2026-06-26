@@ -22,77 +22,43 @@ import { SceneGraph } from '@examples/scenegraph/SceneGraph';
 import { SortTransparency } from '@examples/sorttransparency/SortTransparency';
 import { MSAA } from '@examples/msaa/MSAA';
 import { CubeMapExample } from '@examples/cubemap/CubeMap';
+import { Loader } from '@examples/Loader';
 //TODO: Post FX WebGPU way
 
 const view = new URLSearchParams(window.location.search).get('src');
 const canvas = document.getElementById('web-gpu-canvas');
 
-switch (view) {
-    case 'rendertargets':
-        new RenderToTexture();
-        break;
-    case 'particles':
-        new Particles();
-        break;
-    case 'textures':
-        new Textures();
-        break;
-    case 'ktx':
-        new KTX();
-        break;
-    case 'instancing':
-        new Instancing();
-        break;
-    case 'instancingpicking':
-        new InstancingPicking();
-        break;
-    case 'primitives':
-        new Primitives();
-        break;
-    case 'raycasting':
-        new Raycasting();
-        break;
-    case 'orbit':
-        new OrbitControls();
-        break;
-    case 'pbrshader':
-        new PBRShader();
-        break;
-    case 'skinning':
-        new Skinning(canvas);
-        break;
-    case 'gltf':
-        new GLTF(canvas);
-        break;
-    case 'shadowmapping':
-        new Shadowmapping();
-        break;
-    case 'frustumculling':
-        new FrustumCulling();
-        break;
-    case 'computefrustumculling':
-        new ComputeFrustumCulling();
-        break;
-    case 'scenegraph':
-        new SceneGraph();
-        break;
-    case 'sorttransparency':
-        new SortTransparency();
-        break;
-    case 'msaa':
-        new MSAA();
-        break;
-    case 'cubemap':
-        new CubeMapExample();
-        break;
-    case 'hellowebgpu':
-        new HelloWebGPU();
-        break;
-    case 'triangle':
-        new Triangle();
-        break;
-    default:
-        renderLanding();
+const views = {
+    rendertargets: () => new RenderToTexture(),
+    particles: () => new Particles(),
+    textures: () => new Textures(),
+    ktx: () => new KTX(),
+    instancing: () => new Instancing(),
+    instancingpicking: () => new InstancingPicking(),
+    primitives: () => new Primitives(),
+    raycasting: () => new Raycasting(),
+    orbit: () => new OrbitControls(),
+    pbrshader: () => new PBRShader(),
+    skinning: () => new Skinning(canvas),
+    gltf: () => new GLTF(canvas),
+    shadowmapping: () => new Shadowmapping(),
+    frustumculling: () => new FrustumCulling(),
+    computefrustumculling: () => new ComputeFrustumCulling(),
+    scenegraph: () => new SceneGraph(),
+    sorttransparency: () => new SortTransparency(),
+    msaa: () => new MSAA(),
+    cubemap: () => new CubeMapExample(),
+    hellowebgpu: () => new HelloWebGPU(),
+    triangle: () => new Triangle(),
+};
+
+if (views[view]) {
+    const app = views[view]();
+    // Wire the default boot overlay to the example's renderer. Swap Loader for
+    // your own to drive a different loader UI.
+    if (app?.renderer) new Loader(app.renderer);
+} else {
+    renderLanding();
 }
 
 // Example gallery shown at the root (no ?src=). OGL-style sidebar of links

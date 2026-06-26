@@ -1,9 +1,9 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 121,
-    "edges": 219,
-    "modules": 78,
+    "nodes": 122,
+    "edges": 220,
+    "modules": 79,
     "shaders": 36,
     "external": 7
   },
@@ -187,6 +187,12 @@
     {
       "id": "examples/ktx/ktx.wgsl",
       "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "examples/Loader.js",
+      "type": "module",
       "inDegree": 1,
       "outDegree": 0
     },
@@ -578,7 +584,7 @@
       "id": "src/main.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 23
+      "outDegree": 24
     },
     {
       "id": "src/math/Color.js",
@@ -1429,6 +1435,10 @@
     {
       "from": "src/main.js",
       "to": "examples/ktx/KTX.js"
+    },
+    {
+      "from": "src/main.js",
+      "to": "examples/Loader.js"
     },
     {
       "from": "src/main.js",

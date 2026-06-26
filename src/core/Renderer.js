@@ -35,11 +35,15 @@ export class Renderer {
         // re-acquisitions run _restore() instead.
         this._initialized = false;
 
-        // Boot overlay handling: the overlay in index.html stays up until first
-        // render, any promises registered via trackCompile() settle, and a
-        // couple frames have painted — covering async setup before first paint.
+        // Boot lifecycle: tracks async setup (trackCompile) until first render,
+        // its promises settle, and a couple frames have painted. The engine emits
+        // progress + completion to subscribers (addBootProgressHandler /
+        // addBootCompleteHandler) and owns no DOM — a loader UI (see
+        // examples/Loader.js) drives the overlay off these hooks.
         this._bootPromises = [];
         this._bootStarted = false;
+        this.bootProgressHandlers = new Set();
+        this.bootCompleteHandlers = new Set();
 
         this.initDevice();
     }
@@ -293,6 +297,19 @@ export class Renderer {
         return () => this.deviceRestoredHandlers.delete(cb);
     }
 
+    // Boot progress, 0–100 (monotonic). Returns an unsubscribe fn.
+    addBootProgressHandler(cb) {
+        this.bootProgressHandlers.add(cb);
+        return () => this.bootProgressHandlers.delete(cb);
+    }
+
+    // Fired once when boot finishes and the scene is ready to show. Returns an
+    // unsubscribe fn.
+    addBootCompleteHandler(cb) {
+        this.bootCompleteHandlers.add(cb);
+        return () => this.bootCompleteHandlers.delete(cb);
+    }
+
     // Test hook: exercise the recovery path without a real GPU loss. WebGPU has
     // no API to synthetically lose a device (destroy() reports reason
     // 'destroyed', which we deliberately don't recover from), so this drives
@@ -326,20 +343,18 @@ export class Renderer {
         });
     }
 
-    // Drive the boot ring fill (index.html .ogpu-loader__ring). Monotonic —
-    // never steps back when promises are registered late and grow the total.
+    // Emit boot progress to subscribers. Monotonic — never steps back when
+    // promises are registered late and grow the total.
     _setProgress(pct) {
         const p = Math.max(this._bootProgress || 0, Math.min(100, pct));
         this._bootProgress = p;
-        const ring = document.querySelector('#ogpu-loader .ogpu-loader__ring');
-        if (ring) ring.style.setProperty('--p', p);
+        this.bootProgressHandlers.forEach((cb) => cb?.(p));
     }
 
-    // Fades the boot overlay (index.html #ogpu-loader) once the scene is
-    // ready to show. Called once, on first render. Waits for any tracked setup
-    // promises to settle, debounces to catch promises registered late during
-    // setup, then paints two frames before fading. A hard timeout guarantees it
-    // never sticks.
+    // Signals boot completion once the scene is ready to show. Called once, on
+    // first render. Waits for any tracked setup promises to settle, debounces to
+    // catch promises registered late during setup, then paints two frames before
+    // completing. A hard timeout guarantees it never sticks.
     async _startBoot() {
         if (this._bootStarted) return;
         this._bootStarted = true;
@@ -349,7 +364,7 @@ export class Renderer {
         const MIN_VISIBLE_MS = 350;
         const bootStart = performance.now();
 
-        const hardStop = setTimeout(() => this._hideLoader(), 8000);
+        const hardStop = setTimeout(() => this._completeBoot(), 8000);
 
         // Settle current compiles, then re-check: building the scene can keep
         // adding pipelines for a few frames. Loop until the count is stable.
@@ -371,18 +386,13 @@ export class Renderer {
 
         clearTimeout(hardStop);
         this._setProgress(100);
-        this._hideLoader();
+        this._completeBoot();
     }
 
-    _hideLoader() {
-        if (this._loaderHidden) return;
-        this._loaderHidden = true;
-        const el = document.getElementById('ogpu-loader');
-        if (!el) return;
-        el.classList.add('is-hidden');
-        el.addEventListener('transitionend', () => el.remove(), { once: true });
-        // Fallback removal if the transition never fires.
-        setTimeout(() => el.remove(), 600);
+    _completeBoot() {
+        if (this._bootComplete) return;
+        this._bootComplete = true;
+        this.bootCompleteHandlers.forEach((cb) => cb?.());
     }
 
     updateClock(time = 0) {

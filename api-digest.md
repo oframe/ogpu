@@ -73,6 +73,8 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - remove(f)
   - addDeviceLostHandler(cb)
   - addDeviceRestoredHandler(cb)
+  - addBootProgressHandler(cb)
+  - addBootCompleteHandler(cb)
   - forceDeviceLoss()
   - setClearColor({ r = 0, g = 0, b = 0, a = this.transparent ? 0 : 1 } = {})
   - trackCompile(promise)
@@ -296,6 +298,10 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - fn `applyOverrideConstants(code, constants = {})`
 
 ## examples
+
+### examples/Loader.js
+- **class Loader**
+  - constructor(renderer, { el = '#ogpu-loader' } = {})
 
 ### examples/computefrustumculling/ComputeFrustumCulling.js
 - **class ComputeFrustumCulling**

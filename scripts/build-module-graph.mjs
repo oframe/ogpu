@@ -5,11 +5,14 @@
 // vite.config.js. Run: node scripts/build-module-graph.mjs
 
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'node:fs';
-import { join, relative, dirname, resolve } from 'node:path';
+import { join, relative, dirname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'src');
+
+// Repo-relative id, always POSIX-separated so the graph is identical on Windows.
+const rel = (p) => relative(ROOT, p).split(sep).join('/');
 const EXAMPLES = join(ROOT, 'examples');
 
 // Mirror vite.config.js / jsconfig.json aliases.
@@ -72,15 +75,15 @@ function resolveSpecifier(spec, fromFile) {
     for (const ext of EXTS) {
         const candidate = basePath + ext;
         if (existsSync(candidate) && statSync(candidate).isFile()) {
-            return { id: relative(ROOT, candidate) };
+            return { id: rel(candidate) };
         }
     }
     for (const idx of INDEX) {
         const candidate = join(basePath, idx);
-        if (existsSync(candidate)) return { id: relative(ROOT, candidate) };
+        if (existsSync(candidate)) return { id: rel(candidate) };
     }
     // Unresolved (e.g. asset not on disk) — keep as a best-effort node.
-    return { id: relative(ROOT, basePath), unresolved: true };
+    return { id: rel(basePath), unresolved: true };
 }
 
 function typeForId(id) {
@@ -98,7 +101,7 @@ function ensureNode(id, type) {
 }
 
 for (const file of files) {
-    const id = relative(ROOT, file);
+    const id = rel(file);
     ensureNode(id, 'module');
     const code = readFileSync(file, 'utf8');
     const seen = new Set();

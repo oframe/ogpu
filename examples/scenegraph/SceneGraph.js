@@ -31,10 +31,24 @@ export class SceneGraph {
         const sphereGeometry = new Sphere(this.gpu, { radius: 0.15 });
         const cubeGeometry = new Box(this.gpu, { size: 0.3 });
 
+        // sphere and cube share the same attribute layout (position/normal/uv, interleaved,
+        // stride 32) — declare it once and feed it to the pipeline both meshes draw with,
+        // rather than borrowing one geometry's `.bufferLayouts`.
+        const vertexLayout = [
+            {
+                arrayStride: 32,
+                attributes: [
+                    { shaderLocation: 0, offset: 0, format: 'float32x3' }, // position
+                    { shaderLocation: 1, offset: 12, format: 'float32x3' }, // normal
+                    { shaderLocation: 2, offset: 24, format: 'float32x2' }, // uv
+                ],
+            },
+        ];
+
         const pipeline = new RenderPipeline(this.gpu, {
             label: 'scene-graph-pipeline',
             code: sceneGraphShader,
-            vertexBuffers: sphereGeometry.bufferLayouts,
+            vertexBuffers: vertexLayout,
         });
 
         const makeMesh = (geometry, label) =>

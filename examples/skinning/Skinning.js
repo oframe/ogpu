@@ -158,7 +158,7 @@ export class Skinning {
         this.renderer.setClearColor({ r: 1, g: 1, b: 1 });
 
         const anim = this.skin.getAnimation(this.animLabel);
-        anim.elapsed += deltaTime * anim.fps();
+        anim.elapsed += deltaTime * anim.fps() * 10.0;
         this.skin.update();
 
         this.renderer.render({ scene: this.scene, camera: this.camera });

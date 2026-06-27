@@ -8,7 +8,7 @@
 
 OGPU is a small WebGPU framework that continues the ethos of [OGL](https://github.com/oframe/ogl): an approachable interface with a thin abstraction layer that keeps easy access to the metal — in this case, WebGPU. It belongs to the [OFrame](https://github.com/oframe) family, carrying the same minimal-abstraction philosophy that [Nathan Gordon](https://github.com/gordonnl) set with OGL.
 
-Written in vanilla ES modules with a Vite build, the API shares many similarities with ThreeJS, but it is tightly coupled to WebGPU and ships far fewer features. The library does the minimum abstraction necessary, so you should still feel comfortable reaching for native WebGPU commands alongside it.
+Written in vanilla ES modules with a Vite build, the API shares many similarities with THREE, but it is tightly coupled to WebGPU and ships far fewer features. The library does the minimum abstraction necessary, so you should still feel comfortable reaching for native WebGPU commands alongside it.
 
 Keeping the level of abstraction low makes the framework easier to understand, extend, and reshape — and makes it a far more practical resource for learning WebGPU itself.
 
@@ -59,7 +59,7 @@ The rest of Core:
 - `ShaderReload.js` — WGSL hot-reload
 - `skin/` — GPU skinning
 
-The **Math** component (`src/math/`) is a set of chainable, ThreeJS-style wrappers over [`wgpu-matrix`](https://github.com/greggman/wgpu-matrix) — `Vec2`–`Vec4`, `Quat`, `Mat3`/`Mat4`, `Euler`, `Color` — each a `Float32Array` subclass.
+The **Math** component (`src/math/`) is a set of chainable, THREE-style wrappers over [`wgpu-matrix`](https://github.com/greggman/wgpu-matrix) — `Vec2`–`Vec4`, `Quat`, `Mat3`/`Mat4`, `Euler`, `Color` — each a `Float32Array` subclass.
 
 **Modules** (`src/modules/`) are the optional higher-level pieces, kept out of Core to reduce bloat: `Orbit`, `Raycast`, `GUI`, `Animation`, `GLTFLoader`, `CubeMap`, `VideoTexture`, and a shader-only `pbr/` IBL library.
 

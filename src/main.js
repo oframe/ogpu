@@ -19,6 +19,7 @@ import { Shadowmapping } from '@examples/shadowmapping/Shadowmapping';
 import { FrustumCulling } from '@examples/frustumculling/FrustumCulling';
 import { ComputeFrustumCulling } from '@examples/computefrustumculling/ComputeFrustumCulling';
 import { SceneGraph } from '@examples/scenegraph/SceneGraph';
+import { HighMeshCount } from '@examples/highmeshcount/HighMeshCount';
 import { SortTransparency } from '@examples/sorttransparency/SortTransparency';
 import { MSAA } from '@examples/msaa/MSAA';
 import { CubeMapExample } from '@examples/cubemap/CubeMap';
@@ -45,6 +46,7 @@ const views = {
     frustumculling: () => new FrustumCulling(),
     computefrustumculling: () => new ComputeFrustumCulling(),
     scenegraph: () => new SceneGraph(),
+    highmeshcount: () => new HighMeshCount(),
     sorttransparency: () => new SortTransparency(),
     msaa: () => new MSAA(),
     cubemap: () => new CubeMapExample(),
@@ -87,6 +89,8 @@ function renderLanding() {
         { section: 'Interaction' },
         { view: 'orbit', label: 'Orbit Controls', folder: 'orbitcontrols' },
         { view: 'raycasting', label: 'Projection and Raycasting', folder: 'raycasting' },
+        { section: 'Performance' },
+        { view: 'highmeshcount', label: 'High Mesh Count', folder: 'highmeshcount' },
         { section: 'Compute' },
         { view: 'particles', label: 'Particles', folder: 'particles' },
         { view: 'computefrustumculling', label: 'Frustum Culling (GPU Compute)', folder: 'computefrustumculling' },

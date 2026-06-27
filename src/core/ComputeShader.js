@@ -90,7 +90,7 @@ export class ComputeShader {
     // build an explicit, persistent pipeline layout the first time we see the
     // entry point and reuse the same objects on every reload — that stability
     // is what keeps already-built bind groups compatible across hot-reloads.
-    // ponytail: persisted by entry-point name, so changing a shader's binding
+    // persisted by entry-point name, so changing a shader's binding
     // *shape* (add/remove/retype a binding) needs a hard reload, not hot-reload.
     _resolveLayout(key, layout) {
         if (layout !== 'auto') return layout;

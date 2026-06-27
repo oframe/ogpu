@@ -31,7 +31,7 @@ export class RenderTarget {
         this.sampleCount = sampleCount;
         // color=false -> depth-only target (shadow maps): no color attachment,
         // just a sampleable depth texture in depthFormat.
-        // ponytail: depth-only. A combined depth+stencil format (depth24plus-stencil8,
+        // depth-only. A combined depth+stencil format (depth24plus-stencil8,
         // depth32float-stencil8) creates fine here, but Renderer's depthStencilAttachment
         // only sets depth load/store ops — wire stencilLoadOp/stencilStoreOp +
         // pipeline stencil state when an actual stencil pass needs it.

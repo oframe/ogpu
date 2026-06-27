@@ -118,7 +118,11 @@ export class Mesh extends Transform {
 
         this.gpu.device.queue.writeBuffer(this.uniformBuffer, 0, this.uniforms.arrayBuffer);
 
-        pass.setPipeline(this.pipeline.pipeline);
+        // track bound pipeline on the pass (fresh per render pass) to skip redundant setPipeline
+        if (pass._currentPipeline !== this.pipeline.pipeline) {
+            pass.setPipeline(this.pipeline.pipeline);
+            pass._currentPipeline = this.pipeline.pipeline;
+        }
 
         this.bindGroups.forEach((bindGroup, i) => {
             pass.setBindGroup(i, bindGroup);

@@ -71,14 +71,27 @@ export class Shadowmapping {
             },
         });
 
-        // airplane and floor have the same attribute layout (pos/normal/uv, interleaved, stride 32)
-        // — share one render pipeline and one shadow pipeline
         const floorGeometry = new Plane(this.gpu, { width: 6, depth: 6 });
+
+        // airplane and floor share the same attribute layout (pos/normal/uv, interleaved,
+        // stride 32). Since we know that upfront, declare the vertex layout once and hand it
+        // to both pipelines — rather than borrowing one geometry's `.bufferLayouts` and
+        // implicitly assuming every other geometry the pipeline draws happens to match.
+        const vertexLayout = [
+            {
+                arrayStride: 32,
+                attributes: [
+                    { shaderLocation: 0, offset: 0, format: 'float32x3' }, // position
+                    { shaderLocation: 1, offset: 12, format: 'float32x3' }, // normal
+                    { shaderLocation: 2, offset: 24, format: 'float32x2' }, // uv
+                ],
+            },
+        ];
 
         const shadowPipeline = new RenderPipeline(this.gpu, {
             label: 'shadow-pipeline',
             code: shadow,
-            vertexBuffers: airplaneGeometry.bufferLayouts,
+            vertexBuffers: vertexLayout,
             depthStencil: {
                 depthWriteEnabled: true,
                 depthCompare: 'less',
@@ -92,7 +105,7 @@ export class Shadowmapping {
         const renderPipeline = new RenderPipeline(this.gpu, {
             label: 'render-pipeline',
             code: cubeShader,
-            vertexBuffers: airplaneGeometry.bufferLayouts,
+            vertexBuffers: vertexLayout,
             cullMode: 'back',
             constants: { shadowDepthTextureSize: SHADOW_SIZE },
         });

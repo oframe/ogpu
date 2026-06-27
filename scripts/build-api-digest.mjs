@@ -5,11 +5,14 @@
 // Run: node scripts/build-api-digest.mjs
 
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, dirname, resolve } from 'node:path';
+import { join, relative, dirname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'src');
+
+// Repo-relative key, always POSIX-separated so the digest is identical on Windows.
+const rel = (p) => relative(ROOT, p).split(sep).join('/');
 const EXAMPLES = join(ROOT, 'examples');
 const MAX_PARAMS = 90; // truncate long destructured signatures
 
@@ -133,7 +136,7 @@ const byFile = new Map();
 for (const f of files) {
     const parsed = parseFile(f);
     const empty = !parsed.classes.length && !parsed.functions.length && !parsed.consts.length && !parsed.reexports.length;
-    if (!empty) byFile.set(relative(ROOT, f), parsed);
+    if (!empty) byFile.set(rel(f), parsed);
 }
 
 // Group by top-level src subdirectory (core, modules, vfx, utils, examples…).

@@ -2,7 +2,7 @@
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
     "nodes": 124,
-    "edges": 224,
+    "edges": 225,
     "modules": 80,
     "shaders": 37,
     "external": 7
@@ -14,7 +14,7 @@
     },
     {
       "id": "src/core/Texture.js",
-      "inDegree": 5
+      "inDegree": 6
     },
     {
       "id": "src/core/Transform.js",
@@ -571,7 +571,7 @@
     {
       "id": "src/core/Texture.js",
       "type": "module",
-      "inDegree": 5,
+      "inDegree": 6,
       "outDegree": 1
     },
     {
@@ -668,7 +668,7 @@
       "id": "src/modules/GLTFLoader.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 7
+      "outDegree": 8
     },
     {
       "id": "src/modules/GUI.js",
@@ -1627,6 +1627,10 @@
     {
       "from": "src/modules/GLTFLoader.js",
       "to": "src/core/RenderPipeline.js"
+    },
+    {
+      "from": "src/modules/GLTFLoader.js",
+      "to": "src/core/Texture.js"
     },
     {
       "from": "src/modules/GLTFLoader.js",

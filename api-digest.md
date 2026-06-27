@@ -338,6 +338,12 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### examples/hellowebgpu/uniformStruct.js
 - fn `makeUniformStruct(gpu, def, values, label)`
 
+### examples/highmeshcount/HighMeshCount.js
+- **class HighMeshCount**
+  - constructor()
+  - init()
+  - setMeshCount(count)
+
 ### examples/instancing/Instancing.js
 - **class Instancing**
   - constructor()

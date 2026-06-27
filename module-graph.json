@@ -1,10 +1,10 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 122,
-    "edges": 220,
-    "modules": 79,
-    "shaders": 36,
+    "nodes": 124,
+    "edges": 224,
+    "modules": 80,
+    "shaders": 37,
     "external": 7
   },
   "hubs": [
@@ -147,6 +147,18 @@
       "type": "module",
       "inDegree": 2,
       "outDegree": 2
+    },
+    {
+      "id": "examples/highmeshcount/HighMeshCount.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 3
+    },
+    {
+      "id": "examples/highmeshcount/highmeshcount.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "examples/instancing/instances.wgsl",
@@ -397,7 +409,7 @@
     {
       "id": "pkg:ogpu",
       "type": "external",
-      "inDegree": 24,
+      "inDegree": 25,
       "outDegree": 0
     },
     {
@@ -584,7 +596,7 @@
       "id": "src/main.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 24
+      "outDegree": 25
     },
     {
       "id": "src/math/Color.js",
@@ -661,7 +673,7 @@
     {
       "id": "src/modules/GUI.js",
       "type": "module",
-      "inDegree": 1,
+      "inDegree": 2,
       "outDegree": 1
     },
     {
@@ -875,6 +887,18 @@
     {
       "from": "examples/hellowebgpu/uniformStruct.js",
       "to": "pkg:webgpu-utils"
+    },
+    {
+      "from": "examples/highmeshcount/HighMeshCount.js",
+      "to": "examples/highmeshcount/highmeshcount.wgsl"
+    },
+    {
+      "from": "examples/highmeshcount/HighMeshCount.js",
+      "to": "pkg:ogpu"
+    },
+    {
+      "from": "examples/highmeshcount/HighMeshCount.js",
+      "to": "src/modules/GUI.js"
     },
     {
       "from": "examples/instancing/Instancing.js",
@@ -1423,6 +1447,10 @@
     {
       "from": "src/main.js",
       "to": "examples/hellowebgpu/HelloWebGPU.js"
+    },
+    {
+      "from": "src/main.js",
+      "to": "examples/highmeshcount/HighMeshCount.js"
     },
     {
       "from": "src/main.js",

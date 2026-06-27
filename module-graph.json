@@ -323,7 +323,7 @@
       "outDegree": 0
     },
     {
-      "id": "examples/shadowmapping/cube.wgsl",
+      "id": "examples/shadowmapping/mesh.wgsl",
       "type": "shader",
       "inDegree": 1,
       "outDegree": 0
@@ -1034,7 +1034,7 @@
     },
     {
       "from": "examples/shadowmapping/Shadowmapping.js",
-      "to": "examples/shadowmapping/cube.wgsl"
+      "to": "examples/shadowmapping/mesh.wgsl"
     },
     {
       "from": "examples/shadowmapping/Shadowmapping.js",

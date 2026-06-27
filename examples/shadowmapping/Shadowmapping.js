@@ -1,6 +1,6 @@
 import { Mesh, Renderer, RenderPipeline, Transform, Camera, Orbit, Plane, RenderTarget, Mat4, Geometry, Texture, loadJSON, createUniformBuffer } from 'ogpu';
 
-import cubeShader from './cube.wgsl?raw';
+import meshShader from './mesh.wgsl?raw';
 import shadow from './shadow.wgsl?raw';
 import { makeStructuredView } from 'webgpu-utils';
 
@@ -104,7 +104,7 @@ export class Shadowmapping {
 
         const renderPipeline = new RenderPipeline(this.gpu, {
             label: 'render-pipeline',
-            code: cubeShader,
+            code: meshShader,
             vertexBuffers: vertexLayout,
             cullMode: 'back',
             constants: { shadowDepthTextureSize: SHADOW_SIZE },

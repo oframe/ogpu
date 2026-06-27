@@ -54,6 +54,19 @@ To add a new example: drop a class under `examples/<name>/`, import it in `src/m
 
 WebGPU requires a recent Chromium-based browser. See "Browser floor" below for the (currently very high) feature requirements.
 
+## Before building a feature: scan examples first
+
+Any build request that overlaps an existing capability (shadows, skinning, PBR/IBL, render targets, compute particles, glTF loading, …) starts with a scan of `examples/` — **not** a from-scratch implementation. Steps:
+
+1. Read `api-digest.md` and `module-graph.json` to map the public surface and importers, then open the relevant `examples/<name>/` and the `src/` it leans on.
+2. Decide whether what's there carries enough context to do the task:
+   - **Enough** → build on the existing primitive/pattern; don't reinvent it.
+   - **Partial** → extend the existing path; note the gap explicitly before coding.
+   - **Missing** → only then write new core code, following the cross-cutting contracts above.
+3. If the work adds/changes public surface or imports, regenerate the navigation aids so they don't drift: `npm run repomap` (or `node scripts/build-api-digest.mjs` + `node scripts/build-module-graph.mjs`), and commit the updated `api-digest.md` / `module-graph.json`. The pre-commit drift gate blocks stale copies.
+
+Example: a "add shadows" prompt first checks whether any example already does depth-pass / render-target shadow work before introducing a new shadow path.
+
 ## Browser floor
 
 `Renderer.initDevice` (`src/core/Renderer.js`) keeps a `wantedFeatures` wishlist and **feature-detects** it: each entry is kept only if `adapter.features.has(...)`, and the filtered result is what's passed to `requestDevice`. Anything the adapter lacks is dropped (and logged via `console.warn`) instead of failing the device request. This means the engine boots on any WebGPU-capable adapter; capable machines (e.g. Chrome Canary with everything enabled) still get the full set unchanged.

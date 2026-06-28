@@ -11,6 +11,8 @@ import { Texture } from '@core/Texture';
 import { Mesh } from '@core/Mesh';
 import { Transform } from '@core/Transform';
 import { RenderPipeline } from '@core/RenderPipeline';
+import { Skin } from '@core/skin/Skin';
+import { Animation } from './Animation.js';
 
 // --- glTF constant tables (https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html) ---
 
@@ -526,6 +528,114 @@ export class GLTFLoader {
             skinWeight: m.skinAttributes.skinWeight,
             rig: sk.rig,
         };
+    }
+
+    // dataOnly: turnkey skinned PBR mesh. Builds the Skin (compute buffers) + its
+    // Animation, decodes the glTF material maps (factor-only fallbacks for the rest),
+    // and wires everything into a Mesh against `skinnedmesh.wgsl`'s bind layout.
+    // Caller supplies the skinned PBR `code` + `ibl` resources ({ specView, mipLevels,
+    // shBuffer, lutTexture }, e.g. the shape returned by an initIBL helper).
+    // Returns { mesh, skin, animation } — drive `animation.elapsed` + `skin.update()`
+    // per frame. `material` overrides win over the glTF-derived factors.
+    // For full control over the wiring, unfold this yourself — see examples/skinninggltf.
+    async getSkinnedMesh({ code, ibl, mesh = 0, animation = 0, fps = 30, label = 'skinned', material = {} } = {}) {
+        if (!code) throw new Error('GLTFLoader.getSkinnedMesh: no shader code');
+        if (!ibl) throw new Error('GLTFLoader.getSkinnedMesh: no ibl resources');
+
+        const skinData = this.getSkinData(mesh);
+        if (!skinData) return null;
+        const skin = new Skin(this.gpu, { label, data: skinData });
+
+        const animData = this.getAnimation({ animation, skin: this.skinnedMeshes[mesh].skin, fps });
+        const anim = new Animation({ label: animData.label, data: animData, transforms: skin.poseTransforms }).fps(fps);
+        skin.addAnimation(anim);
+
+        const geometry = new Geometry(this.gpu, {
+            data: {
+                position: { data: skinData.position, numComponents: 3 },
+                normal: { data: skinData.normal, numComponents: 3 },
+                uv: { data: skinData.uv, numComponents: 2 },
+                indices: { data: skinData.indices },
+            },
+        });
+
+        const matIndex = this.skinnedMeshes[mesh].material ?? 0;
+        const mat = this.json.materials?.[matIndex] || {};
+        const pbr = mat.pbrMetallicRoughness || {};
+        const d = this._defaults;
+        // _materialTexture bakes the right fallback (white/whiteLin/black) into each slot
+        const [baseColor, metalRough, normalMap] = await Promise.all([
+            this._materialTexture(pbr.baseColorTexture, true),
+            this._materialTexture(pbr.metallicRoughnessTexture, false),
+            this._materialTexture(mat.normalTexture, false, 'normal'),
+        ]);
+
+        const iblSampler = this.gpu.device.createSampler({
+            minFilter: 'linear',
+            magFilter: 'linear',
+            mipmapFilter: 'linear',
+            addressModeU: 'clamp-to-edge',
+            addressModeV: 'clamp-to-edge',
+            addressModeW: 'clamp-to-edge',
+        });
+
+        const pipeline = new RenderPipeline(this.gpu, {
+            label: `${label}-pbr-pipeline`,
+            code,
+            vertexBuffers: geometry.bufferLayouts,
+            constants: { roughnessLevels: ibl.mipLevels },
+        });
+
+        const view = makeStructuredView(pipeline.defs.uniforms.material);
+        view.set({
+            baseColorFactor: pbr.baseColorFactor || [1, 1, 1, 1],
+            emissiveFactor: mat.emissiveFactor || [0, 0, 0],
+            metallicFactor: pbr.metallicFactor ?? 1,
+            roughnessFactor: pbr.roughnessFactor ?? 1,
+            normalScale: mat.normalTexture?.scale ?? 1,
+            occlusionStrength: mat.occlusionTexture?.strength ?? 1,
+            alphaCutoff: mat.alphaCutoff ?? 0.5,
+            alphaMode: 0,
+            hasNormalMap: mat.normalTexture ? 1 : 0,
+            hasTangents: 0, // skinned geometry carries no tangents -> screen-space frame
+            useGeometricNormal: 0,
+            ...material,
+        });
+        const materialBuffer = createUniformBuffer(this.gpu, { label: `${label}-material`, size: view.arrayBuffer.byteLength });
+        this.gpu.device.queue.writeBuffer(materialBuffer, 0, view.arrayBuffer);
+
+        const m = new Mesh(this.gpu, {
+            label: `${label}-mesh`,
+            pipeline,
+            geometry,
+            bindGroups: (uniformBuffer) => [
+                this.gpu.device.createBindGroup({
+                    layout: pipeline.bindGroupLayout(0),
+                    entries: [
+                        { binding: 0, resource: { buffer: uniformBuffer } },
+                        { binding: 1, resource: { buffer: skin.skinnedPositionBuffer } },
+                        { binding: 2, resource: { buffer: skin.skinnedNormalBuffer } },
+                        { binding: 3, resource: ibl.specView },
+                        { binding: 4, resource: { buffer: ibl.shBuffer } },
+                        { binding: 5, resource: ibl.lutTexture.createView() },
+                        { binding: 6, resource: iblSampler },
+                        { binding: 7, resource: baseColor.createView() },
+                        { binding: 8, resource: metalRough.createView() },
+                        { binding: 9, resource: normalMap.createView() },
+                        { binding: 10, resource: d.whiteLin.createView() }, // occlusion
+                        { binding: 11, resource: d.black.createView() }, // emissive
+                        { binding: 12, resource: d.sampler },
+                        { binding: 13, resource: d.white.createView() }, // opacity
+                        { binding: 14, resource: { buffer: materialBuffer } },
+                    ],
+                }),
+            ],
+        });
+        // positions come from the skin compute buffer, not the bind-pose attribute
+        m.frustumCulled = false;
+        m.addChild(skin.root);
+
+        return { mesh: m, skin, animation: anim };
     }
 
     // dataOnly: raw attribute arrays for a decoded static primitive (or its index).

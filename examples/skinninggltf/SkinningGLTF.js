@@ -5,6 +5,14 @@ import skinnedmesh from './skinnedmesh.wgsl?raw';
 
 // glTF rig + animation skinning, PBR-lit (metallic-roughness + IBL). The JSON
 // path lives in examples/skinning.
+//
+// The PBR shading on the skinned mesh was folded in via the pbr-shading skill.
+//
+// The whole skinned-PBR setup below (Skin + Animation, geometry, material maps +
+// fallbacks, IBL bindings) is also available turnkey as
+// `loader.getSkinnedMesh({ code, ibl })` — it returns { mesh, skin, animation }.
+// This example deliberately keeps the manual path to show how you unfold a glTF
+// mesh and perform the wirings yourself.
 export class SkinningGLTF {
     constructor(canvas) {
         this.init(canvas);

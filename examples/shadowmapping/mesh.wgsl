@@ -68,7 +68,7 @@ fn hash22(p : vec2f) -> vec2f
 @fragment
 fn fs(in : VertexOutput) -> @location(0) vec4f {
 
-  var visibility = 0.0;
+  var shadow = 0.0;
   let oneOverShadowDepthTextureSize = 1.0 / shadowDepthTextureSize;
 
   for (var y = -1; y <= 1; y++) {
@@ -76,19 +76,19 @@ fn fs(in : VertexOutput) -> @location(0) vec4f {
       let offset = vec2f(vec2(x, y));
       let hash = hash22(in.vShadowCoord.xy * shadowDepthTextureSize + offset) - 0.5;
 
-      visibility += textureSampleCompare(
+      shadow += textureSampleCompare(
         shadowMap, shadowSampler,
         in.vShadowCoord.xy + (offset + hash) * oneOverShadowDepthTextureSize, in.vShadowCoord.z - 0.0005
       );
     }
   }
-  visibility /= 9.0;
+  shadow /= 9.0;
 
   let tex = textureSample(tMap, textureSampler, in.vUv).rgb;
 
   let lightPos = vec3f(3.0, 10.0, 3.0);
   var light = max(0.0, dot(normalize(in.vNormal), normalize(lightPos)));
-  light *= visibility;
+  light *= shadow;
 
   return vec4f(tex * light, 1.0);
 }

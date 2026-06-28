@@ -1,7 +1,6 @@
-import { Renderer, Camera, Transform, ComputeShader, Orbit, GLTFLoader, createUniformBuffer, loadIBLCubeMap, loadSphericalHarmonics } from 'ogpu';
+import { Renderer, Camera, Transform, Orbit, GLTFLoader, createUniformBuffer, loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from 'ogpu';
 
 import pbr from '@modules/pbr/pbr.wgsl?raw';
-import brdflut from '@modules/pbr/brdflut.wgsl?raw';
 
 export class GLTF {
     constructor(canvas) {
@@ -74,33 +73,7 @@ export class GLTF {
         });
         this.gpu.device.queue.writeBuffer(shBuffer, 0, shArray);
 
-        const lutTexture = this.gpu.device.createTexture({
-            size: [512, 512],
-            format: 'rgba16float',
-            usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC,
-            label: 'gltf-brdflut-texture',
-        });
-
-        const brdflutCompute = new ComputeShader(this.gpu, {
-            label: 'gltf-brdflut-compute',
-            code: brdflut,
-        });
-        const bindGroup = this.gpu.device.createBindGroup({
-            label: 'gltf-brdflut-bind-group',
-            layout: brdflutCompute.bindGroupLayout(brdflutCompute.findKernel('main')),
-            entries: [{ binding: 0, resource: lutTexture.createView() }],
-        });
-
-        const encoder = this.gpu.device.createCommandEncoder({ label: 'gltf-brdflut-encoder' });
-        const pass = encoder.beginComputePass({ label: 'gltf-brdflut-pass' });
-        brdflutCompute.dispatch(encoder, {
-            pass,
-            kernel: brdflutCompute.findKernel('main'),
-            bindGroup,
-            dispatchCount: [512, 512, 1],
-        });
-        pass.end();
-        this.gpu.device.queue.submit([encoder.finish()]);
+        const lutTexture = createBrdfLUT(this.gpu, { label: 'gltf-brdflut' });
 
         return { specView: ibl.view, mipLevels: ibl.mipLevels, shBuffer, lutTexture };
     }

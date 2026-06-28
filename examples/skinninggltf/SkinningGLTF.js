@@ -1,8 +1,7 @@
-import { Camera, Renderer, Transform, Orbit, Skin, Animation, Mesh, Geometry, GLTFLoader, RenderPipeline, ComputeShader, createUniformBuffer, loadIBLCubeMap, loadSphericalHarmonics } from 'ogpu';
+import { Camera, Renderer, Transform, Orbit, Skin, Animation, Mesh, Geometry, GLTFLoader, RenderPipeline, createUniformBuffer, loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from 'ogpu';
 import { makeStructuredView } from 'webgpu-utils';
 
 import skinnedmesh from './skinnedmesh.wgsl?raw';
-import brdflut from '@modules/pbr/brdflut.wgsl?raw';
 
 // glTF rig + animation skinning, PBR-lit (metallic-roughness + IBL). The JSON
 // path lives in examples/skinning.
@@ -150,24 +149,7 @@ export class SkinningGLTF {
         const shBuffer = createUniformBuffer(this.gpu, { label: 'sh-constants-buffer', size: shArray.byteLength });
         this.gpu.device.queue.writeBuffer(shBuffer, 0, shArray);
 
-        const lutTexture = this.gpu.device.createTexture({
-            size: [512, 512],
-            format: 'rgba16float',
-            usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC,
-            label: 'brdflut-texture',
-        });
-        const brdflutCompute = new ComputeShader(this.gpu, { label: 'brdflut-compute', code: brdflut });
-        const kernel = brdflutCompute.findKernel('main');
-        const bindGroup = this.gpu.device.createBindGroup({
-            label: 'brdflut-bind-group',
-            layout: brdflutCompute.bindGroupLayout(kernel),
-            entries: [{ binding: 0, resource: lutTexture.createView() }],
-        });
-        const encoder = this.gpu.device.createCommandEncoder({ label: 'brdflut-encoder' });
-        const pass = encoder.beginComputePass({ label: 'brdflut-pass' });
-        brdflutCompute.dispatch(encoder, { pass, kernel, bindGroup, dispatchCount: [512, 512, 1] });
-        pass.end();
-        this.gpu.device.queue.submit([encoder.finish()]);
+        const lutTexture = createBrdfLUT(this.gpu);
 
         return { specView: ibl.view, mipLevels: ibl.mipLevels, shBuffer, lutTexture };
     }

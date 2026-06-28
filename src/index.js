@@ -24,6 +24,6 @@ export { KTXTexture } from './modules/KTXTexture.js';
 // --- utils ---
 export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js';
 export { loadJSON, loadJSONAll } from './utils/JSONLoader.js';
-export { loadIBLCubeMap, loadSphericalHarmonics } from './utils/IBLUtils/IBLUtils.js';
+export { loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from './utils/IBLUtils/IBLUtils.js';
 export { TimingHelper } from './utils/TimingHelper.js';
 export { applyOverrideConstants } from './utils/wgslOverrides.js';

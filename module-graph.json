@@ -2,7 +2,7 @@
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
     "nodes": 126,
-    "edges": 230,
+    "edges": 229,
     "modules": 81,
     "shaders": 38,
     "external": 7
@@ -25,7 +25,7 @@
       "inDegree": 5
     },
     {
-      "id": "src/modules/pbr/brdflut.wgsl",
+      "id": "src/core/ComputeShader.js",
       "inDegree": 3
     },
     {
@@ -45,15 +45,15 @@
       "inDegree": 2
     },
     {
-      "id": "src/core/ComputeShader.js",
-      "inDegree": 2
-    },
-    {
       "id": "src/core/Mesh.js",
       "inDegree": 2
     },
     {
       "id": "src/core/primitives/index.js",
+      "inDegree": 2
+    },
+    {
+      "id": "src/core/RenderPipeline.js",
       "inDegree": 2
     }
   ],
@@ -122,7 +122,7 @@
       "id": "examples/gltf/GLTF.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 3
+      "outDegree": 2
     },
     {
       "id": "examples/hellowebgpu/BoxMesh.js",
@@ -254,7 +254,7 @@
       "id": "examples/pbrshader/PBRShader.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 7
+      "outDegree": 6
     },
     {
       "id": "examples/pbrshader/probe.wgsl",
@@ -368,7 +368,7 @@
       "id": "examples/skinninggltf/SkinningGLTF.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 4
+      "outDegree": 3
     },
     {
       "id": "examples/sorttransparency/SortTransparency.js",
@@ -457,7 +457,7 @@
     {
       "id": "src/core/ComputeShader.js",
       "type": "module",
-      "inDegree": 2,
+      "inDegree": 3,
       "outDegree": 3
     },
     {
@@ -703,7 +703,7 @@
     {
       "id": "src/modules/pbr/brdflut.wgsl",
       "type": "shader",
-      "inDegree": 3,
+      "inDegree": 1,
       "outDegree": 0
     },
     {
@@ -752,7 +752,7 @@
       "id": "src/utils/IBLUtils/IBLUtils.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 9
+      "outDegree": 11
     },
     {
       "id": "src/utils/IBLUtils/unpackequirect.wgsl",
@@ -855,10 +855,6 @@
     {
       "from": "examples/gltf/GLTF.js",
       "to": "pkg:ogpu"
-    },
-    {
-      "from": "examples/gltf/GLTF.js",
-      "to": "src/modules/pbr/brdflut.wgsl"
     },
     {
       "from": "examples/gltf/GLTF.js",
@@ -1002,10 +998,6 @@
     },
     {
       "from": "examples/pbrshader/PBRShader.js",
-      "to": "src/modules/pbr/brdflut.wgsl"
-    },
-    {
-      "from": "examples/pbrshader/PBRShader.js",
       "to": "src/modules/pbr/pbr.wgsl"
     },
     {
@@ -1083,10 +1075,6 @@
     {
       "from": "examples/skinninggltf/SkinningGLTF.js",
       "to": "pkg:webgpu-utils"
-    },
-    {
-      "from": "examples/skinninggltf/SkinningGLTF.js",
-      "to": "src/modules/pbr/brdflut.wgsl"
     },
     {
       "from": "examples/sorttransparency/SortTransparency.js",
@@ -1702,7 +1690,15 @@
     },
     {
       "from": "src/utils/IBLUtils/IBLUtils.js",
+      "to": "src/core/ComputeShader.js"
+    },
+    {
+      "from": "src/utils/IBLUtils/IBLUtils.js",
       "to": "src/core/Texture.js"
+    },
+    {
+      "from": "src/utils/IBLUtils/IBLUtils.js",
+      "to": "src/modules/pbr/brdflut.wgsl"
     },
     {
       "from": "src/utils/IBLUtils/IBLUtils.js",

@@ -2,7 +2,6 @@ import { Pane } from 'tweakpane';
 import { makeStructuredView } from 'webgpu-utils';
 
 import pbr from '@modules/pbr/pbr.wgsl?raw';
-import brdflut from '@modules/pbr/brdflut.wgsl?raw';
 import probe from './probe.wgsl?raw';
 import shadowShader from './shadow.wgsl?raw';
 
@@ -12,7 +11,6 @@ import {
     Mesh,
     RenderPipeline,
     Transform,
-    ComputeShader,
     Camera,
     Orbit,
     Vec3,
@@ -23,6 +21,7 @@ import {
     loadIBLCubeMap,
     loadSphericalHarmonics,
     loadJSON,
+    createBrdfLUT,
 } from 'ogpu';
 
 export class PBRShader {
@@ -356,38 +355,7 @@ export class PBRShader {
         });
         this.gpu.device.queue.writeBuffer(shBuffer, 0, shArray);
 
-        const lutTexture = this.gpu.device.createTexture({
-            size: [512, 512],
-            format: 'rgba16float',
-            usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC,
-            label: 'brdflut-texture',
-        });
-
-        const brdflutCompute = new ComputeShader(this.gpu, {
-            label: 'brdflut-compute',
-            code: brdflut,
-        });
-
-        const brdflutBindGroup = this.gpu.device.createBindGroup({
-            label: 'brdflut-bind-group',
-            layout: brdflutCompute.bindGroupLayout(brdflutCompute.findKernel('main')),
-            entries: [{ binding: 0, resource: lutTexture.createView() }],
-        });
-
-        const commandEncoder = this.gpu.device.createCommandEncoder({
-            label: 'brdflut-compute-encoder',
-        });
-        const passEncoder = commandEncoder.beginComputePass({ label: 'brdflut-compute-pass' });
-
-        brdflutCompute.dispatch(commandEncoder, {
-            pass: passEncoder,
-            kernel: brdflutCompute.findKernel('main'),
-            bindGroup: brdflutBindGroup,
-            dispatchCount: [512, 512, 1],
-        });
-
-        passEncoder.end();
-        this.gpu.device.queue.submit([commandEncoder.finish()]);
+        const lutTexture = createBrdfLUT(this.gpu);
 
         return { specView: ibl.view, mipLevels: ibl.mipLevels, shBuffer, lutTexture };
     }

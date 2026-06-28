@@ -29,6 +29,11 @@ struct SHConstants {
   coefficients : array<vec4f, 9>
 }
 
+struct Shadow {
+  projectionViewMatrix : mat4x4f,
+  lightDirection : vec3f,
+}
+
 @group(0) @binding(0) var<uniform> uniforms : Uniforms;
 @group(0) @binding(1) var<storage, read> positionBuffer : array<f32>;
 @group(0) @binding(2) var<storage, read> normalBuffer : array<f32>;
@@ -44,10 +49,14 @@ struct SHConstants {
 @group(0) @binding(12) var materialSampler : sampler;
 @group(0) @binding(13) var tOpacity : texture_2d<f32>;
 @group(0) @binding(14) var<uniform> material : Material;
+@group(0) @binding(15) var<uniform> shadowUniforms : Shadow;
+@group(0) @binding(16) var shadowSampler : sampler_comparison;
+@group(0) @binding(17) var shadowMap : texture_depth_2d;
 
 const PI = 3.14159265358979323846;
 
 override roughnessLevels : f32 = 6.0;
+override shadowDepthTextureSize : f32 = 2048.0;
 
 struct Vertex {
   @location(0) position : vec3f,
@@ -61,6 +70,7 @@ struct VertexOutput {
   @location(0) vUv : vec2f,
   @location(1) vNormal : vec3f,
   @location(2) vWorldPos : vec3f,
+  @location(3) vShadowCoord : vec4f,
 }
 
 @vertex
@@ -83,7 +93,34 @@ fn vs(in : Vertex) -> VertexOutput {
   vsOut.position = uniforms.projectionMatrix * uniforms.viewMatrix * worldPos;
   vsOut.vNormal = normalize(uniforms.normalMatrix * normal);
   vsOut.vUv = in.uv;
+
+  var shadowCoord = shadowUniforms.projectionViewMatrix * worldPos;
+  shadowCoord = shadowCoord / shadowCoord.w;
+  vsOut.vShadowCoord = vec4f(shadowCoord.xy * vec2f(0.5, -0.5) + vec2f(0.5), shadowCoord.z, 1.0);
   return vsOut;
+}
+
+fn hash22(p : vec2f) -> vec2f {
+  var p3 = fract(vec3f(p.xyx) * vec3f(0.1031, 0.1030, 0.0973));
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.xx + p3.yz) * p3.zy);
+}
+
+// 3x3 jittered PCF — matches the floor receiver.
+fn shadowVisibility(shadowCoord : vec4f) -> f32 {
+  var visibility = 0.0;
+  let texel = 1.0 / shadowDepthTextureSize;
+  for (var y = -1; y <= 1; y++) {
+    for (var x = -1; x <= 1; x++) {
+      let offset = vec2f(vec2(x, y));
+      let hash = hash22(shadowCoord.xy * shadowDepthTextureSize + offset) - 0.5;
+      visibility += textureSampleCompare(
+        shadowMap, shadowSampler,
+        shadowCoord.xy + (offset + hash) * texel, shadowCoord.z - 0.002
+      );
+    }
+  }
+  return visibility / 9.0;
 }
 
 fn filmic(x : vec3f) -> vec3f {
@@ -169,6 +206,9 @@ fn fs(in : VertexOutput) -> @location(0) vec4f {
   let iblSpecular = getIBLSpecular(f0, viewReflect, roughness * (roughnessLevels - 1.0), brdf);
 
   var col = (kD * shDiffuse * albedo) + iblSpecular;
+
+  let shadow = shadowVisibility(in.vShadowCoord);
+  col *= vec3f(mix(0.75, 1.0, shadow));
 
   col = mix(col, col * ao, material.occlusionStrength);
   col += emissive;

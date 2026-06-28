@@ -1,7 +1,12 @@
-import { Camera, Renderer, Transform, Orbit, Skin, Animation, Mesh, Geometry, GLTFLoader, RenderPipeline, createUniformBuffer, loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from 'ogpu';
+import { Camera, Renderer, Transform, Orbit, Skin, Animation, Mesh, Geometry, GLTFLoader, RenderPipeline, RenderTarget, Plane, Mat4, createUniformBuffer, loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from 'ogpu';
 import { makeStructuredView } from 'webgpu-utils';
 
 import skinnedmesh from './skinnedmesh.wgsl?raw';
+import shadowCasterShader from './shadowcaster.wgsl?raw';
+import floorShader from './floor.wgsl?raw';
+
+const SHADOW_SIZE = 2048;
+const SHADOW_FORMAT = 'depth32float';
 
 // glTF rig + animation skinning, PBR-lit (metallic-roughness + IBL). The JSON
 // path lives in examples/skinning.
@@ -97,6 +102,42 @@ export class SkinningGLTF {
             constants: { roughnessLevels: ibl.mipLevels },
         });
 
+        // --- shadow mapping: depth target + orthographic light camera ---
+        this.shadowBuffer = new RenderTarget(this.gpu, {
+            width: SHADOW_SIZE,
+            height: SHADOW_SIZE,
+            depth: 1,
+            color: false,
+            depthTexture: true,
+            depthFormat: SHADOW_FORMAT,
+        });
+
+        const lightPos = [4, 8, 4];
+        const lightTarget = [0, 1, 0];
+        this.shadowCamera = new Camera({ left: -3, right: 3, top: 3, bottom: -3, near: 1, far: 30 });
+        this.shadowCamera.position.set(...lightPos);
+        this.shadowCamera.lookAt(lightTarget);
+        this.shadowCamera.updateMatrixWorld();
+
+        const shadowVP = new Mat4().copy(this.shadowCamera.projectionMatrix).multiply(this.shadowCamera.viewMatrix);
+        const lightDir = [lightPos[0] - lightTarget[0], lightPos[1] - lightTarget[1], lightPos[2] - lightTarget[2]];
+        const lightLen = Math.hypot(...lightDir);
+
+        const shadowMapSampler = this.gpu.device.createSampler({
+            label: 'shadow-map-sampler',
+            minFilter: 'linear',
+            magFilter: 'linear',
+            addressModeU: 'clamp-to-edge',
+            addressModeV: 'clamp-to-edge',
+            compare: 'less',
+        });
+
+        const shadowView = makeStructuredView(pipeline.defs.uniforms.shadowUniforms);
+        shadowView.set({ projectionViewMatrix: shadowVP, lightDirection: lightDir.map((v) => v / lightLen) });
+        const shadowUniformBuffer = createUniformBuffer(this.gpu, { label: 'shadow-uniforms', size: shadowView.arrayBuffer.byteLength });
+        this.gpu.device.queue.writeBuffer(shadowUniformBuffer, 0, shadowView.arrayBuffer);
+        const shadowDepthView = this.shadowBuffer.depthTexture.createView();
+
         const materialView = makeStructuredView(pipeline.defs.uniforms.material);
         materialView.set({
             baseColorFactor: [1, 1, 1, 1],
@@ -137,6 +178,9 @@ export class SkinningGLTF {
                         { binding: 12, resource: materialSampler },
                         { binding: 13, resource: white.createView() }, // opacity
                         { binding: 14, resource: { buffer: materialBuffer } },
+                        { binding: 15, resource: { buffer: shadowUniformBuffer } },
+                        { binding: 16, resource: shadowMapSampler },
+                        { binding: 17, resource: shadowDepthView },
                     ],
                 }),
             ],
@@ -145,6 +189,62 @@ export class SkinningGLTF {
         this.mesh.frustumCulled = false;
         this.mesh.addChild(this.skin.root);
         this.scene.addChild(this.mesh);
+
+        // Shadow-receiving floor under the character.
+        const floorGeo = new Plane(this.gpu, { width: 10, depth: 10 });
+        const floorPipeline = new RenderPipeline(this.gpu, {
+            label: 'shadow-floor-pipeline',
+            code: floorShader,
+            vertexBuffers: floorGeo.bufferLayouts,
+            constants: { shadowDepthTextureSize: SHADOW_SIZE },
+        });
+        this.floor = new Mesh(this.gpu, {
+            label: 'shadow-floor',
+            pipeline: floorPipeline,
+            geometry: floorGeo,
+            bindGroups: (uniformBuffer) => [
+                this.gpu.device.createBindGroup({
+                    layout: floorPipeline.bindGroupLayout(0),
+                    entries: [
+                        { binding: 0, resource: { buffer: uniformBuffer } },
+                        { binding: 1, resource: { buffer: shadowUniformBuffer } },
+                        { binding: 2, resource: shadowMapSampler },
+                        { binding: 3, resource: shadowDepthView },
+                    ],
+                }),
+            ],
+        });
+        this.scene.addChild(this.floor);
+
+        // Shadow caster: same skin buffers, depth-only pass from the light's POV.
+        const casterPipeline = new RenderPipeline(this.gpu, {
+            label: 'skinned-shadow-caster',
+            code: shadowCasterShader,
+            vertexBuffers: geometry.bufferLayouts,
+            depthStencil: {
+                depthWriteEnabled: true,
+                depthCompare: 'less',
+                format: SHADOW_FORMAT,
+                depthBias: 1,
+                depthBiasSlopeScale: 1.75,
+                depthBiasClamp: 0.0,
+            },
+        });
+        this.shadowMesh = new Mesh(this.gpu, {
+            label: 'mixamo-shadow-caster',
+            pipeline: casterPipeline,
+            geometry,
+            bindGroups: (uniformBuffer) => [
+                this.gpu.device.createBindGroup({
+                    layout: casterPipeline.bindGroupLayout(0),
+                    entries: [
+                        { binding: 0, resource: { buffer: uniformBuffer } },
+                        { binding: 1, resource: { buffer: this.skin.skinnedPositionBuffer } },
+                    ],
+                }),
+            ],
+        });
+        this.shadowMesh.frustumCulled = false;
 
         this.gpu.renderer.add(this.update);
     }
@@ -182,6 +282,8 @@ export class SkinningGLTF {
         anim.elapsed += deltaTime * anim.fps();
         this.skin.update();
 
+        // 1) depth-only shadow pass from the light, 2) lit scene sampling it.
+        this.renderer.render({ scene: this.shadowMesh, camera: this.shadowCamera, target: this.shadowBuffer });
         this.renderer.render({ scene: this.scene, camera: this.camera });
         this.orbit.update();
     };

@@ -25,6 +25,7 @@ No tests or typechecker configured. ESLint + Prettier are set up (format-on-save
 - **WGSL short type aliases.** Use the short alias form, not the verbose generic: `vec3f` not `vec3<f32>`, `vec2u`/`vec4i` not `vec2<u32>`/`vec4<i32>`, `mat4x4f` not `mat4x4<f32>` (and the `h` suffix for `f16`). Texture/atomic/array/ptr types keep their generic form — they have no alias.
 - **WGSL vertex entry parameter is named `in`.** The vertex stage takes its input struct as `in`, not `v` — `fn vs(in: Vertex) -> VertexOutput` (mirrors `fn fs(in: VertexOutput)`). Reference attributes as `in.position`, `in.uv`, etc.
 - **Comments are short, terse, and earn their place.** Write one only when it adds signal the code can't (a why, a gotcha, a non-obvious invariant); skip narration. Don't restate what belongs in a CLAUDE.md.
+- **No `ponytail:` (or other agent-mode) prefixes in committed comments.** Keep the comment's content if it earns its place per the rule above — just strip the `ponytail:`/agent prefix. Generated code carries no trace of the tool that wrote it.
 - **WebGPU / webgpu-utils → use the lookup skills.** Any question or change touching the WebGPU platform uses `webgpu-spec-lookup`; anything touching the `webgpu-utils` library uses `webgpu-utils-lookup`. Don't answer from memory.
 
 ## Navigation aids (for agents)

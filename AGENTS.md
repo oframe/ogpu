@@ -48,6 +48,7 @@ Both are kept honest by a **drift gate**: `npm run repomap` regenerates both; `n
 - `?src=rendertargets` → `RenderToTexture`
 - `?src=pbrshader` → `PBRShader`
 - `?src=skinning` → `Skinning`
+- `?src=skinninggltf` → `SkinningGLTF` (glTF PBR + real-time shadow map)
 - `?src=gltf` → `GLTF`
 - (no `src`) → `HelloWebGPU`
 

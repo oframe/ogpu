@@ -1,10 +1,10 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 124,
-    "edges": 225,
-    "modules": 80,
-    "shaders": 37,
+    "nodes": 126,
+    "edges": 230,
+    "modules": 81,
+    "shaders": 38,
     "external": 7
   },
   "hubs": [
@@ -23,6 +23,10 @@
     {
       "id": "src/utils/BufferUtils.js",
       "inDegree": 5
+    },
+    {
+      "id": "src/modules/pbr/brdflut.wgsl",
+      "inDegree": 3
     },
     {
       "id": "src/utils/wgslOverrides.js",
@@ -50,10 +54,6 @@
     },
     {
       "id": "src/core/primitives/index.js",
-      "inDegree": 2
-    },
-    {
-      "id": "src/core/RenderPipeline.js",
       "inDegree": 2
     }
   ],
@@ -359,6 +359,18 @@
       "outDegree": 3
     },
     {
+      "id": "examples/skinninggltf/skinnedmesh.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "examples/skinninggltf/SkinningGLTF.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 4
+    },
+    {
       "id": "examples/sorttransparency/SortTransparency.js",
       "type": "module",
       "inDegree": 1,
@@ -409,7 +421,7 @@
     {
       "id": "pkg:ogpu",
       "type": "external",
-      "inDegree": 25,
+      "inDegree": 26,
       "outDegree": 0
     },
     {
@@ -427,7 +439,7 @@
     {
       "id": "pkg:webgpu-utils",
       "type": "external",
-      "inDegree": 21,
+      "inDegree": 22,
       "outDegree": 0
     },
     {
@@ -596,7 +608,7 @@
       "id": "src/main.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 25
+      "outDegree": 26
     },
     {
       "id": "src/math/Color.js",
@@ -691,7 +703,7 @@
     {
       "id": "src/modules/pbr/brdflut.wgsl",
       "type": "shader",
-      "inDegree": 2,
+      "inDegree": 3,
       "outDegree": 0
     },
     {
@@ -1059,6 +1071,22 @@
     {
       "from": "examples/skinning/Skinning.js",
       "to": "pkg:ogpu"
+    },
+    {
+      "from": "examples/skinninggltf/SkinningGLTF.js",
+      "to": "examples/skinninggltf/skinnedmesh.wgsl"
+    },
+    {
+      "from": "examples/skinninggltf/SkinningGLTF.js",
+      "to": "pkg:ogpu"
+    },
+    {
+      "from": "examples/skinninggltf/SkinningGLTF.js",
+      "to": "pkg:webgpu-utils"
+    },
+    {
+      "from": "examples/skinninggltf/SkinningGLTF.js",
+      "to": "src/modules/pbr/brdflut.wgsl"
     },
     {
       "from": "examples/sorttransparency/SortTransparency.js",
@@ -1507,6 +1535,10 @@
     {
       "from": "src/main.js",
       "to": "examples/skinning/Skinning.js"
+    },
+    {
+      "from": "src/main.js",
+      "to": "examples/skinninggltf/SkinningGLTF.js"
     },
     {
       "from": "src/main.js",

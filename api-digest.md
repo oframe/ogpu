@@ -210,6 +210,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - getGeometryData(meshOrIndex = 0)
   - getGeometry(meshOrIndex = 0)
   - getAnimation({ animation = 0, skin = 0, fps = 30 } = {})
+  - getMaterialTexture(materialIndex = 0, map = 'baseColor')
 
 ### src/modules/GUI.js
 - **class GUI**
@@ -425,6 +426,14 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - **class Skinning**
   - constructor(canvas)
   - init(canvas)
+  - addCredit(html)
+
+### examples/skinninggltf/SkinningGLTF.js
+- **class SkinningGLTF**
+  - constructor(canvas)
+  - init(canvas)
+  - initIBL({ url = './assets/pbr/artistworkshop_oct.exr', shUrl = './assets/pbr/artistworkshop_sh.js…)
+  - solidTexture(rgba, label)
   - addCredit(html)
 
 ### examples/sorttransparency/SortTransparency.js

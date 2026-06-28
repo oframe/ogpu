@@ -636,6 +636,32 @@ export class GLTFLoader {
         return { label: anim.name, frames };
     }
 
+    // Decode one material map to an engine Texture. Works in dataOnly (images,
+    // buffers and defaults are all set in load()). Returns null when the material
+    // lacks that map. map: baseColor | metallicRoughness | normal | occlusion | emissive.
+    async getMaterialTexture(materialIndex = 0, map = 'baseColor') {
+        const material = this.json.materials?.[materialIndex];
+        if (!material) return null;
+        const pbr = material.pbrMetallicRoughness || {};
+        const info = {
+            baseColor: pbr.baseColorTexture,
+            metallicRoughness: pbr.metallicRoughnessTexture,
+            normal: material.normalTexture,
+            occlusion: material.occlusionTexture,
+            emissive: material.emissiveTexture,
+        }[map];
+        if (!info || info.index === undefined) return null;
+        const srgb = map === 'baseColor' || map === 'emissive';
+        return this._decodeImage(this._imageIndex(info.index), srgb);
+    }
+
+    // glTF texture -> image index. EXT_texture_webp/avif store source under the
+    // extension instead of the top-level field.
+    _imageIndex(textureIndex) {
+        const tex = this.textures[textureIndex];
+        return tex.source ?? tex.extensions?.EXT_texture_webp?.source ?? tex.extensions?.EXT_texture_avif?.source;
+    }
+
     // ---- textures ----
 
     _initDefaults() {
@@ -680,7 +706,7 @@ export class GLTFLoader {
         if (!textureInfo || textureInfo.index === undefined) {
             return Promise.resolve(kind === 'normal' ? this._defaults.black : srgb ? this._defaults.white : this._defaults.whiteLin);
         }
-        const imageIndex = this.textures[textureInfo.index].source;
+        const imageIndex = this._imageIndex(textureInfo.index);
         const cacheKey = `${imageIndex}:${srgb ? 1 : 0}`;
         if (!this._textureCache.has(cacheKey)) {
             this._textureCache.set(cacheKey, this._decodeImage(imageIndex, srgb));

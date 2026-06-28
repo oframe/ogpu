@@ -1,10 +1,9 @@
-import { Camera, Renderer, Transform, Orbit, Skin, Animation, Mesh, Geometry, GLTFLoader, RenderPipeline, Texture, loadJSON, Plane } from 'ogpu';
+import { Camera, Renderer, Transform, Orbit, Skin, Animation, Mesh, Geometry, RenderPipeline, Texture, loadJSON, Plane } from 'ogpu';
 
 import skinnedmesh from './skinnedmesh.wgsl?raw';
 import shadowShader from './shadow.wgsl?raw';
 
-const USE_JSON = true;
-
+// JSON rig + animation skinning. The glTF path lives in examples/skinninggltf.
 export class Skinning {
     constructor(canvas) {
         this.init(canvas);
@@ -31,58 +30,27 @@ export class Skinning {
         addEventListener('resize', this.handleResize);
         setTimeout(this.handleResize, 350);
 
-        let skinData;
-        let geometry;
+        const skinData = await loadJSON('./assets/skinning/snout-rig.json');
+        const animData = await loadJSON('./assets/skinning/snout-anim.json');
 
-        if (USE_JSON) {
-            skinData = await loadJSON('./assets/skinning/snout-rig.json');
-            const animData = await loadJSON('./assets/skinning/snout-anim.json');
+        this.skin = new Skin(this.gpu, { label: 'snout', data: skinData });
 
-            this.skin = new Skin(this.gpu, { label: 'snout', data: skinData });
-
-            this.animLabel = 'snout-anim';
-            const animation = new Animation({
+        this.animLabel = 'snout-anim';
+        this.skin.addAnimation(
+            new Animation({
                 label: this.animLabel,
                 data: animData,
                 transforms: this.skin.bones,
-            }).fps(1);
+            }).fps(1)
+        );
 
-            geometry = new Geometry(this.gpu, {
-                data: {
-                    position: { data: skinData.position, numComponents: 3, type: Float32Array },
-                    normal: { data: skinData.normal, numComponents: 3, type: Float32Array },
-                    uv: { data: skinData.uv, numComponents: 2, type: Float32Array },
-                },
-            });
-
-            this.skin.addAnimation(animation);
-        } else {
-            const loader = new GLTFLoader(this.gpu, { dataOnly: true });
-            await loader.load('./assets/skinning/breakdance.glb');
-
-            const skinData = loader.getSkinData(0);
-            this.skin = new Skin(this.gpu, { label: 'dancer', data: skinData });
-
-            const animFps = 30;
-            const animData = loader.getAnimation({ animation: 1, skin: 0, fps: animFps });
-            this.animLabel = animData.label;
-            this.skin.addAnimation(
-                new Animation({
-                    label: this.animLabel,
-                    data: animData,
-                    transforms: this.skin.bones,
-                }).fps(animFps)
-            );
-
-            geometry = new Geometry(this.gpu, {
-                data: {
-                    position: { data: skinData.position, numComponents: 3, type: Float32Array },
-                    normal: { data: skinData.normal, numComponents: 3, type: Float32Array },
-                    uv: { data: skinData.uv, numComponents: 2, type: Float32Array },
-                    indices: { data: skinData.indices },
-                },
-            });
-        }
+        const geometry = new Geometry(this.gpu, {
+            data: {
+                position: { data: skinData.position, numComponents: 3, type: Float32Array },
+                normal: { data: skinData.normal, numComponents: 3, type: Float32Array },
+                uv: { data: skinData.uv, numComponents: 2, type: Float32Array },
+            },
+        });
 
         const sampler = this.gpu.device.createSampler();
 

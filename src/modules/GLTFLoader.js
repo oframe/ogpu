@@ -71,7 +71,7 @@ export class GLTFLoader {
             sampleCount = 1,
             // parse geometry / skin / animation data only — skip building render
             // pipelines, materials and textures (no PBR shader / IBL required).
-            // Useful when the geometry feeds something else, e.g. the VAT baker.
+            // Useful when the geometry feeds something else.
             dataOnly = false,
         } = {}
     ) {

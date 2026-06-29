@@ -198,7 +198,7 @@ export class Skin {
 
     // recompute world matrices from the current bone pose and upload them to the
     // bone matrix buffer. Caller is responsible for having posed the bones first
-    // (applyAnimations, or driving an Animation directly — e.g. the VAT baker).
+    // (applyAnimations, or driving an Animation directly).
     updateBones() {
         this.root.updateMatrixWorld(true);
         // Same root-relative space as the bind matrices (see initBones). This

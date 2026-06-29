@@ -39,8 +39,8 @@ export class Animation {
         const n = this.data.frames.length;
         const weight = isSet ? 1.0 : this.weight / totalWeight;
 
-        // wrap (or clamp) before indexing so frame stays in range. The VAT baker
-        // drives elapsed to exact integers 0..n-1, which survive the modulo intact.
+        // wrap (or clamp) before indexing so frame stays in range. Callers that
+        // drive elapsed to exact integers 0..n-1 survive the modulo intact.
         if (this.loop) this.elapsed %= this.duration;
         else this.elapsed = Math.min(this.elapsed, n - 1);
 

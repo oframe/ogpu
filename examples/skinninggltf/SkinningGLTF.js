@@ -113,15 +113,13 @@ export class SkinningGLTF {
         });
 
         const lightPos = [4, 8, 4];
-        const lightTarget = [0, 1, 0];
+        const lightTarget = [0, 0, 0];
         this.shadowCamera = new Camera({ left: -3, right: 3, top: 3, bottom: -3, near: 1, far: 30 });
         this.shadowCamera.position.set(...lightPos);
         this.shadowCamera.lookAt(lightTarget);
         this.shadowCamera.updateMatrixWorld();
 
         const shadowVP = new Mat4().copy(this.shadowCamera.projectionMatrix).multiply(this.shadowCamera.viewMatrix);
-        const lightDir = [lightPos[0] - lightTarget[0], lightPos[1] - lightTarget[1], lightPos[2] - lightTarget[2]];
-        const lightLen = Math.hypot(...lightDir);
 
         const shadowMapSampler = this.gpu.device.createSampler({
             label: 'shadow-map-sampler',
@@ -133,7 +131,7 @@ export class SkinningGLTF {
         });
 
         const shadowView = makeStructuredView(pipeline.defs.uniforms.shadowUniforms);
-        shadowView.set({ projectionViewMatrix: shadowVP, lightDirection: lightDir.map((v) => v / lightLen) });
+        shadowView.set({ projectionViewMatrix: shadowVP});
         const shadowUniformBuffer = createUniformBuffer(this.gpu, { label: 'shadow-uniforms', size: shadowView.arrayBuffer.byteLength });
         this.gpu.device.queue.writeBuffer(shadowUniformBuffer, 0, shadowView.arrayBuffer);
         const shadowDepthView = this.shadowBuffer.depthTexture.createView();

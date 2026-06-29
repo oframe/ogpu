@@ -31,7 +31,6 @@ struct SHConstants {
 
 struct Shadow {
   projectionViewMatrix : mat4x4f,
-  lightDirection : vec3f,
 }
 
 @group(0) @binding(0) var<uniform> uniforms : Uniforms;

@@ -1,6 +1,6 @@
 {
     "name": "ogpu",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "description": "A hand-rolled WebGPU engine starter",
     "type": "module",
     "main": "./src/index.js",

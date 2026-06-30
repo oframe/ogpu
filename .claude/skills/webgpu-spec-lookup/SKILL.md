@@ -19,9 +19,9 @@ limits, spec behavior. It is NOT for questions about OGPU's own engine code
 
 ## Sources
 
-Always consult these two with WebFetch; they answer different things:
+Two sources answer different things — query each its own way:
 
-1. **Chrome WebGPU docs / "What's New" — reality of what's shipped.**
+1. **Chrome WebGPU docs / "What's New" — reality of what's shipped.** (WebFetch)
    <https://developer.chrome.com/docs/web-platform/webgpu>
    This is the entry point; the per-release "What's New in WebGPU (Chrome NNN)"
    posts are where feature-shipping, flags, origin trials, and raised limits are
@@ -30,8 +30,19 @@ Always consult these two with WebFetch; they answer different things:
    the most recent post). Use this for: "is it shipping / in which Chrome / behind
    a flag / in an origin trial", and browser-compat reality.
 
-2. **W3C WebGPU spec — authoritative API surface.**
-   <https://www.w3.org/TR/webgpu/>
+2. **W3C WebGPU spec — authoritative API surface.** (local cache, grep — not WebFetch)
+   The spec is one 4.5 MB page; WebFetch'ing it per question is slow and lossy.
+   Instead query a preprocessed local copy:
+
+   ```sh
+   # Prints the cache path; (re)downloads + strips to text only when the cached
+   # copy's date != today. Run it first, then grep the path it prints.
+   python3 .claude/skills/webgpu-spec-lookup/update_spec.py
+   grep -n -i "maxStorageBufferBindingSize" .claude/skills/webgpu-spec-lookup/webgpu-spec.txt
+   ```
+
+   The text keeps each heading prefixed `[#anchor]`, so a grep hit traces back to
+   a spec section (open `https://www.w3.org/TR/webgpu/#<anchor>` for the source).
    Use this for: exact feature names (the `GPUFeatureName` enum — e.g.
    `timestamp-query`, `shader-f16`, `float32-filterable`, `depth32float-stencil8`,
    texture-compression families), default and required limit values

@@ -134,3 +134,7 @@ public/assets/splats/hornedlizard.spz
 
 # macOS
 .DS_Store
+
+# webgpu-spec-lookup: downloaded + preprocessed spec cache (regenerated daily)
+.claude/skills/webgpu-spec-lookup/webgpu-spec.txt
+.claude/skills/webgpu-spec-lookup/__pycache__/

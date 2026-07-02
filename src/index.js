@@ -33,6 +33,10 @@ export { DoFEffect } from './modules/post/effects/DoFEffect.js';
 export { SSREffect } from './modules/post/effects/SSREffect.js';
 export { TAAEffect } from './modules/post/effects/TAAEffect.js';
 export { PerformanceProfile } from './modules/PerformanceProfile.js';
+export { InteractionManager } from './modules/interaction/InteractionManager.js';
+export { Pointer } from './modules/interaction/Pointer.js';
+export { Spring, SPRING_PRESETS } from './modules/interaction/Spring.js';
+export { ease, cubicBezier, EASE_NAMES } from './modules/interaction/easing.js';
 
 // --- utils ---
 export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js';

@@ -1,11 +1,11 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 170,
-    "edges": 309,
-    "modules": 97,
-    "shaders": 65,
-    "external": 8
+    "nodes": 177,
+    "edges": 323,
+    "modules": 102,
+    "shaders": 66,
+    "external": 9
   },
   "hubs": [
     {
@@ -186,6 +186,18 @@
     },
     {
       "id": "examples/instancingpicking/picking.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "examples/interaction/Interaction.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 3
+    },
+    {
+      "id": "examples/interaction/interaction.wgsl",
       "type": "shader",
       "inDegree": 1,
       "outDegree": 0
@@ -445,7 +457,7 @@
     {
       "id": "pkg:@math",
       "type": "external",
-      "inDegree": 14,
+      "inDegree": 16,
       "outDegree": 0
     },
     {
@@ -455,9 +467,15 @@
       "outDegree": 0
     },
     {
+      "id": "pkg:gsap",
+      "type": "external",
+      "inDegree": 3,
+      "outDegree": 0
+    },
+    {
       "id": "pkg:ogpu",
       "type": "external",
-      "inDegree": 28,
+      "inDegree": 29,
       "outDegree": 0
     },
     {
@@ -638,13 +656,13 @@
       "id": "src/index.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 29
+      "outDegree": 33
     },
     {
       "id": "src/main.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 28
+      "outDegree": 29
     },
     {
       "id": "src/math/Color.js",
@@ -723,6 +741,30 @@
       "type": "module",
       "inDegree": 2,
       "outDegree": 1
+    },
+    {
+      "id": "src/modules/interaction/easing.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 1
+    },
+    {
+      "id": "src/modules/interaction/InteractionManager.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 4
+    },
+    {
+      "id": "src/modules/interaction/Pointer.js",
+      "type": "module",
+      "inDegree": 2,
+      "outDegree": 1
+    },
+    {
+      "id": "src/modules/interaction/Spring.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 0
     },
     {
       "id": "src/modules/KTXTexture.js",
@@ -979,7 +1021,7 @@
     {
       "id": "src/modules/Raycast.js",
       "type": "module",
-      "inDegree": 1,
+      "inDegree": 2,
       "outDegree": 1
     },
     {
@@ -1195,6 +1237,18 @@
     {
       "from": "examples/instancingpicking/InstancingPicking.js",
       "to": "pkg:webgpu-utils"
+    },
+    {
+      "from": "examples/interaction/Interaction.js",
+      "to": "examples/interaction/interaction.wgsl"
+    },
+    {
+      "from": "examples/interaction/Interaction.js",
+      "to": "pkg:gsap"
+    },
+    {
+      "from": "examples/interaction/Interaction.js",
+      "to": "pkg:ogpu"
     },
     {
       "from": "examples/ktx/KTX.js",
@@ -1690,6 +1744,22 @@
     },
     {
       "from": "src/index.js",
+      "to": "src/modules/interaction/easing.js"
+    },
+    {
+      "from": "src/index.js",
+      "to": "src/modules/interaction/InteractionManager.js"
+    },
+    {
+      "from": "src/index.js",
+      "to": "src/modules/interaction/Pointer.js"
+    },
+    {
+      "from": "src/index.js",
+      "to": "src/modules/interaction/Spring.js"
+    },
+    {
+      "from": "src/index.js",
       "to": "src/modules/KTXTexture.js"
     },
     {
@@ -1811,6 +1881,10 @@
     {
       "from": "src/main.js",
       "to": "examples/instancingpicking/InstancingPicking.js"
+    },
+    {
+      "from": "src/main.js",
+      "to": "examples/interaction/Interaction.js"
     },
     {
       "from": "src/main.js",
@@ -2015,6 +2089,30 @@
     {
       "from": "src/modules/GUI.js",
       "to": "pkg:tweakpane"
+    },
+    {
+      "from": "src/modules/interaction/easing.js",
+      "to": "pkg:gsap"
+    },
+    {
+      "from": "src/modules/interaction/InteractionManager.js",
+      "to": "pkg:@math"
+    },
+    {
+      "from": "src/modules/interaction/InteractionManager.js",
+      "to": "pkg:gsap"
+    },
+    {
+      "from": "src/modules/interaction/InteractionManager.js",
+      "to": "src/modules/interaction/Pointer.js"
+    },
+    {
+      "from": "src/modules/interaction/InteractionManager.js",
+      "to": "src/modules/Raycast.js"
+    },
+    {
+      "from": "src/modules/interaction/Pointer.js",
+      "to": "pkg:@math"
     },
     {
       "from": "src/modules/KTXTexture.js",

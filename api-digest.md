@@ -257,6 +257,33 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - createView()
   - destroy()
 
+### src/modules/interaction/InteractionManager.js
+- **class InteractionManager**
+  - constructor({ renderer, camera, targets = [], clickSlop = 6, dragPlaneNormal = 'up', cursor = true, p…)
+  - on(mesh, type, cb)
+  - off(mesh)
+  - update()
+  - dispose()
+
+### src/modules/interaction/Pointer.js
+- **class Pointer**
+  - constructor()
+
+### src/modules/interaction/Spring.js
+- **class Spring**
+  - constructor({ stiffness = 170, damping = 26, mass = 1, value = 0, target, precision = 1e-3, preset } …)
+  - setTarget(v)
+  - jump(v)
+  - kick(v)
+  - onRest(cb)
+  - update(dt)
+- const `SPRING_PRESETS`
+
+### src/modules/interaction/easing.js
+- fn `ease(name)`
+- fn `cubicBezier(x1, y1, x2, y2)`
+- const `EASE_NAMES`
+
 ### src/modules/post/FullscreenPass.js
 - **class FullscreenPass**
   - constructor(gpu, { label = 'fullscreen-pass', code = ``, targets, blending = {}, transparent = false,…)
@@ -477,6 +504,15 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - constructor()
   - init()
 
+### examples/interaction/Interaction.js
+- **class Interaction**
+  - constructor({ el = null } = {})
+  - init(el)
+  - addMesh(geometry, { label, color, position })
+  - initScene()
+  - initInteraction()
+  - initPane()
+
 ### examples/ktx/KTX.js
 - **class KTX**
   - constructor()
@@ -612,6 +648,10 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { SSREffect } from './modules/post/effects/SSREffect.js'
 - re-export { TAAEffect } from './modules/post/effects/TAAEffect.js'
 - re-export { PerformanceProfile } from './modules/PerformanceProfile.js'
+- re-export { InteractionManager } from './modules/interaction/InteractionManager.js'
+- re-export { Pointer } from './modules/interaction/Pointer.js'
+- re-export { Spring, SPRING_PRESETS } from './modules/interaction/Spring.js'
+- re-export { ease, cubicBezier, EASE_NAMES } from './modules/interaction/easing.js'
 - re-export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js'
 - re-export { loadJSON, loadJSONAll } from './utils/JSONLoader.js'
 - re-export { loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from './utils/IBLUtils/IBLUtils.js'

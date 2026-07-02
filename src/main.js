@@ -26,6 +26,7 @@ import { MSAA } from '@examples/msaa/MSAA';
 import { CubeMapExample } from '@examples/cubemap/CubeMap';
 import { PostProcessingExample } from '@examples/postprocessing/PostProcessingExample';
 import { Performance } from '@examples/performance/Performance';
+import { Interaction } from '@examples/interaction/Interaction';
 import { Loader } from '@examples/Loader';
 
 const view = new URLSearchParams(window.location.search).get('src');
@@ -35,6 +36,7 @@ const views = {
     rendertargets: () => new RenderToTexture(),
     postprocessing: () => new PostProcessingExample(),
     performance: () => new Performance(),
+    interaction: () => new Interaction(),
     particles: () => new Particles(),
     textures: () => new Textures(),
     ktx: () => new KTX(),
@@ -94,6 +96,7 @@ function renderLanding() {
         { section: 'Interaction' },
         { view: 'orbit', label: 'Orbit Controls', folder: 'orbitcontrols' },
         { view: 'raycasting', label: 'Projection and Raycasting', folder: 'raycasting' },
+        { view: 'interaction', label: 'Interaction Manager', folder: 'interaction' },
         { section: 'Performance' },
         { view: 'highmeshcount', label: 'High Mesh Count', folder: 'highmeshcount' },
         { view: 'performance', label: 'Performance Profile', folder: 'performance' },

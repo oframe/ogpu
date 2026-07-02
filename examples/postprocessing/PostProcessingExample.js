@@ -1,4 +1,4 @@
-import { Renderer, Camera, Transform, Orbit, Mesh, RenderPipeline, Plane, Box, Sphere, Torus, GUI, PostProcessing, FinalPassEffect, BloomEffect, BlurEffect } from 'ogpu';
+import { Renderer, Camera, Transform, Orbit, Mesh, RenderPipeline, Plane, Box, Sphere, Torus, GUI, PostProcessing, FinalPassEffect, BloomEffect, BlurEffect, FXAAEffect, SMAAEffect } from 'ogpu';
 
 import sceneShader from './scene.wgsl?raw';
 
@@ -20,6 +20,10 @@ export class PostProcessingExample {
         this.blur = this.post.addEffect(new BlurEffect(this.gpu));
         this.blur.enabled = false; // artistic tool — off by default
         this.finalPass = this.post.addEffect(new FinalPassEffect(this.gpu));
+        // AA runs on LDR output, after the final pass; pick one at a time
+        this.fxaa = this.post.addEffect(new FXAAEffect(this.gpu));
+        this.smaa = this.post.addEffect(new SMAAEffect(this.gpu));
+        this.smaa.enabled = false;
 
         this.scene = new Transform();
         this.camera = new Camera({
@@ -112,6 +116,8 @@ export class PostProcessingExample {
         this.bloom.addGUI(this.gui);
         this.blur.addGUI(this.gui);
         this.finalPass.addGUI(this.gui);
+        this.fxaa.addGUI(this.gui);
+        this.smaa.addGUI(this.gui);
     }
 
     update = ({ deltaTime = 0 } = {}) => {

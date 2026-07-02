@@ -286,6 +286,15 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - dispose()
 - const `BLUR_MODES`
 
+### src/modules/post/effects/FXAAEffect.js
+- **class FXAAEffect**
+  - constructor(gpu, { format = 'rgba16float' } = {})
+  - setQuality(tier)
+  - resize()
+  - render(encoder, { sourceView, destView, sampler, size })
+  - addGUI(gui)
+  - dispose()
+
 ### src/modules/post/effects/FinalPassEffect.js
 - **class FinalPassEffect**
   - constructor(gpu, { format = 'rgba16float', toneMapping = 'aces' } = {})
@@ -295,6 +304,15 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - addGUI(gui)
   - dispose()
 - const `TONEMAP`
+
+### src/modules/post/effects/SMAAEffect.js
+- **class SMAAEffect**
+  - constructor(gpu, { format = 'rgba16float', assetsPath = './assets/smaa' } = {})
+  - setQuality(tier)
+  - resize()
+  - render(encoder, { sourceView, destView, sampler, size })
+  - addGUI(gui)
+  - dispose()
 
 ## utils
 
@@ -525,6 +543,8 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { FinalPassEffect, TONEMAP } from './modules/post/effects/FinalPassEffect.js'
 - re-export { BloomEffect, BLOOM_MODES, BLOOM_MASKS } from './modules/post/effects/BloomEffect.js'
 - re-export { BlurEffect, BLUR_MODES } from './modules/post/effects/BlurEffect.js'
+- re-export { FXAAEffect } from './modules/post/effects/FXAAEffect.js'
+- re-export { SMAAEffect } from './modules/post/effects/SMAAEffect.js'
 - re-export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js'
 - re-export { loadJSON, loadJSONAll } from './utils/JSONLoader.js'
 - re-export { loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from './utils/IBLUtils/IBLUtils.js'

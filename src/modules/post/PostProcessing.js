@@ -133,7 +133,7 @@ export class PostProcessing {
         // always render through sceneTarget — the blit is an identity passthrough.
         for (const effect of this.enabled ? this.effects : []) {
             if (!effect.enabled) continue;
-            effect.render(encoder, {
+            const wrote = effect.render(encoder, {
                 sourceView,
                 destView: views.pingPong[write],
                 destTarget: this.pingPong[write],
@@ -145,6 +145,9 @@ export class PostProcessing {
                 sampler: this.sampler,
                 composer: this,
             });
+            // an effect may return false to skip the frame (e.g. async LUTs
+            // still loading) — the chain passes through without swapping
+            if (wrote === false) continue;
             sourceView = views.pingPong[write];
             write = 1 - write;
         }

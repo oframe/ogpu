@@ -1,10 +1,10 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 145,
-    "edges": 265,
-    "modules": 87,
-    "shaders": 51,
+    "nodes": 151,
+    "edges": 275,
+    "modules": 89,
+    "shaders": 55,
     "external": 7
   },
   "hubs": [
@@ -14,23 +14,23 @@
     },
     {
       "id": "src/core/Texture.js",
-      "inDegree": 6
+      "inDegree": 7
+    },
+    {
+      "id": "src/modules/post/FullscreenPass.js",
+      "inDegree": 7
     },
     {
       "id": "src/utils/BufferUtils.js",
       "inDegree": 6
     },
     {
+      "id": "src/core/RenderTarget.js",
+      "inDegree": 5
+    },
+    {
       "id": "src/core/Transform.js",
       "inDegree": 5
-    },
-    {
-      "id": "src/modules/post/FullscreenPass.js",
-      "inDegree": 5
-    },
-    {
-      "id": "src/core/RenderTarget.js",
-      "inDegree": 4
     },
     {
       "id": "src/core/ComputeShader.js",
@@ -583,7 +583,7 @@
     {
       "id": "src/core/RenderTarget.js",
       "type": "module",
-      "inDegree": 4,
+      "inDegree": 5,
       "outDegree": 1
     },
     {
@@ -607,7 +607,7 @@
     {
       "id": "src/core/Texture.js",
       "type": "module",
-      "inDegree": 6,
+      "inDegree": 7,
       "outDegree": 1
     },
     {
@@ -626,7 +626,7 @@
       "id": "src/index.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 21
+      "outDegree": 23
     },
     {
       "id": "src/main.js",
@@ -815,9 +815,45 @@
       "outDegree": 2
     },
     {
+      "id": "src/modules/post/effects/fxaa.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/post/effects/FXAAEffect.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 2
+    },
+    {
+      "id": "src/modules/post/effects/smaa_blend.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/post/effects/smaa_edges.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/post/effects/smaa_weights.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/post/effects/SMAAEffect.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 6
+    },
+    {
       "id": "src/modules/post/FullscreenPass.js",
       "type": "module",
-      "inDegree": 5,
+      "inDegree": 7,
       "outDegree": 4
     },
     {
@@ -1556,6 +1592,14 @@
     },
     {
       "from": "src/index.js",
+      "to": "src/modules/post/effects/FXAAEffect.js"
+    },
+    {
+      "from": "src/index.js",
+      "to": "src/modules/post/effects/SMAAEffect.js"
+    },
+    {
+      "from": "src/index.js",
       "to": "src/modules/post/FullscreenPass.js"
     },
     {
@@ -1904,6 +1948,38 @@
     },
     {
       "from": "src/modules/post/effects/FinalPassEffect.js",
+      "to": "src/modules/post/FullscreenPass.js"
+    },
+    {
+      "from": "src/modules/post/effects/FXAAEffect.js",
+      "to": "src/modules/post/effects/fxaa.wgsl"
+    },
+    {
+      "from": "src/modules/post/effects/FXAAEffect.js",
+      "to": "src/modules/post/FullscreenPass.js"
+    },
+    {
+      "from": "src/modules/post/effects/SMAAEffect.js",
+      "to": "src/core/RenderTarget.js"
+    },
+    {
+      "from": "src/modules/post/effects/SMAAEffect.js",
+      "to": "src/core/Texture.js"
+    },
+    {
+      "from": "src/modules/post/effects/SMAAEffect.js",
+      "to": "src/modules/post/effects/smaa_blend.wgsl"
+    },
+    {
+      "from": "src/modules/post/effects/SMAAEffect.js",
+      "to": "src/modules/post/effects/smaa_edges.wgsl"
+    },
+    {
+      "from": "src/modules/post/effects/SMAAEffect.js",
+      "to": "src/modules/post/effects/smaa_weights.wgsl"
+    },
+    {
+      "from": "src/modules/post/effects/SMAAEffect.js",
       "to": "src/modules/post/FullscreenPass.js"
     },
     {

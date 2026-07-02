@@ -25,6 +25,8 @@ export { FullscreenPass } from './modules/post/FullscreenPass.js';
 export { FinalPassEffect, TONEMAP } from './modules/post/effects/FinalPassEffect.js';
 export { BloomEffect, BLOOM_MODES, BLOOM_MASKS } from './modules/post/effects/BloomEffect.js';
 export { BlurEffect, BLUR_MODES } from './modules/post/effects/BlurEffect.js';
+export { FXAAEffect } from './modules/post/effects/FXAAEffect.js';
+export { SMAAEffect } from './modules/post/effects/SMAAEffect.js';
 
 // --- utils ---
 export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js';

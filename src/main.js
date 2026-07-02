@@ -27,6 +27,7 @@ import { CubeMapExample } from '@examples/cubemap/CubeMap';
 import { PostProcessingExample } from '@examples/postprocessing/PostProcessingExample';
 import { Performance } from '@examples/performance/Performance';
 import { Interaction } from '@examples/interaction/Interaction';
+import { TextExample } from '@examples/text/TextExample';
 import { Loader } from '@examples/Loader';
 
 const view = new URLSearchParams(window.location.search).get('src');
@@ -37,6 +38,7 @@ const views = {
     postprocessing: () => new PostProcessingExample(),
     performance: () => new Performance(),
     interaction: () => new Interaction(),
+    text: () => new TextExample(),
     particles: () => new Particles(),
     textures: () => new Textures(),
     ktx: () => new KTX(),
@@ -113,6 +115,8 @@ function renderLanding() {
         { view: 'rendertargets', label: 'Render to Texture', folder: 'rendertotexture' },
         { view: 'postprocessing', label: 'Post Processing', folder: 'postprocessing' },
         { view: 'shadowmapping', label: 'Shadow Maps', folder: 'shadowmapping' },
+        { section: 'Text' },
+        { view: 'text', label: 'MSDF Text', folder: 'text' },
         { section: 'Loaders' },
         { view: 'gltf', label: 'Load glTF', folder: 'gltf' },
         { section: 'Animation' },

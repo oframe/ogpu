@@ -1,16 +1,16 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 177,
-    "edges": 323,
-    "modules": 102,
-    "shaders": 66,
+    "nodes": 181,
+    "edges": 332,
+    "modules": 105,
+    "shaders": 67,
     "external": 9
   },
   "hubs": [
     {
       "id": "src/core/Geometry.js",
-      "inDegree": 12
+      "inDegree": 13
     },
     {
       "id": "src/modules/post/FullscreenPass.js",
@@ -22,7 +22,7 @@
     },
     {
       "id": "src/core/Texture.js",
-      "inDegree": 7
+      "inDegree": 8
     },
     {
       "id": "src/utils/BufferUtils.js",
@@ -33,11 +33,15 @@
       "inDegree": 5
     },
     {
+      "id": "src/core/RenderPipeline.js",
+      "inDegree": 4
+    },
+    {
       "id": "src/core/ComputeShader.js",
       "inDegree": 3
     },
     {
-      "id": "src/core/RenderPipeline.js",
+      "id": "src/core/Mesh.js",
       "inDegree": 3
     },
     {
@@ -50,10 +54,6 @@
     },
     {
       "id": "examples/hellowebgpu/uniformStruct.js",
-      "inDegree": 2
-    },
-    {
-      "id": "examples/sorttransparency/sorttransparency.wgsl",
       "inDegree": 2
     }
   ],
@@ -425,6 +425,12 @@
       "outDegree": 0
     },
     {
+      "id": "examples/text/TextExample.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 1
+    },
+    {
       "id": "examples/textures/texturedObj.wgsl",
       "type": "shader",
       "inDegree": 1,
@@ -475,7 +481,7 @@
     {
       "id": "pkg:ogpu",
       "type": "external",
-      "inDegree": 29,
+      "inDegree": 30,
       "outDegree": 0
     },
     {
@@ -517,7 +523,7 @@
     {
       "id": "src/core/Geometry.js",
       "type": "module",
-      "inDegree": 12,
+      "inDegree": 13,
       "outDegree": 2
     },
     {
@@ -529,7 +535,7 @@
     {
       "id": "src/core/Mesh.js",
       "type": "module",
-      "inDegree": 2,
+      "inDegree": 3,
       "outDegree": 4
     },
     {
@@ -607,7 +613,7 @@
     {
       "id": "src/core/RenderPipeline.js",
       "type": "module",
-      "inDegree": 3,
+      "inDegree": 4,
       "outDegree": 3
     },
     {
@@ -637,7 +643,7 @@
     {
       "id": "src/core/Texture.js",
       "type": "module",
-      "inDegree": 7,
+      "inDegree": 8,
       "outDegree": 1
     },
     {
@@ -656,13 +662,13 @@
       "id": "src/index.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 33
+      "outDegree": 35
     },
     {
       "id": "src/main.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 29
+      "outDegree": 30
     },
     {
       "id": "src/math/Color.js",
@@ -1023,6 +1029,24 @@
       "type": "module",
       "inDegree": 2,
       "outDegree": 1
+    },
+    {
+      "id": "src/modules/text/msdf.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/text/MSDFFont.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 1
+    },
+    {
+      "id": "src/modules/text/Text.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 4
     },
     {
       "id": "src/modules/VideoTexture.js",
@@ -1420,6 +1444,10 @@
     },
     {
       "from": "examples/sorttransparency/SortTransparency.js",
+      "to": "pkg:ogpu"
+    },
+    {
+      "from": "examples/text/TextExample.js",
       "to": "pkg:ogpu"
     },
     {
@@ -1824,6 +1852,14 @@
     },
     {
       "from": "src/index.js",
+      "to": "src/modules/text/MSDFFont.js"
+    },
+    {
+      "from": "src/index.js",
+      "to": "src/modules/text/Text.js"
+    },
+    {
+      "from": "src/index.js",
       "to": "src/modules/VideoTexture.js"
     },
     {
@@ -1949,6 +1985,10 @@
     {
       "from": "src/main.js",
       "to": "examples/sorttransparency/SortTransparency.js"
+    },
+    {
+      "from": "src/main.js",
+      "to": "examples/text/TextExample.js"
     },
     {
       "from": "src/main.js",
@@ -2361,6 +2401,26 @@
     {
       "from": "src/modules/Raycast.js",
       "to": "pkg:@math"
+    },
+    {
+      "from": "src/modules/text/MSDFFont.js",
+      "to": "src/core/Texture.js"
+    },
+    {
+      "from": "src/modules/text/Text.js",
+      "to": "src/core/Geometry.js"
+    },
+    {
+      "from": "src/modules/text/Text.js",
+      "to": "src/core/Mesh.js"
+    },
+    {
+      "from": "src/modules/text/Text.js",
+      "to": "src/core/RenderPipeline.js"
+    },
+    {
+      "from": "src/modules/text/Text.js",
+      "to": "src/modules/text/msdf.wgsl"
     },
     {
       "from": "src/utils/IBLUtils/IBLUtils.js",

@@ -48,6 +48,7 @@
         "validate:shaders": "node scripts/validate-shaders.mjs",
         "repomap": "node scripts/build-api-digest.mjs && node scripts/build-module-graph.mjs",
         "repomap:check": "npm run repomap && git diff --exit-code -- api-digest.md module-graph.json",
+        "font": "node scripts/generate-msdf.mjs",
         "prepare": "git config core.hooksPath .githooks || true",
         "generate:sh": "node tools/generateSH.mjs"
     },
@@ -56,6 +57,7 @@
         "eslint": "^9.39.4",
         "eslint-config-prettier": "^10.1.8",
         "globals": "^17.6.0",
+        "msdf-bmfont-xml": "^2.8.0",
         "prettier": "^3.8.3",
         "vite": "^6.0.1"
     },

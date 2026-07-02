@@ -397,6 +397,17 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - addGUI(gui)
   - dispose()
 
+### src/modules/text/MSDFFont.js
+- **class MSDFFont**
+  - constructor(data, texture)
+  - glyph(codePoint)
+  - kerning(prevCode, code)
+  - destroy()
+
+### src/modules/text/Text.js
+- **class Text** extends Mesh
+  - constructor(gpu, { font, text = '', fontSize = 1, letterSpacing = 0, lineHeight = 1, maxWidth = 0, al…)
+
 ## utils
 
 ### src/utils/BufferUtils.js
@@ -612,6 +623,12 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - constructor()
   - init()
 
+### examples/text/TextExample.js
+- **class TextExample**
+  - constructor({ el = null } = {})
+  - init(el)
+  - initPane()
+
 ### examples/textures/Textures.js
 - **class Textures**
   - constructor()
@@ -652,6 +669,8 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { Pointer } from './modules/interaction/Pointer.js'
 - re-export { Spring, SPRING_PRESETS } from './modules/interaction/Spring.js'
 - re-export { ease, cubicBezier, EASE_NAMES } from './modules/interaction/easing.js'
+- re-export { MSDFFont } from './modules/text/MSDFFont.js'
+- re-export { Text } from './modules/text/Text.js'
 - re-export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js'
 - re-export { loadJSON, loadJSONAll } from './utils/JSONLoader.js'
 - re-export { loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from './utils/IBLUtils/IBLUtils.js'

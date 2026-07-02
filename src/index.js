@@ -37,6 +37,8 @@ export { InteractionManager } from './modules/interaction/InteractionManager.js'
 export { Pointer } from './modules/interaction/Pointer.js';
 export { Spring, SPRING_PRESETS } from './modules/interaction/Spring.js';
 export { ease, cubicBezier, EASE_NAMES } from './modules/interaction/easing.js';
+export { MSDFFont } from './modules/text/MSDFFont.js';
+export { Text } from './modules/text/Text.js';
 
 // --- utils ---
 export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js';

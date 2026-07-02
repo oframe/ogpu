@@ -1,10 +1,10 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 128,
-    "edges": 233,
-    "modules": 81,
-    "shaders": 40,
+    "nodes": 133,
+    "edges": 245,
+    "modules": 84,
+    "shaders": 42,
     "external": 7
   },
   "hubs": [
@@ -17,15 +17,19 @@
       "inDegree": 6
     },
     {
+      "id": "src/utils/BufferUtils.js",
+      "inDegree": 6
+    },
+    {
       "id": "src/core/Transform.js",
       "inDegree": 5
     },
     {
-      "id": "src/utils/BufferUtils.js",
-      "inDegree": 5
+      "id": "src/core/ComputeShader.js",
+      "inDegree": 3
     },
     {
-      "id": "src/core/ComputeShader.js",
+      "id": "src/core/RenderPipeline.js",
       "inDegree": 3
     },
     {
@@ -49,11 +53,7 @@
       "inDegree": 2
     },
     {
-      "id": "src/core/primitives/index.js",
-      "inDegree": 2
-    },
-    {
-      "id": "src/core/RenderPipeline.js",
+      "id": "src/core/primitives/FullscreenTriangle.js",
       "inDegree": 2
     }
   ],
@@ -269,6 +269,18 @@
       "outDegree": 0
     },
     {
+      "id": "examples/postprocessing/PostProcessingExample.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 2
+    },
+    {
+      "id": "examples/postprocessing/scene.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
       "id": "examples/primitives/Primitives.js",
       "type": "module",
       "inDegree": 1,
@@ -433,7 +445,7 @@
     {
       "id": "pkg:ogpu",
       "type": "external",
-      "inDegree": 26,
+      "inDegree": 27,
       "outDegree": 0
     },
     {
@@ -451,7 +463,7 @@
     {
       "id": "pkg:webgpu-utils",
       "type": "external",
-      "inDegree": 22,
+      "inDegree": 23,
       "outDegree": 0
     },
     {
@@ -517,7 +529,7 @@
     {
       "id": "src/core/primitives/FullscreenTriangle.js",
       "type": "module",
-      "inDegree": 1,
+      "inDegree": 2,
       "outDegree": 1
     },
     {
@@ -565,13 +577,13 @@
     {
       "id": "src/core/RenderPipeline.js",
       "type": "module",
-      "inDegree": 2,
+      "inDegree": 3,
       "outDegree": 3
     },
     {
       "id": "src/core/RenderTarget.js",
       "type": "module",
-      "inDegree": 1,
+      "inDegree": 2,
       "outDegree": 1
     },
     {
@@ -614,13 +626,13 @@
       "id": "src/index.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 16
+      "outDegree": 18
     },
     {
       "id": "src/main.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 26
+      "outDegree": 27
     },
     {
       "id": "src/math/Color.js",
@@ -725,6 +737,24 @@
       "outDegree": 0
     },
     {
+      "id": "src/modules/post/blit.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/post/FullscreenPass.js",
+      "type": "module",
+      "inDegree": 2,
+      "outDegree": 4
+    },
+    {
+      "id": "src/modules/post/PostProcessing.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 3
+    },
+    {
       "id": "src/modules/Raycast.js",
       "type": "module",
       "inDegree": 1,
@@ -745,7 +775,7 @@
     {
       "id": "src/utils/BufferUtils.js",
       "type": "module",
-      "inDegree": 5,
+      "inDegree": 6,
       "outDegree": 0
     },
     {
@@ -1011,6 +1041,14 @@
     {
       "from": "examples/pbrshader/PBRShader.js",
       "to": "src/modules/pbr/pbr.wgsl"
+    },
+    {
+      "from": "examples/postprocessing/PostProcessingExample.js",
+      "to": "examples/postprocessing/scene.wgsl"
+    },
+    {
+      "from": "examples/postprocessing/PostProcessingExample.js",
+      "to": "pkg:ogpu"
     },
     {
       "from": "examples/primitives/Primitives.js",
@@ -1434,6 +1472,14 @@
     },
     {
       "from": "src/index.js",
+      "to": "src/modules/post/FullscreenPass.js"
+    },
+    {
+      "from": "src/index.js",
+      "to": "src/modules/post/PostProcessing.js"
+    },
+    {
+      "from": "src/index.js",
       "to": "src/modules/Raycast.js"
     },
     {
@@ -1519,6 +1565,10 @@
     {
       "from": "src/main.js",
       "to": "examples/pbrshader/PBRShader.js"
+    },
+    {
+      "from": "src/main.js",
+      "to": "examples/postprocessing/PostProcessingExample.js"
     },
     {
       "from": "src/main.js",
@@ -1703,6 +1753,34 @@
     {
       "from": "src/modules/Orbit.js",
       "to": "pkg:@math"
+    },
+    {
+      "from": "src/modules/post/FullscreenPass.js",
+      "to": "pkg:webgpu-utils"
+    },
+    {
+      "from": "src/modules/post/FullscreenPass.js",
+      "to": "src/core/primitives/FullscreenTriangle.js"
+    },
+    {
+      "from": "src/modules/post/FullscreenPass.js",
+      "to": "src/core/RenderPipeline.js"
+    },
+    {
+      "from": "src/modules/post/FullscreenPass.js",
+      "to": "src/utils/BufferUtils.js"
+    },
+    {
+      "from": "src/modules/post/PostProcessing.js",
+      "to": "src/core/RenderTarget.js"
+    },
+    {
+      "from": "src/modules/post/PostProcessing.js",
+      "to": "src/modules/post/blit.wgsl"
+    },
+    {
+      "from": "src/modules/post/PostProcessing.js",
+      "to": "src/modules/post/FullscreenPass.js"
     },
     {
       "from": "src/modules/Raycast.js",

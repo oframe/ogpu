@@ -24,14 +24,15 @@ import { HighMeshCount } from '@examples/highmeshcount/HighMeshCount';
 import { SortTransparency } from '@examples/sorttransparency/SortTransparency';
 import { MSAA } from '@examples/msaa/MSAA';
 import { CubeMapExample } from '@examples/cubemap/CubeMap';
+import { PostProcessingExample } from '@examples/postprocessing/PostProcessingExample';
 import { Loader } from '@examples/Loader';
-//TODO: Post FX WebGPU way
 
 const view = new URLSearchParams(window.location.search).get('src');
 const canvas = document.getElementById('web-gpu-canvas');
 
 const views = {
     rendertargets: () => new RenderToTexture(),
+    postprocessing: () => new PostProcessingExample(),
     particles: () => new Particles(),
     textures: () => new Textures(),
     ktx: () => new KTX(),
@@ -104,6 +105,7 @@ function renderLanding() {
         { view: 'msaa', label: 'MSAA', folder: 'msaa' },
         { section: 'Frame Buffer' },
         { view: 'rendertargets', label: 'Render to Texture', folder: 'rendertotexture' },
+        { view: 'postprocessing', label: 'Post Processing', folder: 'postprocessing' },
         { view: 'shadowmapping', label: 'Shadow Maps', folder: 'shadowmapping' },
         { section: 'Loaders' },
         { view: 'gltf', label: 'Load glTF', folder: 'gltf' },
@@ -163,4 +165,3 @@ function renderLanding() {
     const random = exampleLinks[Math.floor(Math.random() * exampleLinks.length)];
     show(exampleLinks.find((l) => l.dataset.view === wanted) ?? random);
 }
-

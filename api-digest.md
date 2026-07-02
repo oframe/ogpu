@@ -250,6 +250,22 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - createView()
   - destroy()
 
+### src/modules/post/FullscreenPass.js
+- **class FullscreenPass**
+  - constructor(gpu, { label = 'fullscreen-pass', code = ``, targets, blending = {}, transparent = false,…)
+  - setBindings(bindings = {})
+  - draw(encoder, { view, colorAttachments = null, loadOp = 'clear', clearValue = { r: 0, g: 0, b:…)
+  - dispose()
+
+### src/modules/post/PostProcessing.js
+- **class PostProcessing**
+  - constructor(gpu, { effects = [], format = 'rgba16float', label = 'post' } = {})
+  - addEffect(effect)
+  - setQuality(quality)
+  - setSize(width, height)
+  - render({ scene, camera } = {})
+  - dispose()
+
 ## utils
 
 ### src/utils/BufferUtils.js
@@ -397,6 +413,14 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - solidTexture(rgba, label)
   - initPane()
 
+### examples/postprocessing/PostProcessingExample.js
+- **class PostProcessingExample**
+  - constructor({ el = null } = {})
+  - init(el)
+  - addMesh(geometry, { label, color, emissive = [0, 0, 0], emissiveIntensity = 0, position = [0, 0, …)
+  - initScene()
+  - initPane()
+
 ### examples/primitives/Primitives.js
 - **class Primitives**
   - constructor()
@@ -466,6 +490,8 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { CubeMap } from './modules/CubeMap.js'
 - re-export { VideoTexture } from './modules/VideoTexture.js'
 - re-export { KTXTexture } from './modules/KTXTexture.js'
+- re-export { PostProcessing } from './modules/post/PostProcessing.js'
+- re-export { FullscreenPass } from './modules/post/FullscreenPass.js'
 - re-export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js'
 - re-export { loadJSON, loadJSONAll } from './utils/JSONLoader.js'
 - re-export { loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from './utils/IBLUtils/IBLUtils.js'

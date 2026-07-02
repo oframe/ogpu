@@ -1,4 +1,24 @@
-import { Renderer, Camera, Transform, Orbit, Mesh, RenderPipeline, Plane, Box, Sphere, Torus, GUI, PostProcessing, FinalPassEffect, BloomEffect, BlurEffect, FXAAEffect, SMAAEffect } from 'ogpu';
+import {
+    Renderer,
+    Camera,
+    Transform,
+    Orbit,
+    Mesh,
+    RenderPipeline,
+    Plane,
+    Box,
+    Sphere,
+    Torus,
+    GUI,
+    PostProcessing,
+    FinalPassEffect,
+    BloomEffect,
+    BlurEffect,
+    FXAAEffect,
+    SMAAEffect,
+    GTAOEffect,
+    SSAOEffect,
+} from 'ogpu';
 
 import sceneShader from './scene.wgsl?raw';
 
@@ -16,6 +36,10 @@ export class PostProcessingExample {
         this.gpu = this.renderer.gpu;
 
         this.post = new PostProcessing(this.gpu, { label: 'post' });
+        // AO first — it darkens the scene color the rest of the chain reads
+        this.gtao = this.post.addEffect(new GTAOEffect(this.gpu));
+        this.ssao = this.post.addEffect(new SSAOEffect(this.gpu));
+        this.ssao.enabled = false; // cheap-tier alternative to gtao
         this.bloom = this.post.addEffect(new BloomEffect(this.gpu));
         this.blur = this.post.addEffect(new BlurEffect(this.gpu));
         this.blur.enabled = false; // artistic tool — off by default
@@ -113,6 +137,8 @@ export class PostProcessingExample {
             this.emissives.forEach((m) => m.uniforms.set({ uEmissiveIntensity: ev.value }));
         });
 
+        this.gtao.addGUI(this.gui);
+        this.ssao.addGUI(this.gui);
         this.bloom.addGUI(this.gui);
         this.blur.addGUI(this.gui);
         this.finalPass.addGUI(this.gui);

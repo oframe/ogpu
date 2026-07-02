@@ -27,6 +27,8 @@ export { BloomEffect, BLOOM_MODES, BLOOM_MASKS } from './modules/post/effects/Bl
 export { BlurEffect, BLUR_MODES } from './modules/post/effects/BlurEffect.js';
 export { FXAAEffect } from './modules/post/effects/FXAAEffect.js';
 export { SMAAEffect } from './modules/post/effects/SMAAEffect.js';
+export { GTAOEffect } from './modules/post/effects/GTAOEffect.js';
+export { SSAOEffect } from './modules/post/effects/SSAOEffect.js';
 
 // --- utils ---
 export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js';

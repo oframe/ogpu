@@ -266,6 +266,14 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - render({ scene, camera } = {})
   - dispose()
 
+### src/modules/post/effects/AOBase.js
+- **class AOBase**
+  - constructor(gpu, { format = 'rgba16float', label = 'ao', code } = {})
+  - resize()
+  - updateUniforms()
+  - render(encoder, ctx)
+  - dispose()
+
 ### src/modules/post/effects/BloomEffect.js
 - **class BloomEffect**
   - constructor(gpu, { format = 'rgba16float', mode = 'unreal', intensity = 0.7, threshold = 1.0, knee = …)
@@ -305,6 +313,13 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - dispose()
 - const `TONEMAP`
 
+### src/modules/post/effects/GTAOEffect.js
+- **class GTAOEffect** extends AOBase
+  - constructor(gpu, { format = 'rgba16float', radius = 1.0, power = 1.2, bias = 0.08 } = {})
+  - setQuality(tier)
+  - updateUniforms({ camera, frameIndex }, { aoWidth, aoHeight })
+  - addGUI(gui)
+
 ### src/modules/post/effects/SMAAEffect.js
 - **class SMAAEffect**
   - constructor(gpu, { format = 'rgba16float', assetsPath = './assets/smaa' } = {})
@@ -313,6 +328,13 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - render(encoder, { sourceView, destView, sampler, size })
   - addGUI(gui)
   - dispose()
+
+### src/modules/post/effects/SSAOEffect.js
+- **class SSAOEffect** extends AOBase
+  - constructor(gpu, { format = 'rgba16float', radius = 0.8, bias = 0.02, power = 1.2 } = {})
+  - setQuality(tier)
+  - updateUniforms({ camera, frameIndex }, { aoWidth, aoHeight })
+  - addGUI(gui)
 
 ## utils
 
@@ -545,6 +567,8 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { BlurEffect, BLUR_MODES } from './modules/post/effects/BlurEffect.js'
 - re-export { FXAAEffect } from './modules/post/effects/FXAAEffect.js'
 - re-export { SMAAEffect } from './modules/post/effects/SMAAEffect.js'
+- re-export { GTAOEffect } from './modules/post/effects/GTAOEffect.js'
+- re-export { SSAOEffect } from './modules/post/effects/SSAOEffect.js'
 - re-export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js'
 - re-export { loadJSON, loadJSONAll } from './utils/JSONLoader.js'
 - re-export { loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from './utils/IBLUtils/IBLUtils.js'

@@ -1,10 +1,10 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 151,
-    "edges": 275,
-    "modules": 89,
-    "shaders": 55,
+    "nodes": 158,
+    "edges": 286,
+    "modules": 92,
+    "shaders": 59,
     "external": 7
   },
   "hubs": [
@@ -13,20 +13,20 @@
       "inDegree": 12
     },
     {
+      "id": "src/modules/post/FullscreenPass.js",
+      "inDegree": 8
+    },
+    {
       "id": "src/core/Texture.js",
       "inDegree": 7
     },
     {
-      "id": "src/modules/post/FullscreenPass.js",
-      "inDegree": 7
+      "id": "src/core/RenderTarget.js",
+      "inDegree": 6
     },
     {
       "id": "src/utils/BufferUtils.js",
       "inDegree": 6
-    },
-    {
-      "id": "src/core/RenderTarget.js",
-      "inDegree": 5
     },
     {
       "id": "src/core/Transform.js",
@@ -439,7 +439,7 @@
     {
       "id": "pkg:@math",
       "type": "external",
-      "inDegree": 10,
+      "inDegree": 11,
       "outDegree": 0
     },
     {
@@ -583,7 +583,7 @@
     {
       "id": "src/core/RenderTarget.js",
       "type": "module",
-      "inDegree": 5,
+      "inDegree": 6,
       "outDegree": 1
     },
     {
@@ -626,7 +626,7 @@
       "id": "src/index.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 23
+      "outDegree": 25
     },
     {
       "id": "src/main.js",
@@ -743,6 +743,24 @@
       "outDegree": 0
     },
     {
+      "id": "src/modules/post/effects/ao_apply.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/post/effects/ao_blur.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/post/effects/AOBase.js",
+      "type": "module",
+      "inDegree": 2,
+      "outDegree": 5
+    },
+    {
       "id": "src/modules/post/effects/bloom_composite.wgsl",
       "type": "shader",
       "inDegree": 1,
@@ -827,6 +845,18 @@
       "outDegree": 2
     },
     {
+      "id": "src/modules/post/effects/gtao.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/post/effects/GTAOEffect.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 2
+    },
+    {
       "id": "src/modules/post/effects/smaa_blend.wgsl",
       "type": "shader",
       "inDegree": 1,
@@ -851,9 +881,21 @@
       "outDegree": 6
     },
     {
+      "id": "src/modules/post/effects/ssao.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/post/effects/SSAOEffect.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 2
+    },
+    {
       "id": "src/modules/post/FullscreenPass.js",
       "type": "module",
-      "inDegree": 7,
+      "inDegree": 8,
       "outDegree": 4
     },
     {
@@ -1596,7 +1638,15 @@
     },
     {
       "from": "src/index.js",
+      "to": "src/modules/post/effects/GTAOEffect.js"
+    },
+    {
+      "from": "src/index.js",
       "to": "src/modules/post/effects/SMAAEffect.js"
+    },
+    {
+      "from": "src/index.js",
+      "to": "src/modules/post/effects/SSAOEffect.js"
     },
     {
       "from": "src/index.js",
@@ -1883,6 +1933,26 @@
       "to": "pkg:@math"
     },
     {
+      "from": "src/modules/post/effects/AOBase.js",
+      "to": "pkg:@math"
+    },
+    {
+      "from": "src/modules/post/effects/AOBase.js",
+      "to": "src/core/RenderTarget.js"
+    },
+    {
+      "from": "src/modules/post/effects/AOBase.js",
+      "to": "src/modules/post/effects/ao_apply.wgsl"
+    },
+    {
+      "from": "src/modules/post/effects/AOBase.js",
+      "to": "src/modules/post/effects/ao_blur.wgsl"
+    },
+    {
+      "from": "src/modules/post/effects/AOBase.js",
+      "to": "src/modules/post/FullscreenPass.js"
+    },
+    {
       "from": "src/modules/post/effects/BloomEffect.js",
       "to": "src/core/RenderTarget.js"
     },
@@ -1959,6 +2029,14 @@
       "to": "src/modules/post/FullscreenPass.js"
     },
     {
+      "from": "src/modules/post/effects/GTAOEffect.js",
+      "to": "src/modules/post/effects/AOBase.js"
+    },
+    {
+      "from": "src/modules/post/effects/GTAOEffect.js",
+      "to": "src/modules/post/effects/gtao.wgsl"
+    },
+    {
       "from": "src/modules/post/effects/SMAAEffect.js",
       "to": "src/core/RenderTarget.js"
     },
@@ -1981,6 +2059,14 @@
     {
       "from": "src/modules/post/effects/SMAAEffect.js",
       "to": "src/modules/post/FullscreenPass.js"
+    },
+    {
+      "from": "src/modules/post/effects/SSAOEffect.js",
+      "to": "src/modules/post/effects/AOBase.js"
+    },
+    {
+      "from": "src/modules/post/effects/SSAOEffect.js",
+      "to": "src/modules/post/effects/ssao.wgsl"
     },
     {
       "from": "src/modules/post/FullscreenPass.js",

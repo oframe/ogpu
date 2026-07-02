@@ -1,10 +1,10 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 133,
-    "edges": 245,
-    "modules": 84,
-    "shaders": 42,
+    "nodes": 135,
+    "edges": 248,
+    "modules": 85,
+    "shaders": 43,
     "external": 7
   },
   "hubs": [
@@ -33,6 +33,10 @@
       "inDegree": 3
     },
     {
+      "id": "src/modules/post/FullscreenPass.js",
+      "inDegree": 3
+    },
+    {
       "id": "src/utils/wgslOverrides.js",
       "inDegree": 3
     },
@@ -50,10 +54,6 @@
     },
     {
       "id": "src/core/Mesh.js",
-      "inDegree": 2
-    },
-    {
-      "id": "src/core/primitives/FullscreenTriangle.js",
       "inDegree": 2
     }
   ],
@@ -626,7 +626,7 @@
       "id": "src/index.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 18
+      "outDegree": 19
     },
     {
       "id": "src/main.js",
@@ -743,9 +743,21 @@
       "outDegree": 0
     },
     {
+      "id": "src/modules/post/effects/final.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/post/effects/FinalPassEffect.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 2
+    },
+    {
       "id": "src/modules/post/FullscreenPass.js",
       "type": "module",
-      "inDegree": 2,
+      "inDegree": 3,
       "outDegree": 4
     },
     {
@@ -1472,6 +1484,10 @@
     },
     {
       "from": "src/index.js",
+      "to": "src/modules/post/effects/FinalPassEffect.js"
+    },
+    {
+      "from": "src/index.js",
       "to": "src/modules/post/FullscreenPass.js"
     },
     {
@@ -1753,6 +1769,14 @@
     {
       "from": "src/modules/Orbit.js",
       "to": "pkg:@math"
+    },
+    {
+      "from": "src/modules/post/effects/FinalPassEffect.js",
+      "to": "src/modules/post/effects/final.wgsl"
+    },
+    {
+      "from": "src/modules/post/effects/FinalPassEffect.js",
+      "to": "src/modules/post/FullscreenPass.js"
     },
     {
       "from": "src/modules/post/FullscreenPass.js",

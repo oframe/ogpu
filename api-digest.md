@@ -266,6 +266,16 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - render({ scene, camera } = {})
   - dispose()
 
+### src/modules/post/effects/FinalPassEffect.js
+- **class FinalPassEffect**
+  - constructor(gpu, { format = 'rgba16float', toneMapping = 'aces' } = {})
+  - setQuality()
+  - resize()
+  - render(encoder, { sourceView, destView, sampler, size })
+  - addGUI(gui)
+  - dispose()
+- const `TONEMAP`
+
 ## utils
 
 ### src/utils/BufferUtils.js
@@ -492,6 +502,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { KTXTexture } from './modules/KTXTexture.js'
 - re-export { PostProcessing } from './modules/post/PostProcessing.js'
 - re-export { FullscreenPass } from './modules/post/FullscreenPass.js'
+- re-export { FinalPassEffect, TONEMAP } from './modules/post/effects/FinalPassEffect.js'
 - re-export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js'
 - re-export { loadJSON, loadJSONAll } from './utils/JSONLoader.js'
 - re-export { loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from './utils/IBLUtils/IBLUtils.js'

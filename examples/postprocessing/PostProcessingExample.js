@@ -1,4 +1,4 @@
-import { Renderer, Camera, Transform, Orbit, Mesh, RenderPipeline, Plane, Box, Sphere, Torus, GUI, PostProcessing } from 'ogpu';
+import { Renderer, Camera, Transform, Orbit, Mesh, RenderPipeline, Plane, Box, Sphere, Torus, GUI, PostProcessing, FinalPassEffect } from 'ogpu';
 
 import sceneShader from './scene.wgsl?raw';
 
@@ -16,6 +16,7 @@ export class PostProcessingExample {
         this.gpu = this.renderer.gpu;
 
         this.post = new PostProcessing(this.gpu, { label: 'post' });
+        this.finalPass = this.post.addEffect(new FinalPassEffect(this.gpu));
 
         this.scene = new Transform();
         this.camera = new Camera({
@@ -104,6 +105,8 @@ export class PostProcessingExample {
         this.gui.add(proxy, 'emissive', { min: 0, max: 20, step: 0.1, label: 'emissive-intensity' }).on('change', (ev) => {
             this.emissives.forEach((m) => m.uniforms.set({ uEmissiveIntensity: ev.value }));
         });
+
+        this.finalPass.addGUI(this.gui);
     }
 
     update = ({ deltaTime = 0 } = {}) => {

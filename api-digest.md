@@ -230,6 +230,13 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/modules/Orbit.js
 - fn `Orbit(object, { element = document, enabled = true, target = new Vec3(0, 0, 0), ease = 0.25, in…)`
 
+### src/modules/PerformanceProfile.js
+- **class PerformanceProfile**
+  - setQuality(tier)
+  - onQualityChange(cb)
+  - addGUI(gui)
+  - startWatchdog(renderer, { windowSize = 90, thresholdMs = 22, cooldownMs = 4000, onSuggestDowngrade } = …)
+
 ### src/modules/Raycast.js
 - **class Raycast**
   - constructor()
@@ -249,6 +256,33 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - stop()
   - createView()
   - destroy()
+
+### src/modules/interaction/InteractionManager.js
+- **class InteractionManager**
+  - constructor({ renderer, camera, targets = [], clickSlop = 6, dragPlaneNormal = 'up', cursor = true, p…)
+  - on(mesh, type, cb)
+  - off(mesh)
+  - update()
+  - dispose()
+
+### src/modules/interaction/Pointer.js
+- **class Pointer**
+  - constructor()
+
+### src/modules/interaction/Spring.js
+- **class Spring**
+  - constructor({ stiffness = 170, damping = 26, mass = 1, value = 0, target, precision = 1e-3, preset } …)
+  - setTarget(v)
+  - jump(v)
+  - kick(v)
+  - onRest(cb)
+  - update(dt)
+- const `SPRING_PRESETS`
+
+### src/modules/interaction/easing.js
+- fn `ease(name)`
+- fn `cubicBezier(x1, y1, x2, y2)`
+- const `EASE_NAMES`
 
 ### src/modules/post/FullscreenPass.js
 - **class FullscreenPass**
@@ -363,6 +397,17 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - addGUI(gui)
   - dispose()
 
+### src/modules/text/MSDFFont.js
+- **class MSDFFont**
+  - constructor(data, texture)
+  - glyph(codePoint)
+  - kerning(prevCode, code)
+  - destroy()
+
+### src/modules/text/Text.js
+- **class Text** extends Mesh
+  - constructor(gpu, { font, text = '', fontSize = 1, letterSpacing = 0, lineHeight = 1, maxWidth = 0, al…)
+
 ## utils
 
 ### src/utils/BufferUtils.js
@@ -470,6 +515,15 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - constructor()
   - init()
 
+### examples/interaction/Interaction.js
+- **class Interaction**
+  - constructor({ el = null } = {})
+  - init(el)
+  - addMesh(geometry, { label, color, position })
+  - initScene()
+  - initInteraction()
+  - initPane()
+
 ### examples/ktx/KTX.js
 - **class KTX**
   - constructor()
@@ -509,6 +563,11 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - initIBL({ url = './assets/pbr/artistworkshop_oct.exr', shUrl = './assets/pbr/artistworkshop_sh.js…)
   - solidTexture(rgba, label)
   - initPane()
+
+### examples/performance/Performance.js
+- **class Performance**
+  - constructor({ el = null } = {})
+  - init(el)
 
 ### examples/postprocessing/PostProcessingExample.js
 - **class PostProcessingExample**
@@ -564,6 +623,12 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - constructor()
   - init()
 
+### examples/text/TextExample.js
+- **class TextExample**
+  - constructor({ el = null } = {})
+  - init(el)
+  - initPane()
+
 ### examples/textures/Textures.js
 - **class Textures**
   - constructor()
@@ -599,6 +664,13 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { DoFEffect } from './modules/post/effects/DoFEffect.js'
 - re-export { SSREffect } from './modules/post/effects/SSREffect.js'
 - re-export { TAAEffect } from './modules/post/effects/TAAEffect.js'
+- re-export { PerformanceProfile } from './modules/PerformanceProfile.js'
+- re-export { InteractionManager } from './modules/interaction/InteractionManager.js'
+- re-export { Pointer } from './modules/interaction/Pointer.js'
+- re-export { Spring, SPRING_PRESETS } from './modules/interaction/Spring.js'
+- re-export { ease, cubicBezier, EASE_NAMES } from './modules/interaction/easing.js'
+- re-export { MSDFFont } from './modules/text/MSDFFont.js'
+- re-export { Text } from './modules/text/Text.js'
 - re-export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js'
 - re-export { loadJSON, loadJSONAll } from './utils/JSONLoader.js'
 - re-export { loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from './utils/IBLUtils/IBLUtils.js'

@@ -1,16 +1,16 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 167,
-    "edges": 304,
-    "modules": 95,
-    "shaders": 65,
-    "external": 7
+    "nodes": 181,
+    "edges": 332,
+    "modules": 105,
+    "shaders": 67,
+    "external": 9
   },
   "hubs": [
     {
       "id": "src/core/Geometry.js",
-      "inDegree": 12
+      "inDegree": 13
     },
     {
       "id": "src/modules/post/FullscreenPass.js",
@@ -22,7 +22,7 @@
     },
     {
       "id": "src/core/Texture.js",
-      "inDegree": 7
+      "inDegree": 8
     },
     {
       "id": "src/utils/BufferUtils.js",
@@ -33,11 +33,15 @@
       "inDegree": 5
     },
     {
+      "id": "src/core/RenderPipeline.js",
+      "inDegree": 4
+    },
+    {
       "id": "src/core/ComputeShader.js",
       "inDegree": 3
     },
     {
-      "id": "src/core/RenderPipeline.js",
+      "id": "src/core/Mesh.js",
       "inDegree": 3
     },
     {
@@ -50,10 +54,6 @@
     },
     {
       "id": "examples/hellowebgpu/uniformStruct.js",
-      "inDegree": 2
-    },
-    {
-      "id": "examples/sorttransparency/sorttransparency.wgsl",
       "inDegree": 2
     }
   ],
@@ -191,6 +191,18 @@
       "outDegree": 0
     },
     {
+      "id": "examples/interaction/Interaction.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 3
+    },
+    {
+      "id": "examples/interaction/interaction.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
       "id": "examples/ktx/KTX.js",
       "type": "module",
       "inDegree": 1,
@@ -267,6 +279,12 @@
       "type": "shader",
       "inDegree": 1,
       "outDegree": 0
+    },
+    {
+      "id": "examples/performance/Performance.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 1
     },
     {
       "id": "examples/postprocessing/PostProcessingExample.js",
@@ -407,6 +425,12 @@
       "outDegree": 0
     },
     {
+      "id": "examples/text/TextExample.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 1
+    },
+    {
       "id": "examples/textures/texturedObj.wgsl",
       "type": "shader",
       "inDegree": 1,
@@ -439,13 +463,25 @@
     {
       "id": "pkg:@math",
       "type": "external",
-      "inDegree": 14,
+      "inDegree": 16,
+      "outDegree": 0
+    },
+    {
+      "id": "pkg:detect-gpu",
+      "type": "external",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "pkg:gsap",
+      "type": "external",
+      "inDegree": 3,
       "outDegree": 0
     },
     {
       "id": "pkg:ogpu",
       "type": "external",
-      "inDegree": 27,
+      "inDegree": 30,
       "outDegree": 0
     },
     {
@@ -487,7 +523,7 @@
     {
       "id": "src/core/Geometry.js",
       "type": "module",
-      "inDegree": 12,
+      "inDegree": 13,
       "outDegree": 2
     },
     {
@@ -499,7 +535,7 @@
     {
       "id": "src/core/Mesh.js",
       "type": "module",
-      "inDegree": 2,
+      "inDegree": 3,
       "outDegree": 4
     },
     {
@@ -577,7 +613,7 @@
     {
       "id": "src/core/RenderPipeline.js",
       "type": "module",
-      "inDegree": 3,
+      "inDegree": 4,
       "outDegree": 3
     },
     {
@@ -607,7 +643,7 @@
     {
       "id": "src/core/Texture.js",
       "type": "module",
-      "inDegree": 7,
+      "inDegree": 8,
       "outDegree": 1
     },
     {
@@ -626,13 +662,13 @@
       "id": "src/index.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 28
+      "outDegree": 35
     },
     {
       "id": "src/main.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 27
+      "outDegree": 30
     },
     {
       "id": "src/math/Color.js",
@@ -713,6 +749,30 @@
       "outDegree": 1
     },
     {
+      "id": "src/modules/interaction/easing.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 1
+    },
+    {
+      "id": "src/modules/interaction/InteractionManager.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 4
+    },
+    {
+      "id": "src/modules/interaction/Pointer.js",
+      "type": "module",
+      "inDegree": 2,
+      "outDegree": 1
+    },
+    {
+      "id": "src/modules/interaction/Spring.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
       "id": "src/modules/KTXTexture.js",
       "type": "module",
       "inDegree": 1,
@@ -735,6 +795,12 @@
       "type": "shader",
       "inDegree": 2,
       "outDegree": 0
+    },
+    {
+      "id": "src/modules/PerformanceProfile.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 2
     },
     {
       "id": "src/modules/post/blit.wgsl",
@@ -961,8 +1027,26 @@
     {
       "id": "src/modules/Raycast.js",
       "type": "module",
+      "inDegree": 2,
+      "outDegree": 1
+    },
+    {
+      "id": "src/modules/text/msdf.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/text/MSDFFont.js",
+      "type": "module",
       "inDegree": 1,
       "outDegree": 1
+    },
+    {
+      "id": "src/modules/text/Text.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 4
     },
     {
       "id": "src/modules/VideoTexture.js",
@@ -1039,7 +1123,7 @@
     {
       "id": "src/utils/miscutils.js",
       "type": "module",
-      "inDegree": 1,
+      "inDegree": 2,
       "outDegree": 0
     },
     {
@@ -1179,6 +1263,18 @@
       "to": "pkg:webgpu-utils"
     },
     {
+      "from": "examples/interaction/Interaction.js",
+      "to": "examples/interaction/interaction.wgsl"
+    },
+    {
+      "from": "examples/interaction/Interaction.js",
+      "to": "pkg:gsap"
+    },
+    {
+      "from": "examples/interaction/Interaction.js",
+      "to": "pkg:ogpu"
+    },
+    {
       "from": "examples/ktx/KTX.js",
       "to": "examples/ktx/ktx.wgsl"
     },
@@ -1245,6 +1341,10 @@
     {
       "from": "examples/pbrshader/PBRShader.js",
       "to": "src/modules/pbr/pbr.wgsl"
+    },
+    {
+      "from": "examples/performance/Performance.js",
+      "to": "pkg:ogpu"
     },
     {
       "from": "examples/postprocessing/PostProcessingExample.js",
@@ -1344,6 +1444,10 @@
     },
     {
       "from": "examples/sorttransparency/SortTransparency.js",
+      "to": "pkg:ogpu"
+    },
+    {
+      "from": "examples/text/TextExample.js",
       "to": "pkg:ogpu"
     },
     {
@@ -1668,11 +1772,31 @@
     },
     {
       "from": "src/index.js",
+      "to": "src/modules/interaction/easing.js"
+    },
+    {
+      "from": "src/index.js",
+      "to": "src/modules/interaction/InteractionManager.js"
+    },
+    {
+      "from": "src/index.js",
+      "to": "src/modules/interaction/Pointer.js"
+    },
+    {
+      "from": "src/index.js",
+      "to": "src/modules/interaction/Spring.js"
+    },
+    {
+      "from": "src/index.js",
       "to": "src/modules/KTXTexture.js"
     },
     {
       "from": "src/index.js",
       "to": "src/modules/Orbit.js"
+    },
+    {
+      "from": "src/index.js",
+      "to": "src/modules/PerformanceProfile.js"
     },
     {
       "from": "src/index.js",
@@ -1725,6 +1849,14 @@
     {
       "from": "src/index.js",
       "to": "src/modules/Raycast.js"
+    },
+    {
+      "from": "src/index.js",
+      "to": "src/modules/text/MSDFFont.js"
+    },
+    {
+      "from": "src/index.js",
+      "to": "src/modules/text/Text.js"
     },
     {
       "from": "src/index.js",
@@ -1788,6 +1920,10 @@
     },
     {
       "from": "src/main.js",
+      "to": "examples/interaction/Interaction.js"
+    },
+    {
+      "from": "src/main.js",
       "to": "examples/ktx/KTX.js"
     },
     {
@@ -1809,6 +1945,10 @@
     {
       "from": "src/main.js",
       "to": "examples/pbrshader/PBRShader.js"
+    },
+    {
+      "from": "src/main.js",
+      "to": "examples/performance/Performance.js"
     },
     {
       "from": "src/main.js",
@@ -1845,6 +1985,10 @@
     {
       "from": "src/main.js",
       "to": "examples/sorttransparency/SortTransparency.js"
+    },
+    {
+      "from": "src/main.js",
+      "to": "examples/text/TextExample.js"
     },
     {
       "from": "src/main.js",
@@ -1987,6 +2131,30 @@
       "to": "pkg:tweakpane"
     },
     {
+      "from": "src/modules/interaction/easing.js",
+      "to": "pkg:gsap"
+    },
+    {
+      "from": "src/modules/interaction/InteractionManager.js",
+      "to": "pkg:@math"
+    },
+    {
+      "from": "src/modules/interaction/InteractionManager.js",
+      "to": "pkg:gsap"
+    },
+    {
+      "from": "src/modules/interaction/InteractionManager.js",
+      "to": "src/modules/interaction/Pointer.js"
+    },
+    {
+      "from": "src/modules/interaction/InteractionManager.js",
+      "to": "src/modules/Raycast.js"
+    },
+    {
+      "from": "src/modules/interaction/Pointer.js",
+      "to": "pkg:@math"
+    },
+    {
       "from": "src/modules/KTXTexture.js",
       "to": "src/core/Texture.js"
     },
@@ -1997,6 +2165,14 @@
     {
       "from": "src/modules/Orbit.js",
       "to": "pkg:@math"
+    },
+    {
+      "from": "src/modules/PerformanceProfile.js",
+      "to": "pkg:detect-gpu"
+    },
+    {
+      "from": "src/modules/PerformanceProfile.js",
+      "to": "src/utils/miscutils.js"
     },
     {
       "from": "src/modules/post/effects/AOBase.js",
@@ -2225,6 +2401,26 @@
     {
       "from": "src/modules/Raycast.js",
       "to": "pkg:@math"
+    },
+    {
+      "from": "src/modules/text/MSDFFont.js",
+      "to": "src/core/Texture.js"
+    },
+    {
+      "from": "src/modules/text/Text.js",
+      "to": "src/core/Geometry.js"
+    },
+    {
+      "from": "src/modules/text/Text.js",
+      "to": "src/core/Mesh.js"
+    },
+    {
+      "from": "src/modules/text/Text.js",
+      "to": "src/core/RenderPipeline.js"
+    },
+    {
+      "from": "src/modules/text/Text.js",
+      "to": "src/modules/text/msdf.wgsl"
     },
     {
       "from": "src/utils/IBLUtils/IBLUtils.js",

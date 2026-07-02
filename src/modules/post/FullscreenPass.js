@@ -43,8 +43,9 @@ export class FullscreenPass {
 
         this._initUniforms();
 
-        this._bindings = null;
-        this._bindGroup = null;
+        // key → { bindings, group } — one pipeline can serve many bind sets
+        // per frame (e.g. a bloom mip chain), each memoized under its own key.
+        this._groups = new Map();
     }
 
     _initUniforms() {
@@ -66,20 +67,21 @@ export class FullscreenPass {
      * Declare group(0) resources by shader binding name:
      * `pass.setBindings({ tMap: view, mapSampler: sampler, extra: { buffer } })`.
      * The pass's own uniform buffer (if the shader declares `uniforms`) is bound
-     * automatically. Identity-memoized — passing the same resources every frame
-     * is free; any changed resource rebuilds the bind group lazily.
+     * automatically. Identity-memoized per `key` — passing the same resources
+     * every frame is free; any changed resource rebuilds that key's bind group
+     * lazily. Use distinct keys to keep several bind sets alive at once
+     * (mip chains, ping-pong variants).
      */
-    setBindings(bindings = {}) {
-        const prev = this._bindings;
-        if (prev) {
+    setBindings(bindings = {}, key = 'default') {
+        const entry = this._groups.get(key);
+        if (entry) {
             const keys = Object.keys(bindings);
-            if (keys.length === Object.keys(prev).length && keys.every((k) => prev[k] === bindings[k])) return;
+            if (keys.length === Object.keys(entry.bindings).length && keys.every((k) => entry.bindings[k] === bindings[k])) return;
         }
-        this._bindings = bindings;
-        this._bindGroup = null;
+        this._groups.set(key, { bindings, group: null });
     }
 
-    _buildBindGroup() {
+    _buildBindGroup(entry) {
         const defs = this.pipeline.defs;
         const entries = [];
 
@@ -87,7 +89,7 @@ export class FullscreenPass {
             entries.push({ binding: defs.uniforms.uniforms.binding, resource: { buffer: this.uniformBuffer } });
         }
 
-        for (const [name, resource] of Object.entries(this._bindings ?? {})) {
+        for (const [name, resource] of Object.entries(entry.bindings)) {
             const def = defs.textures?.[name] ?? defs.samplers?.[name] ?? defs.storages?.[name] ?? (name !== 'uniforms' ? defs.uniforms?.[name] : null);
             if (!def) {
                 console.warn(`[post] ${this.label}: shader has no binding named '${name}'`);
@@ -97,12 +99,9 @@ export class FullscreenPass {
         }
 
         const layout = this.pipeline.bindGroupLayout(0);
-        if (!entries.length || !layout) {
-            this._bindGroup = null;
-            return;
-        }
+        if (!entries.length || !layout) return;
 
-        this._bindGroup = this.gpu.device.createBindGroup({
+        entry.group = this.gpu.device.createBindGroup({
             label: `${this.label}-bind-group`,
             layout,
             entries,
@@ -113,24 +112,25 @@ export class FullscreenPass {
      * Record one fullscreen render pass on `encoder`. Pass either a single
      * color `view` or a full `colorAttachments` array (MRT / custom ops).
      */
-    draw(encoder, { view, colorAttachments = null, loadOp = 'clear', clearValue = { r: 0, g: 0, b: 0, a: 1 } } = {}) {
+    draw(encoder, { view, colorAttachments = null, loadOp = 'clear', clearValue = { r: 0, g: 0, b: 0, a: 1 }, bindKey = 'default' } = {}) {
         // Hot-reload guard (mirrors Mesh.draw): defs swap on reload — rebuild the
         // structured view (preserving bytes when the layout is unchanged) and
-        // invalidate the bind group.
+        // invalidate every bind group.
         if (this._defs !== this.pipeline.defs) {
             const prev = this.uniforms;
             this._initUniforms();
             if (prev && this.uniforms && prev.arrayBuffer.byteLength === this.uniforms.arrayBuffer.byteLength) {
                 new Uint8Array(this.uniforms.arrayBuffer).set(new Uint8Array(prev.arrayBuffer));
             }
-            this._bindGroup = null;
+            this._groups.forEach((entry) => (entry.group = null));
         }
 
         if (this.uniforms) {
             this.gpu.device.queue.writeBuffer(this.uniformBuffer, 0, this.uniforms.arrayBuffer);
         }
 
-        if (!this._bindGroup) this._buildBindGroup();
+        const entry = this._groups.get(bindKey);
+        if (entry && !entry.group) this._buildBindGroup(entry);
 
         const pass = encoder.beginRenderPass({
             label: `${this.label}-pass`,
@@ -138,7 +138,7 @@ export class FullscreenPass {
         });
 
         pass.setPipeline(this.pipeline.pipeline);
-        if (this._bindGroup) pass.setBindGroup(0, this._bindGroup);
+        if (entry?.group) pass.setBindGroup(0, entry.group);
         this.geometry.nonInstancedVerts.buffers.forEach((buffer, i) => pass.setVertexBuffer(i, buffer));
         pass.draw(3);
         pass.end();
@@ -147,7 +147,6 @@ export class FullscreenPass {
     dispose() {
         this.pipeline.destroy();
         this.uniformBuffer?.destroy?.();
-        this._bindGroup = null;
-        this._bindings = null;
+        this._groups.clear();
     }
 }

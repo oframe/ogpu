@@ -253,7 +253,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/modules/post/FullscreenPass.js
 - **class FullscreenPass**
   - constructor(gpu, { label = 'fullscreen-pass', code = ``, targets, blending = {}, transparent = false,…)
-  - setBindings(bindings = {})
+  - setBindings(bindings = {}, key = 'default')
   - draw(encoder, { view, colorAttachments = null, loadOp = 'clear', clearValue = { r: 0, g: 0, b:…)
   - dispose()
 
@@ -265,6 +265,26 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - setSize(width, height)
   - render({ scene, camera } = {})
   - dispose()
+
+### src/modules/post/effects/BloomEffect.js
+- **class BloomEffect**
+  - constructor(gpu, { format = 'rgba16float', mode = 'unreal', intensity = 0.7, threshold = 1.0, knee = …)
+  - setQuality(tier)
+  - resize()
+  - render(encoder, { sourceView, destView, sampler, size })
+  - addGUI(gui)
+  - dispose()
+- const `BLOOM_MODES`, `BLOOM_MASKS`
+
+### src/modules/post/effects/BlurEffect.js
+- **class BlurEffect**
+  - constructor(gpu, { format = 'rgba16float', mode = 'gaussian', radius = 8, amount = 1 } = {})
+  - setQuality(tier)
+  - resize()
+  - render(encoder, { sourceView, destView, sampler, size })
+  - addGUI(gui)
+  - dispose()
+- const `BLUR_MODES`
 
 ### src/modules/post/effects/FinalPassEffect.js
 - **class FinalPassEffect**
@@ -503,6 +523,8 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { PostProcessing } from './modules/post/PostProcessing.js'
 - re-export { FullscreenPass } from './modules/post/FullscreenPass.js'
 - re-export { FinalPassEffect, TONEMAP } from './modules/post/effects/FinalPassEffect.js'
+- re-export { BloomEffect, BLOOM_MODES, BLOOM_MASKS } from './modules/post/effects/BloomEffect.js'
+- re-export { BlurEffect, BLUR_MODES } from './modules/post/effects/BlurEffect.js'
 - re-export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js'
 - re-export { loadJSON, loadJSONAll } from './utils/JSONLoader.js'
 - re-export { loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from './utils/IBLUtils/IBLUtils.js'

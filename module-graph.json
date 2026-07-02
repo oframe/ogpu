@@ -1,10 +1,10 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 135,
-    "edges": 248,
-    "modules": 85,
-    "shaders": 43,
+    "nodes": 145,
+    "edges": 265,
+    "modules": 87,
+    "shaders": 51,
     "external": 7
   },
   "hubs": [
@@ -25,15 +25,19 @@
       "inDegree": 5
     },
     {
+      "id": "src/modules/post/FullscreenPass.js",
+      "inDegree": 5
+    },
+    {
+      "id": "src/core/RenderTarget.js",
+      "inDegree": 4
+    },
+    {
       "id": "src/core/ComputeShader.js",
       "inDegree": 3
     },
     {
       "id": "src/core/RenderPipeline.js",
-      "inDegree": 3
-    },
-    {
-      "id": "src/modules/post/FullscreenPass.js",
       "inDegree": 3
     },
     {
@@ -50,10 +54,6 @@
     },
     {
       "id": "examples/sorttransparency/sorttransparency.wgsl",
-      "inDegree": 2
-    },
-    {
-      "id": "src/core/Mesh.js",
       "inDegree": 2
     }
   ],
@@ -583,7 +583,7 @@
     {
       "id": "src/core/RenderTarget.js",
       "type": "module",
-      "inDegree": 2,
+      "inDegree": 4,
       "outDegree": 1
     },
     {
@@ -626,7 +626,7 @@
       "id": "src/index.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 19
+      "outDegree": 21
     },
     {
       "id": "src/main.js",
@@ -743,6 +743,66 @@
       "outDegree": 0
     },
     {
+      "id": "src/modules/post/effects/bloom_composite.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/post/effects/bloom_down.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/post/effects/bloom_prefilter.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/post/effects/bloom_up.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/post/effects/BloomEffect.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 9
+    },
+    {
+      "id": "src/modules/post/effects/blur_gaussian.wgsl",
+      "type": "shader",
+      "inDegree": 2,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/post/effects/blur_kawase_down.wgsl",
+      "type": "shader",
+      "inDegree": 2,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/post/effects/blur_kawase_up.wgsl",
+      "type": "shader",
+      "inDegree": 2,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/post/effects/blur_mix.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/post/effects/BlurEffect.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 6
+    },
+    {
       "id": "src/modules/post/effects/final.wgsl",
       "type": "shader",
       "inDegree": 1,
@@ -757,7 +817,7 @@
     {
       "id": "src/modules/post/FullscreenPass.js",
       "type": "module",
-      "inDegree": 3,
+      "inDegree": 5,
       "outDegree": 4
     },
     {
@@ -1484,6 +1544,14 @@
     },
     {
       "from": "src/index.js",
+      "to": "src/modules/post/effects/BloomEffect.js"
+    },
+    {
+      "from": "src/index.js",
+      "to": "src/modules/post/effects/BlurEffect.js"
+    },
+    {
+      "from": "src/index.js",
       "to": "src/modules/post/effects/FinalPassEffect.js"
     },
     {
@@ -1769,6 +1837,66 @@
     {
       "from": "src/modules/Orbit.js",
       "to": "pkg:@math"
+    },
+    {
+      "from": "src/modules/post/effects/BloomEffect.js",
+      "to": "src/core/RenderTarget.js"
+    },
+    {
+      "from": "src/modules/post/effects/BloomEffect.js",
+      "to": "src/modules/post/effects/bloom_composite.wgsl"
+    },
+    {
+      "from": "src/modules/post/effects/BloomEffect.js",
+      "to": "src/modules/post/effects/bloom_down.wgsl"
+    },
+    {
+      "from": "src/modules/post/effects/BloomEffect.js",
+      "to": "src/modules/post/effects/bloom_prefilter.wgsl"
+    },
+    {
+      "from": "src/modules/post/effects/BloomEffect.js",
+      "to": "src/modules/post/effects/bloom_up.wgsl"
+    },
+    {
+      "from": "src/modules/post/effects/BloomEffect.js",
+      "to": "src/modules/post/effects/blur_gaussian.wgsl"
+    },
+    {
+      "from": "src/modules/post/effects/BloomEffect.js",
+      "to": "src/modules/post/effects/blur_kawase_down.wgsl"
+    },
+    {
+      "from": "src/modules/post/effects/BloomEffect.js",
+      "to": "src/modules/post/effects/blur_kawase_up.wgsl"
+    },
+    {
+      "from": "src/modules/post/effects/BloomEffect.js",
+      "to": "src/modules/post/FullscreenPass.js"
+    },
+    {
+      "from": "src/modules/post/effects/BlurEffect.js",
+      "to": "src/core/RenderTarget.js"
+    },
+    {
+      "from": "src/modules/post/effects/BlurEffect.js",
+      "to": "src/modules/post/effects/blur_gaussian.wgsl"
+    },
+    {
+      "from": "src/modules/post/effects/BlurEffect.js",
+      "to": "src/modules/post/effects/blur_kawase_down.wgsl"
+    },
+    {
+      "from": "src/modules/post/effects/BlurEffect.js",
+      "to": "src/modules/post/effects/blur_kawase_up.wgsl"
+    },
+    {
+      "from": "src/modules/post/effects/BlurEffect.js",
+      "to": "src/modules/post/effects/blur_mix.wgsl"
+    },
+    {
+      "from": "src/modules/post/effects/BlurEffect.js",
+      "to": "src/modules/post/FullscreenPass.js"
     },
     {
       "from": "src/modules/post/effects/FinalPassEffect.js",

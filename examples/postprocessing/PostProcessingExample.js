@@ -1,4 +1,4 @@
-import { Renderer, Camera, Transform, Orbit, Mesh, RenderPipeline, Plane, Box, Sphere, Torus, GUI, PostProcessing, FinalPassEffect } from 'ogpu';
+import { Renderer, Camera, Transform, Orbit, Mesh, RenderPipeline, Plane, Box, Sphere, Torus, GUI, PostProcessing, FinalPassEffect, BloomEffect, BlurEffect } from 'ogpu';
 
 import sceneShader from './scene.wgsl?raw';
 
@@ -16,6 +16,9 @@ export class PostProcessingExample {
         this.gpu = this.renderer.gpu;
 
         this.post = new PostProcessing(this.gpu, { label: 'post' });
+        this.bloom = this.post.addEffect(new BloomEffect(this.gpu));
+        this.blur = this.post.addEffect(new BlurEffect(this.gpu));
+        this.blur.enabled = false; // artistic tool — off by default
         this.finalPass = this.post.addEffect(new FinalPassEffect(this.gpu));
 
         this.scene = new Transform();
@@ -106,6 +109,8 @@ export class PostProcessingExample {
             this.emissives.forEach((m) => m.uniforms.set({ uEmissiveIntensity: ev.value }));
         });
 
+        this.bloom.addGUI(this.gui);
+        this.blur.addGUI(this.gui);
         this.finalPass.addGUI(this.gui);
     }
 

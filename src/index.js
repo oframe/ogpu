@@ -23,6 +23,8 @@ export { KTXTexture } from './modules/KTXTexture.js';
 export { PostProcessing } from './modules/post/PostProcessing.js';
 export { FullscreenPass } from './modules/post/FullscreenPass.js';
 export { FinalPassEffect, TONEMAP } from './modules/post/effects/FinalPassEffect.js';
+export { BloomEffect, BLOOM_MODES, BLOOM_MASKS } from './modules/post/effects/BloomEffect.js';
+export { BlurEffect, BLUR_MODES } from './modules/post/effects/BlurEffect.js';
 
 // --- utils ---
 export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js';

@@ -20,6 +20,18 @@ export { GLTFLoader } from './modules/GLTFLoader.js';
 export { CubeMap } from './modules/CubeMap.js';
 export { VideoTexture } from './modules/VideoTexture.js';
 export { KTXTexture } from './modules/KTXTexture.js';
+export { PostProcessing } from './modules/post/PostProcessing.js';
+export { FullscreenPass } from './modules/post/FullscreenPass.js';
+export { FinalPassEffect, TONEMAP } from './modules/post/effects/FinalPassEffect.js';
+export { BloomEffect, BLOOM_MODES, BLOOM_MASKS } from './modules/post/effects/BloomEffect.js';
+export { BlurEffect, BLUR_MODES } from './modules/post/effects/BlurEffect.js';
+export { FXAAEffect } from './modules/post/effects/FXAAEffect.js';
+export { SMAAEffect } from './modules/post/effects/SMAAEffect.js';
+export { GTAOEffect } from './modules/post/effects/GTAOEffect.js';
+export { SSAOEffect } from './modules/post/effects/SSAOEffect.js';
+export { DoFEffect } from './modules/post/effects/DoFEffect.js';
+export { SSREffect } from './modules/post/effects/SSREffect.js';
+export { TAAEffect } from './modules/post/effects/TAAEffect.js';
 
 // --- utils ---
 export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js';

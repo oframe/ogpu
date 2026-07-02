@@ -250,6 +250,119 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - createView()
   - destroy()
 
+### src/modules/post/FullscreenPass.js
+- **class FullscreenPass**
+  - constructor(gpu, { label = 'fullscreen-pass', code = ``, targets, blending = {}, transparent = false,…)
+  - setBindings(bindings = {}, key = 'default')
+  - draw(encoder, { view, colorAttachments = null, loadOp = 'clear', clearValue = { r: 0, g: 0, b:…)
+  - dispose()
+
+### src/modules/post/PostProcessing.js
+- **class PostProcessing**
+  - constructor(gpu, { effects = [], format = 'rgba16float', label = 'post' } = {})
+  - addEffect(effect)
+  - setQuality(quality)
+  - setSize(width, height)
+  - render({ scene, camera } = {})
+  - dispose()
+
+### src/modules/post/effects/AOBase.js
+- **class AOBase**
+  - constructor(gpu, { format = 'rgba16float', label = 'ao', code } = {})
+  - resize()
+  - updateUniforms()
+  - render(encoder, ctx)
+  - dispose()
+
+### src/modules/post/effects/BloomEffect.js
+- **class BloomEffect**
+  - constructor(gpu, { format = 'rgba16float', mode = 'unreal', intensity = 0.7, threshold = 1.0, knee = …)
+  - setQuality(tier)
+  - resize()
+  - render(encoder, { sourceView, destView, sampler, size })
+  - addGUI(gui)
+  - dispose()
+- const `BLOOM_MODES`, `BLOOM_MASKS`
+
+### src/modules/post/effects/BlurEffect.js
+- **class BlurEffect**
+  - constructor(gpu, { format = 'rgba16float', mode = 'gaussian', radius = 8, amount = 1 } = {})
+  - setQuality(tier)
+  - resize()
+  - render(encoder, { sourceView, destView, sampler, size })
+  - addGUI(gui)
+  - dispose()
+- const `BLUR_MODES`
+
+### src/modules/post/effects/DoFEffect.js
+- **class DoFEffect**
+  - constructor(gpu, { format = 'rgba16float', focusDistance = 10, focusRange = 6, bokehRadius = 8 } = {})
+  - setQuality(tier)
+  - resize()
+  - render(encoder, { sourceView, destView, depthView, sampler, size, camera })
+  - addGUI(gui)
+  - dispose()
+
+### src/modules/post/effects/FXAAEffect.js
+- **class FXAAEffect**
+  - constructor(gpu, { format = 'rgba16float' } = {})
+  - setQuality(tier)
+  - resize()
+  - render(encoder, { sourceView, destView, sampler, size })
+  - addGUI(gui)
+  - dispose()
+
+### src/modules/post/effects/FinalPassEffect.js
+- **class FinalPassEffect**
+  - constructor(gpu, { format = 'rgba16float', toneMapping = 'aces' } = {})
+  - setQuality()
+  - resize()
+  - render(encoder, { sourceView, destView, sampler, size })
+  - addGUI(gui)
+  - dispose()
+- const `TONEMAP`
+
+### src/modules/post/effects/GTAOEffect.js
+- **class GTAOEffect** extends AOBase
+  - constructor(gpu, { format = 'rgba16float', radius = 1.0, power = 1.2, bias = 0.08 } = {})
+  - setQuality(tier)
+  - updateUniforms({ camera, frameIndex }, { aoWidth, aoHeight })
+  - addGUI(gui)
+
+### src/modules/post/effects/SMAAEffect.js
+- **class SMAAEffect**
+  - constructor(gpu, { format = 'rgba16float', assetsPath = './assets/smaa' } = {})
+  - setQuality(tier)
+  - resize()
+  - render(encoder, { sourceView, destView, sampler, size })
+  - addGUI(gui)
+  - dispose()
+
+### src/modules/post/effects/SSAOEffect.js
+- **class SSAOEffect** extends AOBase
+  - constructor(gpu, { format = 'rgba16float', radius = 0.8, bias = 0.02, power = 1.2 } = {})
+  - setQuality(tier)
+  - updateUniforms({ camera, frameIndex }, { aoWidth, aoHeight })
+  - addGUI(gui)
+
+### src/modules/post/effects/SSREffect.js
+- **class SSREffect**
+  - constructor(gpu, { format = 'rgba16float', maxDistance = 18, thickness = 0.4, intensity = 0.8 } = {})
+  - setQuality(tier)
+  - resize()
+  - render(encoder, { sourceView, destView, depthView, normalView, sampler, size, camera, frameIndex…)
+  - addGUI(gui)
+  - dispose()
+
+### src/modules/post/effects/TAAEffect.js
+- **class TAAEffect**
+  - constructor(gpu, { format = 'rgba16float', blend = 0.9 } = {})
+  - setQuality(tier)
+  - resize()
+  - render(encoder, { sourceView, destView, destTarget, depthView, sampler, size, camera, composer })
+  - addGUI(gui)
+  - dispose()
+
 ## utils
 
 ### src/utils/BufferUtils.js
@@ -397,6 +510,14 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - solidTexture(rgba, label)
   - initPane()
 
+### examples/postprocessing/PostProcessingExample.js
+- **class PostProcessingExample**
+  - constructor({ el = null } = {})
+  - init(el)
+  - addMesh(geometry, { label, color, emissive = [0, 0, 0], emissiveIntensity = 0, position = [0, 0, …)
+  - initScene()
+  - initPane()
+
 ### examples/primitives/Primitives.js
 - **class Primitives**
   - constructor()
@@ -466,6 +587,18 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { CubeMap } from './modules/CubeMap.js'
 - re-export { VideoTexture } from './modules/VideoTexture.js'
 - re-export { KTXTexture } from './modules/KTXTexture.js'
+- re-export { PostProcessing } from './modules/post/PostProcessing.js'
+- re-export { FullscreenPass } from './modules/post/FullscreenPass.js'
+- re-export { FinalPassEffect, TONEMAP } from './modules/post/effects/FinalPassEffect.js'
+- re-export { BloomEffect, BLOOM_MODES, BLOOM_MASKS } from './modules/post/effects/BloomEffect.js'
+- re-export { BlurEffect, BLUR_MODES } from './modules/post/effects/BlurEffect.js'
+- re-export { FXAAEffect } from './modules/post/effects/FXAAEffect.js'
+- re-export { SMAAEffect } from './modules/post/effects/SMAAEffect.js'
+- re-export { GTAOEffect } from './modules/post/effects/GTAOEffect.js'
+- re-export { SSAOEffect } from './modules/post/effects/SSAOEffect.js'
+- re-export { DoFEffect } from './modules/post/effects/DoFEffect.js'
+- re-export { SSREffect } from './modules/post/effects/SSREffect.js'
+- re-export { TAAEffect } from './modules/post/effects/TAAEffect.js'
 - re-export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js'
 - re-export { loadJSON, loadJSONAll } from './utils/JSONLoader.js'
 - re-export { loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from './utils/IBLUtils/IBLUtils.js'

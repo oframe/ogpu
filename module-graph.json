@@ -1,11 +1,11 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 167,
-    "edges": 304,
-    "modules": 95,
+    "nodes": 170,
+    "edges": 309,
+    "modules": 97,
     "shaders": 65,
-    "external": 7
+    "external": 8
   },
   "hubs": [
     {
@@ -269,6 +269,12 @@
       "outDegree": 0
     },
     {
+      "id": "examples/performance/Performance.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 1
+    },
+    {
       "id": "examples/postprocessing/PostProcessingExample.js",
       "type": "module",
       "inDegree": 1,
@@ -443,9 +449,15 @@
       "outDegree": 0
     },
     {
+      "id": "pkg:detect-gpu",
+      "type": "external",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
       "id": "pkg:ogpu",
       "type": "external",
-      "inDegree": 27,
+      "inDegree": 28,
       "outDegree": 0
     },
     {
@@ -626,13 +638,13 @@
       "id": "src/index.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 28
+      "outDegree": 29
     },
     {
       "id": "src/main.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 27
+      "outDegree": 28
     },
     {
       "id": "src/math/Color.js",
@@ -735,6 +747,12 @@
       "type": "shader",
       "inDegree": 2,
       "outDegree": 0
+    },
+    {
+      "id": "src/modules/PerformanceProfile.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 2
     },
     {
       "id": "src/modules/post/blit.wgsl",
@@ -1039,7 +1057,7 @@
     {
       "id": "src/utils/miscutils.js",
       "type": "module",
-      "inDegree": 1,
+      "inDegree": 2,
       "outDegree": 0
     },
     {
@@ -1245,6 +1263,10 @@
     {
       "from": "examples/pbrshader/PBRShader.js",
       "to": "src/modules/pbr/pbr.wgsl"
+    },
+    {
+      "from": "examples/performance/Performance.js",
+      "to": "pkg:ogpu"
     },
     {
       "from": "examples/postprocessing/PostProcessingExample.js",
@@ -1676,6 +1698,10 @@
     },
     {
       "from": "src/index.js",
+      "to": "src/modules/PerformanceProfile.js"
+    },
+    {
+      "from": "src/index.js",
       "to": "src/modules/post/effects/BloomEffect.js"
     },
     {
@@ -1809,6 +1835,10 @@
     {
       "from": "src/main.js",
       "to": "examples/pbrshader/PBRShader.js"
+    },
+    {
+      "from": "src/main.js",
+      "to": "examples/performance/Performance.js"
     },
     {
       "from": "src/main.js",
@@ -1997,6 +2027,14 @@
     {
       "from": "src/modules/Orbit.js",
       "to": "pkg:@math"
+    },
+    {
+      "from": "src/modules/PerformanceProfile.js",
+      "to": "pkg:detect-gpu"
+    },
+    {
+      "from": "src/modules/PerformanceProfile.js",
+      "to": "src/utils/miscutils.js"
     },
     {
       "from": "src/modules/post/effects/AOBase.js",

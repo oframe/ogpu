@@ -32,6 +32,7 @@ export { SSAOEffect } from './modules/post/effects/SSAOEffect.js';
 export { DoFEffect } from './modules/post/effects/DoFEffect.js';
 export { SSREffect } from './modules/post/effects/SSREffect.js';
 export { TAAEffect } from './modules/post/effects/TAAEffect.js';
+export { PerformanceProfile } from './modules/PerformanceProfile.js';
 
 // --- utils ---
 export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js';

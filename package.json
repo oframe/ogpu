@@ -60,6 +60,7 @@
         "vite": "^6.0.1"
     },
     "dependencies": {
+        "detect-gpu": "^5.0.70",
         "parse-exr": "^1.0.2",
         "tweakpane": "^4.0.5",
         "webgpu-utils": "^1.10.3",

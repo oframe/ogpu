@@ -230,6 +230,13 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/modules/Orbit.js
 - fn `Orbit(object, { element = document, enabled = true, target = new Vec3(0, 0, 0), ease = 0.25, in…)`
 
+### src/modules/PerformanceProfile.js
+- **class PerformanceProfile**
+  - setQuality(tier)
+  - onQualityChange(cb)
+  - addGUI(gui)
+  - startWatchdog(renderer, { windowSize = 90, thresholdMs = 22, cooldownMs = 4000, onSuggestDowngrade } = …)
+
 ### src/modules/Raycast.js
 - **class Raycast**
   - constructor()
@@ -510,6 +517,11 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - solidTexture(rgba, label)
   - initPane()
 
+### examples/performance/Performance.js
+- **class Performance**
+  - constructor({ el = null } = {})
+  - init(el)
+
 ### examples/postprocessing/PostProcessingExample.js
 - **class PostProcessingExample**
   - constructor({ el = null } = {})
@@ -599,6 +611,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { DoFEffect } from './modules/post/effects/DoFEffect.js'
 - re-export { SSREffect } from './modules/post/effects/SSREffect.js'
 - re-export { TAAEffect } from './modules/post/effects/TAAEffect.js'
+- re-export { PerformanceProfile } from './modules/PerformanceProfile.js'
 - re-export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js'
 - re-export { loadJSON, loadJSONAll } from './utils/JSONLoader.js'
 - re-export { loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from './utils/IBLUtils/IBLUtils.js'

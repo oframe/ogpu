@@ -25,6 +25,7 @@ import { SortTransparency } from '@examples/sorttransparency/SortTransparency';
 import { MSAA } from '@examples/msaa/MSAA';
 import { CubeMapExample } from '@examples/cubemap/CubeMap';
 import { PostProcessingExample } from '@examples/postprocessing/PostProcessingExample';
+import { Performance } from '@examples/performance/Performance';
 import { Loader } from '@examples/Loader';
 
 const view = new URLSearchParams(window.location.search).get('src');
@@ -33,6 +34,7 @@ const canvas = document.getElementById('web-gpu-canvas');
 const views = {
     rendertargets: () => new RenderToTexture(),
     postprocessing: () => new PostProcessingExample(),
+    performance: () => new Performance(),
     particles: () => new Particles(),
     textures: () => new Textures(),
     ktx: () => new KTX(),
@@ -94,6 +96,7 @@ function renderLanding() {
         { view: 'raycasting', label: 'Projection and Raycasting', folder: 'raycasting' },
         { section: 'Performance' },
         { view: 'highmeshcount', label: 'High Mesh Count', folder: 'highmeshcount' },
+        { view: 'performance', label: 'Performance Profile', folder: 'performance' },
         { section: 'Compute' },
         { view: 'particles', label: 'Particles', folder: 'particles' },
         { view: 'computefrustumculling', label: 'Frustum Culling (GPU Compute)', folder: 'computefrustumculling' },

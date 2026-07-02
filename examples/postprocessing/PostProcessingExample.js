@@ -21,11 +21,10 @@ import {
     DoFEffect,
     SSREffect,
     TAAEffect,
+    PerformanceProfile,
 } from 'ogpu';
 
 import sceneShader from './scene.wgsl?raw';
-
-const QUALITY_OPTIONS = { low: 'low', medium: 'medium', high: 'high', ultra: 'ultra' };
 
 export class PostProcessingExample {
     constructor({ el = null } = {}) {
@@ -66,6 +65,11 @@ export class PostProcessingExample {
         this.camera.position.set(7, 4.5, 9);
         this.camera.lookAt([0, 0.8, 0]);
         this.orbit = new Orbit(this.camera, { element: this.gpu.canvas, target: [0, 0.8, 0] });
+
+        // device-detected quality drives the whole chain; GUI can override
+        this.profile = await PerformanceProfile.detect(this.gpu);
+        this.post.setQuality(this.profile.quality);
+        this.profile.onQualityChange((quality) => this.post.setQuality(quality));
 
         this.initScene();
         this.initPane();
@@ -143,8 +147,10 @@ export class PostProcessingExample {
 
         this.gui.add(this.post, 'enabled', { label: 'post-enabled' });
 
-        const proxy = { quality: this.post.quality, emissive: 6 };
-        this.gui.add(proxy, 'quality', { options: QUALITY_OPTIONS }).on('change', (ev) => this.post.setQuality(ev.value));
+        // quality lives in the profile folder — its onQualityChange drives the composer
+        this.profile.addGUI(this.gui);
+
+        const proxy = { emissive: 6 };
         this.gui.add(proxy, 'emissive', { min: 0, max: 20, step: 0.1, label: 'emissive-intensity' }).on('change', (ev) => {
             this.emissives.forEach((m) => m.uniforms.set({ uEmissiveIntensity: ev.value }));
         });

@@ -29,6 +29,7 @@ export { FXAAEffect } from './modules/post/effects/FXAAEffect.js';
 export { SMAAEffect } from './modules/post/effects/SMAAEffect.js';
 export { GTAOEffect } from './modules/post/effects/GTAOEffect.js';
 export { SSAOEffect } from './modules/post/effects/SSAOEffect.js';
+export { DoFEffect } from './modules/post/effects/DoFEffect.js';
 
 // --- utils ---
 export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js';

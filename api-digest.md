@@ -294,6 +294,15 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - dispose()
 - const `BLUR_MODES`
 
+### src/modules/post/effects/DoFEffect.js
+- **class DoFEffect**
+  - constructor(gpu, { format = 'rgba16float', focusDistance = 10, focusRange = 6, bokehRadius = 8 } = {})
+  - setQuality(tier)
+  - resize()
+  - render(encoder, { sourceView, destView, depthView, sampler, size, camera })
+  - addGUI(gui)
+  - dispose()
+
 ### src/modules/post/effects/FXAAEffect.js
 - **class FXAAEffect**
   - constructor(gpu, { format = 'rgba16float' } = {})
@@ -569,6 +578,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { SMAAEffect } from './modules/post/effects/SMAAEffect.js'
 - re-export { GTAOEffect } from './modules/post/effects/GTAOEffect.js'
 - re-export { SSAOEffect } from './modules/post/effects/SSAOEffect.js'
+- re-export { DoFEffect } from './modules/post/effects/DoFEffect.js'
 - re-export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js'
 - re-export { loadJSON, loadJSONAll } from './utils/JSONLoader.js'
 - re-export { loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from './utils/IBLUtils/IBLUtils.js'

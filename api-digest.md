@@ -397,6 +397,21 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - addGUI(gui)
   - dispose()
 
+### src/modules/raymarch/Raymarcher.js
+- **class Raymarcher** extends Mesh
+  - constructor(gpu, { post = null, ibl = null, preset = 'metaballs', maxPrimitives = 32, maxSteps = 96, …)
+  - setPrimitive(i, { kind = 'sphere', position = [0, 0, 0], rotation = null, scale = 1, params = [1, 0, 0…)
+  - clearPrimitives()
+  - setMaterial(id, { color = [1, 1, 1], roughness = 0.5, metallic = 0, reflectivity = 0 } = {})
+  - setPreset(name)
+  - setQuality(tier)
+  - setMaxSteps(steps)
+  - addGUI(gui)
+- const `PRIMITIVE_KINDS`
+
+### src/modules/raymarch/presets.js
+- const `PRESETS`
+
 ### src/modules/text/MSDFFont.js
 - **class MSDFFont**
   - constructor(data, texture)
@@ -586,6 +601,14 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - **class Raycasting**
   - constructor()
   - init()
+
+### examples/raymarching/Raymarching.js
+- **class Raymarching**
+  - constructor({ el = null } = {})
+  - init(el)
+  - addMesh(geometry, { label, color, position = [0, 0, 0] } = {})
+  - initScene()
+  - initPane()
 
 ### examples/rendertotexture/RenderToTexture.js
 - **class RenderToTexture**

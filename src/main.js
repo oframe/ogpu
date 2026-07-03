@@ -25,6 +25,7 @@ import { SortTransparency } from '@examples/sorttransparency/SortTransparency';
 import { MSAA } from '@examples/msaa/MSAA';
 import { CubeMapExample } from '@examples/cubemap/CubeMap';
 import { PostProcessingExample } from '@examples/postprocessing/PostProcessingExample';
+import { Raymarching } from '@examples/raymarching/Raymarching';
 import { Performance } from '@examples/performance/Performance';
 import { Interaction } from '@examples/interaction/Interaction';
 import { TextExample } from '@examples/text/TextExample';
@@ -36,6 +37,7 @@ const canvas = document.getElementById('web-gpu-canvas');
 const views = {
     rendertargets: () => new RenderToTexture(),
     postprocessing: () => new PostProcessingExample(),
+    raymarching: () => new Raymarching(),
     performance: () => new Performance(),
     interaction: () => new Interaction(),
     text: () => new TextExample(),

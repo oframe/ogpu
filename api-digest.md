@@ -435,7 +435,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - setResolutionScale(scale)
   - setSize(width, height)
   - reflectCamera(camera, plane = this.plane)
-  - render(encoder, { scene, camera, renderer = this.gpu.renderer, hide = [] } = {})
+  - render({ scene, camera, renderer = this.gpu.renderer, hide = [] } = {})
   - dispose()
 
 ### src/modules/reflections/ReflectionProbe.js

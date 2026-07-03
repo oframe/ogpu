@@ -222,12 +222,17 @@ export class PlanarReflector {
     }
 
     /**
-     * Render the reflection. Call once per frame BEFORE the main render. Pass
-     * the frame encoder to chain into one submit, or null to self-submit.
+     * Render the reflection. Call once per frame BEFORE the main render (or
+     * the frame encoder's creation). Always submits its own encoder: a mesh's
+     * uniform buffer is written at encode time via queue.writeBuffer, so if
+     * the reflection pass shared a submit with another pass drawing the same
+     * meshes, the last pass's camera uniforms would win for BOTH passes
+     * (writeBuffer ops all land before the command buffer executes). A
+     * separate submit flushes this pass's uniforms first.
      * `hide` lists extra meshes to exclude (e.g. another mirror's surface —
      * mirror-in-mirror recursion isn't supported).
      */
-    render(encoder, { scene, camera, renderer = this.gpu.renderer, hide = [] } = {}) {
+    render({ scene, camera, renderer = this.gpu.renderer, hide = [] } = {}) {
         if (!renderer?.isReady) return;
 
         camera.updateMatrixWorld();
@@ -242,8 +247,7 @@ export class PlanarReflector {
             }
         }
 
-        const own = !encoder;
-        const enc = encoder || this.gpu.device.createCommandEncoder({ label: `${this.label}-encoder` });
+        const enc = this.gpu.device.createCommandEncoder({ label: `${this.label}-encoder` });
 
         renderer.render({ scene, camera: this.camera, target: this.target, encoder: enc, updateMatrices: false });
 
@@ -257,7 +261,7 @@ export class PlanarReflector {
             }
         }
 
-        if (own) this.gpu.device.queue.submit([enc.finish()]);
+        this.gpu.device.queue.submit([enc.finish()]);
 
         hidden.forEach((mesh) => (mesh.visible = true));
     }

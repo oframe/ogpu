@@ -4,6 +4,15 @@ Signatures live in repo-root `api-digest.md`. This file is gotchas only.
 
 ## PlanarReflector
 
+- **One submit per pass — never chain into a shared encoder.** `Mesh.draw`
+  writes each mesh's single uniform buffer via `queue.writeBuffer` at encode
+  time. All writeBuffer ops execute before a submitted command buffer runs, so
+  two passes drawing the same meshes inside one submit both execute with the
+  LAST pass's camera uniforms (this shipped as "mirrors render the main view
+  into the reflection target" before the fix). `render()` therefore always
+  creates and submits its own encoder; `ReflectionProbe.update` submits per
+  face for the same reason. Call reflectors before building the frame's main
+  encoder.
 - **Format trap.** Scene pipelines are compiled against one target layout; a
   differently formatted reflection target draws nothing (pass/pipeline
   validation). Plain-swapchain apps get the default single

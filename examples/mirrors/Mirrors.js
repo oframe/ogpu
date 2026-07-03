@@ -108,7 +108,7 @@ export class Mirrors {
         });
         this.floorMirror.uniforms.set({
             uBaseColor: [0.05, 0.05, 0.06],
-            uRoughness: 0.1,
+            uRoughness: 0.05,
             uMaxLod: this.floorReflector.maxLod,
             uReflectivity: 0.7,
             uFresnelPower: 5,
@@ -126,7 +126,7 @@ export class Mirrors {
         this.wallMirror.position.set(0, 3, -4);
         this.wallMirror.uniforms.set({
             uBaseColor: [0.06, 0.06, 0.08],
-            uRoughness: 0.35,
+            uRoughness: 0.15,
             uMaxLod: this.wallReflector.maxLod,
             uReflectivity: 0.85,
             uFresnelPower: 5,
@@ -240,12 +240,10 @@ export class Mirrors {
             hide: [this.probeSphere, this.floorMirror, this.wallMirror],
         });
 
-        // reflections + main pass chained into one submit; each mirror hides the
-        // other (no mirror-in-mirror recursion)
-        const encoder = this.gpu.device.createCommandEncoder({ label: 'mirrors-frame-encoder' });
-        this.floorReflector.render(encoder, { scene: this.scene, camera: this.camera, renderer: this.renderer, hide: [this.wallMirror] });
-        this.wallReflector.render(encoder, { scene: this.scene, camera: this.camera, renderer: this.renderer, hide: [this.floorMirror] });
-        this.renderer.render({ scene: this.scene, camera: this.camera, encoder });
-        this.gpu.device.queue.submit([encoder.finish()]);
+        // each reflector self-submits (shared-submit passes would clobber each
+        // other's mesh uniforms); each mirror hides the other (no recursion)
+        this.floorReflector.render({ scene: this.scene, camera: this.camera, renderer: this.renderer, hide: [this.wallMirror] });
+        this.wallReflector.render({ scene: this.scene, camera: this.camera, renderer: this.renderer, hide: [this.floorMirror] });
+        this.renderer.render({ scene: this.scene, camera: this.camera });
     };
 }

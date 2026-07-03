@@ -139,16 +139,19 @@ export class ReflectionProbe {
 
         scene.updateMatrixWorld();
 
-        const encoder = this.gpu.device.createCommandEncoder({ label: `${this.label}-encoder` });
+        // One submit PER face: mesh uniforms are written via queue.writeBuffer
+        // at encode time, so six faces in one submit would all execute with the
+        // sixth face's camera (last write wins across a shared submit).
         for (let i = 0; i < 6; i++) {
             const face = FACES[i];
             this.camera.position.copy(this.position);
             this.camera.up.set(face.up[0], face.up[1], face.up[2]);
             this.camera.lookAt([this.position[0] + face.dir[0], this.position[1] + face.dir[1], this.position[2] + face.dir[2]]);
             this.camera.updateMatrixWorld();
+            const encoder = this.gpu.device.createCommandEncoder({ label: `${this.label}-face-${i}-encoder` });
             renderer.render({ scene, camera: this.camera, target: this._faceTargets[i], encoder, updateMatrices: false });
+            this.gpu.device.queue.submit([encoder.finish()]);
         }
-        this.gpu.device.queue.submit([encoder.finish()]);
 
         if (this.mipLevelCount > 1) generateMipmap(this.gpu.device, this.cubeTexture);
 

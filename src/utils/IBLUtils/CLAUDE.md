@@ -29,11 +29,20 @@ General-purpose pbr shaders (`pbr.wgsl`, `brdflut.wgsl`, `display.wgsl`) stay in
   `generateMipmap` after writing mip 0. `createDestinationCube` therefore carries
   `RENDER_ATTACHMENT` usage (generateMipmap renders into the mips). See LearnOpenGL
   "Bright dots in the pre-filter convolution".
-- **Source cube is transient.** It exists only as the integration input; `prefilterCube`
+- **Source cube is transient — in the offline path only.** `prefilterCube`
   calls `sourceCube.destroy()` right after submitting the GGX pass (commands already
   enqueued, so the device keeps it alive until the GPU finishes). The returned IBL result
   no longer carries `sourceCube` — only the prefiltered `texture`/`view`, `mipLevels`,
   `faceSize`.
+- **`createDynamicIBL` is the non-destructive twin.** Same `ggx.wgsl`, same slice set
+  (shared via `createPrefilterSlices`/`recordPrefilterSlices`), but the source cube is
+  persistent (caller writes its mip-0 faces + regenerates its mips — e.g.
+  `@modules/sky`), per-slice uniform buffers/bind groups are built once and reused, and
+  the prefilter runs either amortized (`update(encoder, {budget})`, round-robin over
+  face×mip slices) or as a full burst (`refresh`). `profile()` GPU-times a full burst
+  through the ComputeShader timestamp plumbing, guarded on `'timestamp-query'`.
+  Sample count is the `NumSamples` override in `ggx.wgsl` — always baked via
+  `applyOverrideConstants` (1024 offline, `samples` option dynamic).
 - **Mip count is a contract with the shader.** `loadIBLCubeMap` returns `mipLevels`;
   `pbr.wgsl` consumers must feed it back as the `roughnessLevels` override constant or the
   roughness→lod mapping is wrong (see `src/modules/CLAUDE.md` pbr/).

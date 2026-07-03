@@ -1,10 +1,10 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 181,
-    "edges": 332,
-    "modules": 105,
-    "shaders": 67,
+    "nodes": 188,
+    "edges": 351,
+    "modules": 108,
+    "shaders": 71,
     "external": 9
   },
   "hubs": [
@@ -26,35 +26,35 @@
     },
     {
       "id": "src/utils/BufferUtils.js",
-      "inDegree": 6
+      "inDegree": 7
+    },
+    {
+      "id": "src/core/RenderPipeline.js",
+      "inDegree": 5
     },
     {
       "id": "src/core/Transform.js",
       "inDegree": 5
     },
     {
-      "id": "src/core/RenderPipeline.js",
+      "id": "src/core/ComputeShader.js",
       "inDegree": 4
     },
     {
-      "id": "src/core/ComputeShader.js",
-      "inDegree": 3
-    },
-    {
       "id": "src/core/Mesh.js",
-      "inDegree": 3
+      "inDegree": 4
     },
     {
       "id": "src/utils/wgslOverrides.js",
+      "inDegree": 4
+    },
+    {
+      "id": "src/core/primitives/FullscreenTriangle.js",
       "inDegree": 3
     },
     {
-      "id": "examples/hellowebgpu/cube.wgsl",
-      "inDegree": 2
-    },
-    {
-      "id": "examples/hellowebgpu/uniformStruct.js",
-      "inDegree": 2
+      "id": "src/modules/pbr/pbr.wgsl",
+      "inDegree": 3
     }
   ],
   "nodes": [
@@ -93,6 +93,12 @@
       "type": "shader",
       "inDegree": 1,
       "outDegree": 0
+    },
+    {
+      "id": "examples/dynamicsky/DynamicSky.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 4
     },
     {
       "id": "examples/examples.css",
@@ -463,7 +469,7 @@
     {
       "id": "pkg:@math",
       "type": "external",
-      "inDegree": 16,
+      "inDegree": 17,
       "outDegree": 0
     },
     {
@@ -481,7 +487,7 @@
     {
       "id": "pkg:ogpu",
       "type": "external",
-      "inDegree": 30,
+      "inDegree": 31,
       "outDegree": 0
     },
     {
@@ -499,7 +505,7 @@
     {
       "id": "pkg:webgpu-utils",
       "type": "external",
-      "inDegree": 23,
+      "inDegree": 25,
       "outDegree": 0
     },
     {
@@ -517,7 +523,7 @@
     {
       "id": "src/core/ComputeShader.js",
       "type": "module",
-      "inDegree": 3,
+      "inDegree": 4,
       "outDegree": 3
     },
     {
@@ -535,7 +541,7 @@
     {
       "id": "src/core/Mesh.js",
       "type": "module",
-      "inDegree": 3,
+      "inDegree": 4,
       "outDegree": 4
     },
     {
@@ -565,7 +571,7 @@
     {
       "id": "src/core/primitives/FullscreenTriangle.js",
       "type": "module",
-      "inDegree": 2,
+      "inDegree": 3,
       "outDegree": 1
     },
     {
@@ -613,7 +619,7 @@
     {
       "id": "src/core/RenderPipeline.js",
       "type": "module",
-      "inDegree": 4,
+      "inDegree": 5,
       "outDegree": 3
     },
     {
@@ -668,7 +674,7 @@
       "id": "src/main.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 30
+      "outDegree": 31
     },
     {
       "id": "src/math/Color.js",
@@ -793,7 +799,7 @@
     {
       "id": "src/modules/pbr/pbr.wgsl",
       "type": "shader",
-      "inDegree": 2,
+      "inDegree": 3,
       "outDegree": 0
     },
     {
@@ -1031,6 +1037,42 @@
       "outDegree": 1
     },
     {
+      "id": "src/modules/sky/presets.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/sky/sh_project.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/sky/Sky.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 13
+    },
+    {
+      "id": "src/modules/sky/sky.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/sky/skyview_lut.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/sky/transmittance_lut.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
       "id": "src/modules/text/msdf.wgsl",
       "type": "shader",
       "inDegree": 1,
@@ -1063,7 +1105,7 @@
     {
       "id": "src/utils/BufferUtils.js",
       "type": "module",
-      "inDegree": 6,
+      "inDegree": 7,
       "outDegree": 0
     },
     {
@@ -1081,8 +1123,8 @@
     {
       "id": "src/utils/IBLUtils/IBLUtils.js",
       "type": "module",
-      "inDegree": 1,
-      "outDegree": 11
+      "inDegree": 2,
+      "outDegree": 12
     },
     {
       "id": "src/utils/IBLUtils/unpackequirect.wgsl",
@@ -1141,7 +1183,7 @@
     {
       "id": "src/utils/wgslOverrides.js",
       "type": "module",
-      "inDegree": 3,
+      "inDegree": 4,
       "outDegree": 0
     }
   ],
@@ -1169,6 +1211,22 @@
     {
       "from": "examples/cubemap/CubeMap.js",
       "to": "pkg:ogpu"
+    },
+    {
+      "from": "examples/dynamicsky/DynamicSky.js",
+      "to": "pkg:ogpu"
+    },
+    {
+      "from": "examples/dynamicsky/DynamicSky.js",
+      "to": "pkg:webgpu-utils"
+    },
+    {
+      "from": "examples/dynamicsky/DynamicSky.js",
+      "to": "src/modules/pbr/pbr.wgsl"
+    },
+    {
+      "from": "examples/dynamicsky/DynamicSky.js",
+      "to": "src/modules/sky/Sky.js"
     },
     {
       "from": "examples/frustumculling/FrustumCulling.js",
@@ -1892,6 +1950,10 @@
     },
     {
       "from": "src/main.js",
+      "to": "examples/dynamicsky/DynamicSky.js"
+    },
+    {
+      "from": "src/main.js",
       "to": "examples/examples.css"
     },
     {
@@ -2403,6 +2465,58 @@
       "to": "pkg:@math"
     },
     {
+      "from": "src/modules/sky/Sky.js",
+      "to": "pkg:@math"
+    },
+    {
+      "from": "src/modules/sky/Sky.js",
+      "to": "pkg:webgpu-utils"
+    },
+    {
+      "from": "src/modules/sky/Sky.js",
+      "to": "src/core/ComputeShader.js"
+    },
+    {
+      "from": "src/modules/sky/Sky.js",
+      "to": "src/core/Mesh.js"
+    },
+    {
+      "from": "src/modules/sky/Sky.js",
+      "to": "src/core/primitives/FullscreenTriangle.js"
+    },
+    {
+      "from": "src/modules/sky/Sky.js",
+      "to": "src/core/RenderPipeline.js"
+    },
+    {
+      "from": "src/modules/sky/Sky.js",
+      "to": "src/modules/sky/presets.js"
+    },
+    {
+      "from": "src/modules/sky/Sky.js",
+      "to": "src/modules/sky/sh_project.wgsl"
+    },
+    {
+      "from": "src/modules/sky/Sky.js",
+      "to": "src/modules/sky/sky.wgsl"
+    },
+    {
+      "from": "src/modules/sky/Sky.js",
+      "to": "src/modules/sky/skyview_lut.wgsl"
+    },
+    {
+      "from": "src/modules/sky/Sky.js",
+      "to": "src/modules/sky/transmittance_lut.wgsl"
+    },
+    {
+      "from": "src/modules/sky/Sky.js",
+      "to": "src/utils/BufferUtils.js"
+    },
+    {
+      "from": "src/modules/sky/Sky.js",
+      "to": "src/utils/IBLUtils/IBLUtils.js"
+    },
+    {
       "from": "src/modules/text/MSDFFont.js",
       "to": "src/core/Texture.js"
     },
@@ -2465,6 +2579,10 @@
     {
       "from": "src/utils/IBLUtils/IBLUtils.js",
       "to": "src/utils/ktxutils.js"
+    },
+    {
+      "from": "src/utils/IBLUtils/IBLUtils.js",
+      "to": "src/utils/wgslOverrides.js"
     },
     {
       "from": "src/utils/Mat3Utils.js",

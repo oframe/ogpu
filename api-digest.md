@@ -397,6 +397,18 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - addGUI(gui)
   - dispose()
 
+### src/modules/sky/Sky.js
+- **class Sky**
+  - constructor(gpu, { post = null, ibl = {}, preset = 'physical', timeOfDay = 10, timeScale = 0, latitud…)
+  - setPreset(name)
+  - update({ deltaTime = 0 } = {})
+  - refreshEnvironment()
+  - addGUI(gui)
+  - dispose()
+
+### src/modules/sky/presets.js
+- const `SKY_PRESETS`
+
 ### src/modules/text/MSDFFont.js
 - **class MSDFFont**
   - constructor(data, texture)
@@ -422,6 +434,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - fn `loadIBLCubeMap(gpu, { url, faceSize = DEFAULT_FACE_SIZE, mipLevels = null, label = 'IBL cube' } = {})`
 - fn `loadSphericalHarmonics(url)`
 - fn `createBrdfLUT(gpu, { size = 512, label = 'brdflut' } = {})`
+- fn `createDynamicIBL(gpu, { faceSize = 128, mipLevels = null, samples = 256, label = 'dynamic-ibl' } = {})`
 
 ### src/utils/JSONLoader.js
 - fn `loadJSON(url, opts)`
@@ -474,6 +487,14 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - **class CubeMapExample**
   - constructor()
   - init()
+
+### examples/dynamicsky/DynamicSky.js
+- **class DynamicSky**
+  - constructor({ el = null } = {})
+  - init(el)
+  - initSpheres()
+  - solidTexture(rgba, label)
+  - initPane()
 
 ### examples/frustumculling/FrustumCulling.js
 - **class FrustumCulling**

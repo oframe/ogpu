@@ -5,6 +5,7 @@ import { ComputeShader } from '@core/ComputeShader';
 import { createUniformBuffer } from '../BufferUtils';
 import { parseKTXHeader } from '../ktxutils';
 import { loadJSON } from '../JSONLoader';
+import { applyOverrideConstants } from '../wgslOverrides';
 
 import ggx from './ggx.wgsl?raw';
 import unpackOct from './unpackoct.wgsl?raw';
@@ -220,20 +221,9 @@ function unpackToCube(gpu, { sourceTexture, faceSize, label, shader }) {
     };
 }
 
-function prefilterCube(gpu, { sourceCube, faceSize, mipLevels, label }) {
-    const dest = createDestinationCube(gpu, { faceSize, mipLevels, label });
-
-    const module = gpu.device.createShaderModule({ label: `${label}-ggx-module`, code: ggx });
-    const defs = makeShaderDataDefinitions(ggx);
-    const uniformsView = makeStructuredView(defs.uniforms.uniforms);
-
-    const pipeline = gpu.device.createComputePipeline({
-        label: `${label}-ggx-pipeline`,
-        layout: 'auto',
-        compute: { module, entryPoint: 'main' },
-    });
-
-    const sampler = gpu.device.createSampler({
+function makeIblSampler(gpu, label) {
+    return gpu.device.createSampler({
+        label: `${label}-ggx-sampler`,
         minFilter: 'linear',
         magFilter: 'linear',
         mipmapFilter: 'linear',
@@ -241,23 +231,23 @@ function prefilterCube(gpu, { sourceCube, faceSize, mipLevels, label }) {
         addressModeV: 'clamp-to-edge',
         addressModeW: 'clamp-to-edge',
     });
+}
 
-    const sourceView = sourceCube.createView({ dimension: 'cube' });
-
-    const encoder = gpu.device.createCommandEncoder({ label: `${label}-ggx-encoder` });
-    const pass = encoder.beginComputePass({ label: `${label}-ggx-pass` });
-    pass.setPipeline(pipeline);
-
-    const uniformBuffers = [];
+// Shared GGX-prefilter slice setup: one persistent uniform buffer + bind group
+// per face×mip slice. Both the offline (loadIBLCubeMap) and dynamic
+// (createDynamicIBL) paths run these same slices — only *when* differs.
+function createPrefilterSlices(gpu, { layout, defs, dest, sourceView, sampler, faceSize, sourceFaceSize, mipLevels, label }) {
+    const slices = [];
 
     for (let mip = 0; mip < mipLevels; mip++) {
         const mipSize = Math.max(1, faceSize >> mip);
         const roughness = mipLevels > 1 ? mip / (mipLevels - 1) : 0;
 
         for (let face = 0; face < 6; face++) {
+            const uniformsView = makeStructuredView(defs.uniforms.uniforms);
             uniformsView.set({
                 resolution: mipSize,
-                sourceResolution: faceSize,
+                sourceResolution: sourceFaceSize,
                 roughness,
                 mipLevel: mip,
                 faceIndex: face,
@@ -268,11 +258,10 @@ function prefilterCube(gpu, { sourceCube, faceSize, mipLevels, label }) {
                 size: uniformsView.arrayBuffer.byteLength,
             });
             gpu.device.queue.writeBuffer(uBuf, 0, uniformsView.arrayBuffer);
-            uniformBuffers.push(uBuf);
 
             const bindGroup = gpu.device.createBindGroup({
                 label: `${label}-ggx-bg-mip-${mip}-face-${face}`,
-                layout: pipeline.getBindGroupLayout(0),
+                layout,
                 entries: [
                     { binding: 0, resource: { buffer: uBuf } },
                     { binding: 1, resource: sourceView },
@@ -281,11 +270,51 @@ function prefilterCube(gpu, { sourceCube, faceSize, mipLevels, label }) {
                 ],
             });
 
-            pass.setBindGroup(0, bindGroup);
-            pass.dispatchWorkgroups(mipSize, mipSize, 1);
+            slices.push({ size: mipSize, bindGroup });
         }
     }
 
+    return slices;
+}
+
+function recordPrefilterSlices(pass, pipeline, slices, start = 0, count = slices.length) {
+    pass.setPipeline(pipeline);
+    for (let i = 0; i < count; i++) {
+        const slice = slices[(start + i) % slices.length];
+        pass.setBindGroup(0, slice.bindGroup);
+        pass.dispatchWorkgroups(slice.size, slice.size, 1);
+    }
+}
+
+function prefilterCube(gpu, { sourceCube, faceSize, mipLevels, label }) {
+    const dest = createDestinationCube(gpu, { faceSize, mipLevels, label });
+
+    // Bake the sample-count override (Safari has no pipeline-override support).
+    const code = applyOverrideConstants(ggx, {});
+    const module = gpu.device.createShaderModule({ label: `${label}-ggx-module`, code });
+    const defs = makeShaderDataDefinitions(code);
+
+    const pipeline = gpu.device.createComputePipeline({
+        label: `${label}-ggx-pipeline`,
+        layout: 'auto',
+        compute: { module, entryPoint: 'main' },
+    });
+
+    const slices = createPrefilterSlices(gpu, {
+        layout: pipeline.getBindGroupLayout(0),
+        defs,
+        dest,
+        sourceView: sourceCube.createView({ dimension: 'cube' }),
+        sampler: makeIblSampler(gpu, label),
+        faceSize,
+        sourceFaceSize: faceSize,
+        mipLevels,
+        label,
+    });
+
+    const encoder = gpu.device.createCommandEncoder({ label: `${label}-ggx-encoder` });
+    const pass = encoder.beginComputePass({ label: `${label}-ggx-pass` });
+    recordPrefilterSlices(pass, pipeline, slices);
     pass.end();
     gpu.device.queue.submit([encoder.finish()]);
 
@@ -298,6 +327,108 @@ function prefilterCube(gpu, { sourceCube, faceSize, mipLevels, label }) {
         view: dest.createView({ dimension: 'cube' }),
         mipLevels,
         faceSize,
+    };
+}
+
+/**
+ * Persistent, non-destructive IBL pipeline for a runtime-rendered environment
+ * (e.g. the dynamic sky). Unlike loadIBLCubeMap it keeps the source cube alive —
+ * callers render/write into its mip-0 faces and regenerate its mips — and it
+ * reuses per-slice uniform buffers + bind groups instead of reallocating.
+ *
+ * Returns:
+ *   sourceCube            GPUTexture (cube, full mip chain) the caller writes
+ *   prefiltered           { texture, view, mipLevels, faceSize } — bind as tSpecular;
+ *                         feed mipLevels back as the `roughnessLevels` override
+ *   shBuffer              144-byte uniform buffer (9 × vec4f, vec4-padded — same
+ *                         layout as loadSphericalHarmonics); the caller copies
+ *                         projected SH coefficients into it
+ *   update(encoder, { budget })  amortized GGX prefilter: `budget` face×mip
+ *                         slices per call, round-robin over the whole chain
+ *   refresh(encoder)      full-burst prefilter of every slice (scrub-end)
+ *   profile()             GPU-times one full burst via timestamp queries;
+ *                         resolves to ms, or null without 'timestamp-query'
+ */
+export function createDynamicIBL(gpu, { faceSize = 128, mipLevels = null, samples = 256, label = 'dynamic-ibl' } = {}) {
+    if (!gpu) throw new Error('createDynamicIBL: no gpu context');
+
+    const totalMips = mipLevels ?? Math.floor(Math.log2(faceSize)) + 1;
+    const sourceMips = Math.floor(Math.log2(faceSize)) + 1;
+
+    const sourceCube = createDestinationCube(gpu, { faceSize, mipLevels: sourceMips, label: `${label}-source` });
+    const dest = createDestinationCube(gpu, { faceSize, mipLevels: totalMips, label });
+
+    const compute = new ComputeShader(gpu, { label: `${label}-ggx`, code: ggx, constants: { NumSamples: samples } });
+
+    const slices = createPrefilterSlices(gpu, {
+        layout: compute.bindGroupLayout('main'),
+        defs: compute.defs,
+        dest,
+        sourceView: sourceCube.createView({ dimension: 'cube' }),
+        sampler: makeIblSampler(gpu, label),
+        faceSize,
+        sourceFaceSize: faceSize,
+        mipLevels: totalMips,
+        label,
+    });
+
+    const shBuffer = createUniformBuffer(gpu, { label: `${label}-sh-buffer`, size: 9 * 16 });
+
+    const canTime = gpu.device.features.has('timestamp-query');
+    let cursor = 0;
+
+    return {
+        sourceCube,
+        prefiltered: {
+            texture: dest,
+            view: dest.createView({ dimension: 'cube' }),
+            mipLevels: totalMips,
+            faceSize,
+        },
+        shBuffer,
+        sliceCount: slices.length,
+
+        update(encoder, { budget = 6 } = {}) {
+            const n = Math.min(budget, slices.length);
+            const pass = encoder.beginComputePass({ label: `${label}-ggx-pass` });
+            // kernels re-read per call: hot-reload swaps the pipeline in place
+            recordPrefilterSlices(pass, compute.kernels.main, slices, cursor, n);
+            pass.end();
+            cursor = (cursor + n) % slices.length;
+            return n;
+        },
+
+        refresh(encoder) {
+            const pass = encoder.beginComputePass({ label: `${label}-ggx-refresh-pass` });
+            recordPrefilterSlices(pass, compute.kernels.main, slices);
+            pass.end();
+            cursor = 0;
+        },
+
+        async profile() {
+            if (!canTime) return null;
+            const encoder = gpu.device.createCommandEncoder({ label: `${label}-profile-encoder` });
+            // Full burst in one timed pass, through ComputeShader's timing plumbing.
+            const pass = encoder.beginComputePass({
+                label: `${label}-profile-pass`,
+                timestampWrites: {
+                    querySet: compute.querySet,
+                    beginningOfPassWriteIndex: 0,
+                    endOfPassWriteIndex: 1,
+                },
+            });
+            recordPrefilterSlices(pass, compute.kernels.main, slices);
+            pass.end();
+            encoder.resolveQuerySet(compute.querySet, 0, 2, compute.queryBuffer, 0);
+            encoder.copyBufferToBuffer(compute.queryBuffer, 0, compute.queryBufferResult, 0, compute.queryBufferResult.size);
+            gpu.device.queue.submit([encoder.finish()]);
+
+            await compute.queryBufferResult.mapAsync(GPUMapMode.READ);
+            const data = new BigInt64Array(compute.queryBufferResult.getMappedRange());
+            const ms = Number(data[1] - data[0]) / 1e6;
+            compute.queryBufferResult.unmap();
+            return ms;
+        },
     };
 }
 

@@ -28,6 +28,7 @@ import { PostProcessingExample } from '@examples/postprocessing/PostProcessingEx
 import { Performance } from '@examples/performance/Performance';
 import { Interaction } from '@examples/interaction/Interaction';
 import { TextExample } from '@examples/text/TextExample';
+import { DynamicSky } from '@examples/dynamicsky/DynamicSky';
 import { Loader } from '@examples/Loader';
 
 const view = new URLSearchParams(window.location.search).get('src');
@@ -48,6 +49,7 @@ const views = {
     raycasting: () => new Raycasting(),
     orbit: () => new OrbitControls(),
     pbrshader: () => new PBRShader(),
+    dynamicsky: () => new DynamicSky(),
     skinning: () => new Skinning(canvas),
     skinninggltf: () => new SkinningGLTF(canvas),
     gltf: () => new GLTF(canvas),

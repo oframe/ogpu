@@ -1,11 +1,14 @@
-import { Camera, Renderer, Transform, Orbit, GUI, Mesh, Plane, RenderPipeline, Vec3, PerformanceProfile } from 'ogpu';
+import { Camera, Renderer, Transform, Orbit, GUI, Mesh, Plane, Sphere, Box, RenderPipeline, Vec3, PerformanceProfile } from 'ogpu';
 import { RainSystem } from '@modules/rain/RainSystem.js';
 
 import groundShader from './ground.wgsl?raw';
+import meshShader from './mesh.wgsl?raw';
 
 // Rain demo: velocity-stretched streaks in a camera-following wrap volume +
 // a ground plane sampling the RippleField texture (tRipple) for impact
-// ripples. Preset dropdown + intensity slider in the GUI.
+// ripples, plus a sphere and a box in the scene that sample the same
+// ripple field on their upward-facing surfaces and go wet/glossy with rain
+// intensity. Preset dropdown + intensity slider in the GUI.
 export class Rain {
     constructor() {
         this.init();
@@ -32,6 +35,7 @@ export class Rain {
         this.scene.addChild(this.rain);
 
         this.initGround();
+        this.initMeshes();
 
         this.gui = new GUI({ title: 'rain', expanded: true });
         this.rain.addGUI(this.gui);
@@ -87,8 +91,73 @@ export class Rain {
         this.scene.addChild(this.ground);
     }
 
+    // Sphere + box that sit on the ground and react to the same ripple
+    // field: normals bend on their upward-facing surfaces, and the surface
+    // goes wet (darker albedo, glossier specular) as rain intensity rises.
+    initMeshes() {
+        const sampler = this.gpu.device.createSampler({
+            magFilter: 'linear',
+            minFilter: 'linear',
+            addressModeU: 'repeat',
+            addressModeV: 'repeat',
+        });
+
+        const makeMesh = ({ label, geometry, position, color }) => {
+            const pipeline = new RenderPipeline(this.gpu, {
+                label: `${label}-pipeline`,
+                code: meshShader,
+                vertexBuffers: geometry.bufferLayouts,
+            });
+
+            const mesh = new Mesh(this.gpu, {
+                label,
+                pipeline,
+                geometry,
+                bindGroups: (uniformBuffer) => [
+                    this.gpu.device.createBindGroup({
+                        label: `${label}-bind-group`,
+                        layout: pipeline.bindGroupLayout(0),
+                        entries: [
+                            { binding: 0, resource: { buffer: uniformBuffer } },
+                            { binding: 1, resource: sampler },
+                            { binding: 2, resource: this.rain.tRipple },
+                        ],
+                    }),
+                ],
+            });
+
+            mesh.position.set(...position);
+            mesh.uniforms.set({
+                uRippleWorldSize: this.rain.rippleWorldSize,
+                uRippleStrength: 3,
+                uWetness: 0,
+                uColor: color,
+            });
+
+            this.scene.addChild(mesh);
+            return mesh;
+        };
+
+        this.sphere = makeMesh({
+            label: 'rain-sphere',
+            geometry: new Sphere(this.gpu, { radius: 0.8 }),
+            position: [-1.6, 0.8, -1],
+            color: [0.6, 0.15, 0.15],
+        });
+
+        this.box = makeMesh({
+            label: 'rain-box',
+            geometry: new Box(this.gpu, { size: 1.2 }),
+            position: [1.6, 0.6, 0.5],
+            color: [0.18, 0.25, 0.55],
+        });
+    }
+
     update = ({ deltaTime }) => {
         this.rain.update(null, { dt: Math.min(deltaTime, 0.05), camera: this.camera });
+        // wetness tracks live rain intensity (GUI-driven)
+        this.sphere.uniforms.set({ uWetness: this.rain.intensity });
+        this.box.uniforms.set({ uWetness: this.rain.intensity });
         this.renderer.render({ scene: this.scene, camera: this.camera });
         this.orbit.update();
     };

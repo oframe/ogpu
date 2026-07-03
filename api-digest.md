@@ -655,6 +655,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - constructor()
   - init()
   - initGround()
+  - initMeshes()
 
 ### examples/raycasting/Raycasting.js
 - **class Raycasting**

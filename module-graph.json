@@ -1,10 +1,10 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 197,
-    "edges": 371,
+    "nodes": 198,
+    "edges": 372,
     "modules": 113,
-    "shaders": 75,
+    "shaders": 76,
     "external": 9
   },
   "hubs": [
@@ -341,10 +341,16 @@
       "outDegree": 0
     },
     {
+      "id": "examples/rain/mesh.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
       "id": "examples/rain/Rain.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 3
+      "outDegree": 4
     },
     {
       "id": "examples/raycasting/raycast.wgsl",
@@ -1493,6 +1499,10 @@
     {
       "from": "examples/rain/Rain.js",
       "to": "examples/rain/ground.wgsl"
+    },
+    {
+      "from": "examples/rain/Rain.js",
+      "to": "examples/rain/mesh.wgsl"
     },
     {
       "from": "examples/rain/Rain.js",

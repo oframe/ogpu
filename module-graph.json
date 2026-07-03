@@ -1,10 +1,10 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 205,
-    "edges": 391,
-    "modules": 116,
-    "shaders": 80,
+    "nodes": 210,
+    "edges": 403,
+    "modules": 119,
+    "shaders": 82,
     "external": 9
   },
   "hubs": [
@@ -22,18 +22,22 @@
     },
     {
       "id": "src/utils/BufferUtils.js",
-      "inDegree": 9
+      "inDegree": 10
     },
     {
       "id": "src/core/Texture.js",
       "inDegree": 8
     },
     {
+      "id": "src/core/RenderPipeline.js",
+      "inDegree": 7
+    },
+    {
       "id": "src/core/ComputeShader.js",
       "inDegree": 6
     },
     {
-      "id": "src/core/RenderPipeline.js",
+      "id": "src/core/Mesh.js",
       "inDegree": 6
     },
     {
@@ -41,8 +45,8 @@
       "inDegree": 6
     },
     {
-      "id": "src/core/Mesh.js",
-      "inDegree": 5
+      "id": "src/core/primitives/FullscreenTriangle.js",
+      "inDegree": 4
     },
     {
       "id": "src/utils/wgslOverrides.js",
@@ -50,10 +54,6 @@
     },
     {
       "id": "src/core/Camera.js",
-      "inDegree": 3
-    },
-    {
-      "id": "src/core/primitives/FullscreenTriangle.js",
       "inDegree": 3
     }
   ],
@@ -371,6 +371,18 @@
       "outDegree": 2
     },
     {
+      "id": "examples/raymarching/Raymarching.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 3
+    },
+    {
+      "id": "examples/raymarching/scene.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
       "id": "examples/rendertotexture/cube.wgsl",
       "type": "shader",
       "inDegree": 1,
@@ -511,7 +523,7 @@
     {
       "id": "pkg:@math",
       "type": "external",
-      "inDegree": 20,
+      "inDegree": 22,
       "outDegree": 0
     },
     {
@@ -529,7 +541,7 @@
     {
       "id": "pkg:ogpu",
       "type": "external",
-      "inDegree": 34,
+      "inDegree": 35,
       "outDegree": 0
     },
     {
@@ -583,7 +595,7 @@
     {
       "id": "src/core/Mesh.js",
       "type": "module",
-      "inDegree": 5,
+      "inDegree": 6,
       "outDegree": 4
     },
     {
@@ -613,7 +625,7 @@
     {
       "id": "src/core/primitives/FullscreenTriangle.js",
       "type": "module",
-      "inDegree": 3,
+      "inDegree": 4,
       "outDegree": 1
     },
     {
@@ -661,7 +673,7 @@
     {
       "id": "src/core/RenderPipeline.js",
       "type": "module",
-      "inDegree": 6,
+      "inDegree": 7,
       "outDegree": 3
     },
     {
@@ -716,7 +728,7 @@
       "id": "src/main.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 34
+      "outDegree": 35
     },
     {
       "id": "src/math/Color.js",
@@ -1115,6 +1127,24 @@
       "outDegree": 1
     },
     {
+      "id": "src/modules/raymarch/presets.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 1
+    },
+    {
+      "id": "src/modules/raymarch/raymarch.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/modules/raymarch/Raymarcher.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 7
+    },
+    {
       "id": "src/modules/reflections/blur_down.wgsl",
       "type": "shader",
       "inDegree": 1,
@@ -1207,7 +1237,7 @@
     {
       "id": "src/utils/BufferUtils.js",
       "type": "module",
-      "inDegree": 9,
+      "inDegree": 10,
       "outDegree": 0
     },
     {
@@ -1577,6 +1607,18 @@
     {
       "from": "examples/raycasting/Raycasting.js",
       "to": "pkg:ogpu"
+    },
+    {
+      "from": "examples/raymarching/Raymarching.js",
+      "to": "examples/raymarching/scene.wgsl"
+    },
+    {
+      "from": "examples/raymarching/Raymarching.js",
+      "to": "pkg:ogpu"
+    },
+    {
+      "from": "examples/raymarching/Raymarching.js",
+      "to": "src/modules/raymarch/Raymarcher.js"
     },
     {
       "from": "examples/rendertotexture/RenderToTexture.js",
@@ -2188,6 +2230,10 @@
     },
     {
       "from": "src/main.js",
+      "to": "examples/raymarching/Raymarching.js"
+    },
+    {
+      "from": "src/main.js",
       "to": "examples/rendertotexture/RenderToTexture.js"
     },
     {
@@ -2689,6 +2735,38 @@
     {
       "from": "src/modules/Raycast.js",
       "to": "pkg:@math"
+    },
+    {
+      "from": "src/modules/raymarch/presets.js",
+      "to": "pkg:@math"
+    },
+    {
+      "from": "src/modules/raymarch/Raymarcher.js",
+      "to": "pkg:@math"
+    },
+    {
+      "from": "src/modules/raymarch/Raymarcher.js",
+      "to": "src/core/Mesh.js"
+    },
+    {
+      "from": "src/modules/raymarch/Raymarcher.js",
+      "to": "src/core/primitives/FullscreenTriangle.js"
+    },
+    {
+      "from": "src/modules/raymarch/Raymarcher.js",
+      "to": "src/core/RenderPipeline.js"
+    },
+    {
+      "from": "src/modules/raymarch/Raymarcher.js",
+      "to": "src/modules/raymarch/presets.js"
+    },
+    {
+      "from": "src/modules/raymarch/Raymarcher.js",
+      "to": "src/modules/raymarch/raymarch.wgsl"
+    },
+    {
+      "from": "src/modules/raymarch/Raymarcher.js",
+      "to": "src/utils/BufferUtils.js"
     },
     {
       "from": "src/modules/reflections/PlanarReflector.js",

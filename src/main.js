@@ -28,6 +28,7 @@ import { MSAA } from '@examples/msaa/MSAA';
 import { CubeMapExample } from '@examples/cubemap/CubeMap';
 import { PostProcessingExample } from '@examples/postprocessing/PostProcessingExample';
 import { Mirrors } from '@examples/mirrors/Mirrors';
+import { Raymarching } from '@examples/raymarching/Raymarching';
 import { Performance } from '@examples/performance/Performance';
 import { Interaction } from '@examples/interaction/Interaction';
 import { TextExample } from '@examples/text/TextExample';
@@ -41,6 +42,7 @@ const views = {
     rendertargets: () => new RenderToTexture(),
     postprocessing: () => new PostProcessingExample(),
     mirrors: () => new Mirrors(),
+    raymarching: () => new Raymarching(),
     performance: () => new Performance(),
     interaction: () => new Interaction(),
     text: () => new TextExample(),

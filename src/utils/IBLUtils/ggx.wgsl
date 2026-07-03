@@ -2,6 +2,10 @@ enable f16;
 
 const PI = 3.14159265358979323846;
 
+// Importance-sample count. Always baked by applyOverrideConstants — 1024 for the
+// offline loadIBLCubeMap path, lower (e.g. 256) for the amortized dynamic path.
+override NumSamples : u32 = 1024u;
+
 struct Uniforms {
     resolution: f32,
     sourceResolution: f32,
@@ -60,8 +64,6 @@ fn PrefilterEnvMap(Roughness: f32, R: vec3f) -> vec3f {
     let V = R;
     var PrefilteredColor = vec3f(0.0);
     var totalWeight = 0.0;
-
-    const NumSamples = 1024u;
 
     for (var i = 0u; i < NumSamples; i++) {
         let Xi = Hammersley(i, NumSamples);

@@ -117,3 +117,104 @@ export function decompose(srcMat, dstRotation, dstTranslation, dstScale) {
     dstScale[1] = sy;
     dstScale[2] = sz;
 }
+
+/**
+ * Householder reflection across the plane n·p + constant = 0.
+ *
+ * @param {vec3} normal Unit plane normal.
+ * @param {number} constant Plane constant (`-dot(normal, pointOnPlane)`).
+ * @param {mat4} dstMat Matrix to overwrite and return.
+ * @returns {mat4} dstMat set to the reflection (det = -1, involutory: R·R = I).
+ */
+export const reflectionMatrix = (normal, constant, dstMat = new Float32Array(16)) => {
+    const nx = normal[0];
+    const ny = normal[1];
+    const nz = normal[2];
+    const d = constant;
+
+    dstMat[0] = 1 - 2 * nx * nx;
+    dstMat[1] = -2 * nx * ny;
+    dstMat[2] = -2 * nx * nz;
+    dstMat[3] = 0;
+
+    dstMat[4] = -2 * nx * ny;
+    dstMat[5] = 1 - 2 * ny * ny;
+    dstMat[6] = -2 * ny * nz;
+    dstMat[7] = 0;
+
+    dstMat[8] = -2 * nx * nz;
+    dstMat[9] = -2 * ny * nz;
+    dstMat[10] = 1 - 2 * nz * nz;
+    dstMat[11] = 0;
+
+    dstMat[12] = -2 * nx * d;
+    dstMat[13] = -2 * ny * d;
+    dstMat[14] = -2 * nz * d;
+    dstMat[15] = 1;
+
+    return dstMat;
+};
+
+/**
+ * Transform a plane (vec4: normal.xyz, constant) as a row vector: dst = plane · m.
+ * To move a world-space plane into a camera's view space pass the camera's
+ * worldMatrix (the matrix mapping view-space points back to world).
+ *
+ * @param {vec4} plane Source plane.
+ * @param {mat4} m Column-major matrix mapping target-space points to source-space.
+ * @param {vec4} dstPlane Plane to overwrite and return (not renormalized).
+ * @returns {vec4} dstPlane.
+ */
+export const transformPlane = (plane, m, dstPlane = new Float32Array(4)) => {
+    const x = plane[0];
+    const y = plane[1];
+    const z = plane[2];
+    const w = plane[3];
+    dstPlane[0] = x * m[0] + y * m[1] + z * m[2] + w * m[3];
+    dstPlane[1] = x * m[4] + y * m[5] + z * m[6] + w * m[7];
+    dstPlane[2] = x * m[8] + y * m[9] + z * m[10] + w * m[11];
+    dstPlane[3] = x * m[12] + y * m[13] + z * m[14] + w * m[15];
+    return dstPlane;
+};
+
+const _invProj = /* @__PURE__ */ new Float32Array(16);
+
+/**
+ * Oblique near-plane clipping (Lengyel), adjusted for WebGPU's [0, 1] clip z:
+ * rewrites the projection's z row so the near plane IS `clipPlane`, scaled so
+ * the far plane still touches the frustum corner opposite the plane (minimal
+ * depth-precision loss). Planar-reflection workhorse — clips everything behind
+ * the mirror without a hardware clip distance.
+ *
+ * @param {mat4} projMat Source projection matrix.
+ * @param {vec4} clipPlane View-space plane (normal.xyz, constant); visible side
+ *   is `dot(clipPlane, p) > 0`, so the camera must sit on the negative side.
+ * @param {mat4} dstMat Matrix to overwrite and return (may alias projMat).
+ * @returns {mat4} dstMat.
+ */
+export const obliqueProjection = (projMat, clipPlane, dstMat = new Float32Array(16)) => {
+    if (dstMat !== projMat) mat4.copy(projMat, dstMat);
+    mat4.invert(projMat, _invProj);
+
+    // Clip-space plane x/y signs pick the far corner on the plane's positive side.
+    const cx = clipPlane[0] * _invProj[0] + clipPlane[1] * _invProj[1] + clipPlane[2] * _invProj[2] + clipPlane[3] * _invProj[3];
+    const cy = clipPlane[0] * _invProj[4] + clipPlane[1] * _invProj[5] + clipPlane[2] * _invProj[6] + clipPlane[3] * _invProj[7];
+    const qx = cx >= 0 ? 1 : -1;
+    const qy = cy >= 0 ? 1 : -1;
+
+    // Far-plane corner in view space (homogeneous): Q = P⁻¹ · (±1, ±1, 1, 1).
+    const Qx = _invProj[0] * qx + _invProj[4] * qy + _invProj[8] + _invProj[12];
+    const Qy = _invProj[1] * qx + _invProj[5] * qy + _invProj[9] + _invProj[13];
+    const Qz = _invProj[2] * qx + _invProj[6] * qy + _invProj[10] + _invProj[14];
+    const Qw = _invProj[3] * qx + _invProj[7] * qy + _invProj[11] + _invProj[15];
+
+    // z row = clipPlane / (clipPlane·Q): near plane lands on the clip plane
+    // (z' = 0) while the far plane (z' = w, and row4·Q = 1) still contains Q.
+    const s = 1 / (clipPlane[0] * Qx + clipPlane[1] * Qy + clipPlane[2] * Qz + clipPlane[3] * Qw);
+    dstMat[2] = clipPlane[0] * s;
+    dstMat[6] = clipPlane[1] * s;
+    dstMat[10] = clipPlane[2] * s;
+    dstMat[14] = clipPlane[3] * s;
+
+    return dstMat;
+};

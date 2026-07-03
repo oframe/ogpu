@@ -4,6 +4,8 @@ import '@examples/examples.css';
 import { HelloWebGPU } from '@examples/hellowebgpu/HelloWebGPU';
 import { Triangle } from '@examples/triangle/Triangle';
 import { Particles } from '@examples/particles/Particles';
+import { ParticleSystemExample } from '@examples/particlesystem/ParticleSystemExample';
+import { Rain } from '@examples/rain/Rain';
 import { RenderToTexture } from '@examples/rendertotexture/RenderToTexture';
 import { PBRShader } from '@examples/pbrshader/PBRShader';
 import { Skinning } from '@examples/skinning/Skinning';
@@ -25,6 +27,7 @@ import { SortTransparency } from '@examples/sorttransparency/SortTransparency';
 import { MSAA } from '@examples/msaa/MSAA';
 import { CubeMapExample } from '@examples/cubemap/CubeMap';
 import { PostProcessingExample } from '@examples/postprocessing/PostProcessingExample';
+import { Mirrors } from '@examples/mirrors/Mirrors';
 import { Performance } from '@examples/performance/Performance';
 import { Interaction } from '@examples/interaction/Interaction';
 import { TextExample } from '@examples/text/TextExample';
@@ -36,10 +39,13 @@ const canvas = document.getElementById('web-gpu-canvas');
 const views = {
     rendertargets: () => new RenderToTexture(),
     postprocessing: () => new PostProcessingExample(),
+    mirrors: () => new Mirrors(),
     performance: () => new Performance(),
     interaction: () => new Interaction(),
     text: () => new TextExample(),
     particles: () => new Particles(),
+    particlesystem: () => new ParticleSystemExample(),
+    rain: () => new Rain(),
     textures: () => new Textures(),
     ktx: () => new KTX(),
     instancing: () => new Instancing(),

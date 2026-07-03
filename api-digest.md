@@ -284,6 +284,20 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - fn `cubicBezier(x1, y1, x2, y2)`
 - const `EASE_NAMES`
 
+### src/modules/particles/ParticleSystem.js
+- **class ParticleSystem** extends Mesh
+  - constructor(gpu, { capacity = 100_000, preset = null, emitter, forces, boids, appearance, wrap, mode,…)
+  - update(encoder = null, { dt = 1 / 60 } = {})
+  - reset()
+  - setPreset(name)
+  - setBlending(mode)
+  - setQuality(tier)
+  - addGUI(gui)
+  - dispose()
+
+### src/modules/particles/presets.js
+- const `PARTICLE_PRESETS`
+
 ### src/modules/post/FullscreenPass.js
 - **class FullscreenPass**
   - constructor(gpu, { label = 'fullscreen-pass', code = ``, targets, blending = {}, transparent = false,…)
@@ -397,6 +411,41 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - addGUI(gui)
   - dispose()
 
+### src/modules/rain/RainSystem.js
+- **class RippleField**
+  - constructor(gpu, { resolution = 512, worldSize = 20, maxRipples = 256, label = 'ripple-field' } = {})
+  - update(encoder, { dt = 1 / 60 } = {})
+  - dispose()
+- **class RainSystem** extends Transform
+  - constructor(gpu, { preset = 'light', capacity = 60_000, area = 14, height = 10, ripple = {}, label = …)
+  - update(encoder = null, { dt = 1 / 60, camera = null } = {})
+  - setPreset(name)
+  - setQuality(tier)
+  - addGUI(gui)
+  - dispose()
+- const `RAIN_PRESETS`
+
+### src/modules/reflections/PlanarReflector.js
+- **class PlanarReflector**
+  - constructor(gpu, { resolutionScale = 0.5, matchPost = false, format = null, depthFormat = null, mipLe…)
+  - setPlane(normal, point = [0, 0, 0])
+  - addSurface(mesh)
+  - addRebuildHandler(cb)
+  - bindGroup(pipeline, uniformBuffer)
+  - setResolutionScale(scale)
+  - setSize(width, height)
+  - reflectCamera(camera, plane = this.plane)
+  - render(encoder, { scene, camera, renderer = this.gpu.renderer, hide = [] } = {})
+  - dispose()
+
+### src/modules/reflections/ReflectionProbe.js
+- **class ReflectionProbe**
+  - constructor(gpu, { size = 128, format = null, depthFormat = 'depth24plus', near = 0.05, far = 100, po…)
+  - invalidate()
+  - tick({ time = 0, ...rest } = {})
+  - update({ scene, renderer = this.gpu.renderer, hide = [] } = {})
+  - destroy()
+
 ### src/modules/text/MSDFFont.js
 - **class MSDFFont**
   - constructor(data, texture)
@@ -433,6 +482,9 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/utils/Mat4Utils.js
 - fn `compose(dstMat, srcRotation, srcTranslation, srcScale)`
 - fn `decompose(srcMat, dstRotation, dstTranslation, dstScale)`
+- fn `reflectionMatrix(normal, constant, dstMat = new Float32Array(16))`
+- fn `transformPlane(plane, m, dstPlane = new Float32Array(4))`
+- fn `obliqueProjection(projMat, clipPlane, dstMat = new Float32Array(16))`
 
 ### src/utils/TimingHelper.js
 - **class TimingHelper**
@@ -530,6 +582,17 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - init()
   - addInfo(text)
 
+### examples/mirrors/Mirrors.js
+- **class Mirrors**
+  - constructor({ el = null } = {})
+  - init(el)
+  - addContentMesh(geometry, { label, color, position = [0, 0, 0], scale = null } = {})
+  - initContent()
+  - initMirrors()
+  - rebindMirror(mesh, reflector)
+  - initProbe()
+  - initPane()
+
 ### examples/msaa/MSAA.js
 - **class MSAA**
   - constructor()
@@ -547,6 +610,11 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 
 ### examples/particles/Particles.js
 - **class Particles**
+  - constructor()
+  - init()
+
+### examples/particlesystem/ParticleSystemExample.js
+- **class ParticleSystemExample**
   - constructor()
   - init()
 
@@ -581,6 +649,12 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - **class Primitives**
   - constructor()
   - init()
+
+### examples/rain/Rain.js
+- **class Rain**
+  - constructor()
+  - init()
+  - initGround()
 
 ### examples/raycasting/Raycasting.js
 - **class Raycasting**

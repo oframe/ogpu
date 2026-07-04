@@ -97,7 +97,7 @@ Each source directory carries its own `CLAUDE.md` with that area's footguns — 
 Two contracts hold across every file — internalize these; per-file traps are in the nested CLAUDE.md files:
 
 - **Pass the `gpu` object, never the raw `device`.** `Renderer.init` augments the canvas context with `.device`/`.presentationFormat`/`.renderer`; that augmented object (`renderer.gpu`) is what every class takes and stores. It's async — `await renderer.ready` before any GPU work (it also bootstraps `window.ktx`).
-- **Standard uniforms are written by name.** `Mesh.draw` writes the per-frame uniforms (`projectionMatrix`, `viewMatrix`, `modelMatrix`, `modelViewMatrix`, `objectMatrix`, `normalMatrix`, `cameraPosition`, `cameraQuaternion`, `resolution`, `time`) into the pipeline's uniform buffer via webgpu-utils reflection, matched by struct field name. Any shader bound through a Mesh declares a `Uniforms` struct with the subset it uses; a misnamed field is **silently skipped**, no error. (Per-file details in `src/core/CLAUDE.md`.)
+- **Standard uniforms are written by name.** `Mesh.draw` writes the per-frame uniforms (`projectionMatrix`, `viewMatrix`, `modelMatrix`, `modelViewMatrix`, `objectMatrix`, `normalMatrix`, `cameraPosition`, `cameraQuaternion`, `resolution`, `time`) into the mesh's own uniform buffer (built from the pipeline's reflected `uniforms` struct) via webgpu-utils reflection, matched by struct field name. Any shader bound through a Mesh declares a `Uniforms` struct with the subset it uses; a misnamed field is **silently skipped**, no error. (Per-file details in `src/core/CLAUDE.md`.)
 
 Scene graph, frustum culling, hot-reload (`ShaderReload` globs `src/**/*.wgsl` and rebuilds matching pipelines on edit), and the per-frame queue all live in `src/core/` — read its CLAUDE.md before touching render flow.
 
@@ -150,5 +150,5 @@ Aliases work for `?raw` shader imports too (`import s from '@modules/pbr/pbr.wgs
 
 ### Notes when adding code
 
-- The cross-cutting traps (`gpu` object, uniforms-by-name) are above; the rest live in the per-directory CLAUDE.md files. The recurring one: destroying/recreating a `Texture` (e.g. on resize) invalidates its views, so any bind group holding them is stale — call `updateBindgroup` (see `src/core/CLAUDE.md`).
+- The cross-cutting traps (`gpu` object, uniforms-by-name) are above; the rest live in the per-directory CLAUDE.md files. The recurring one: destroying/recreating a `Texture` (e.g. on resize) invalidates its views, so any bind group holding them is stale — rebuild it against `pipeline.bindGroupLayout(i)` (see `src/core/CLAUDE.md`).
 - Remaining gap: no first-class image/KTX texture _loader_. Storage-buffer helpers (`@utils/BufferUtils`), JSON (`@utils/JSONLoader`), glTF (`GLTFLoader.js`), and IBL cubemaps (`@utils/IBLUtils`) are all implemented.

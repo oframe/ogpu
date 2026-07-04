@@ -44,7 +44,7 @@ The framework is split into **Core**, **Math**, and **Modules**.
 
 The **Core** (`src/core/`) holds the engine primitives. Two classes carry the weight and are worth understanding first:
 
-- **`RenderPipeline`** — wraps a WGSL render module. It reflects the shader with `webgpu-utils`, builds the pipeline, bind groups, and uniform buffers, and matches standard per-frame uniforms (matrices, camera, time, resolution) to your `Uniforms` struct **by field name**. You write WGSL with a `vs`/`fs` entry pair; the pipeline wires it up.
+- **`RenderPipeline`** — wraps a WGSL render module. It reflects the shader with `webgpu-utils` and compiles the pipeline — pure compiled state, shareable across meshes. It owns no uniform buffers or bind groups; it serves the bind group layouts via `pipeline.bindGroupLayout(i)`, and each `Mesh` builds its own uniform buffer and bind groups against them. `Mesh.draw` matches standard per-frame uniforms (matrices, camera, time, resolution) to your `Uniforms` struct **by field name**. You write WGSL with a `vs`/`fs` entry pair; reflection wires it up.
 - **`ComputeShader`** — the compute counterpart. Every entry point in a WGSL compute module becomes a dispatchable kernel keyed by its name, with optional timestamp-query timing. This is the path for GPU compute work — simulation, culling, image processing — without leaving the framework.
 
 The rest of Core:

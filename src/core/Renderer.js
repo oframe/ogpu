@@ -91,8 +91,11 @@ export class Renderer {
             'texture-compression-bc-sliced-3d',
             'texture-compression-etc2',
             'timestamp-query',
-            'texture-format-tier1',
-            'texture-format-tier2',
+            // plural 'formats' — the GPUFeatureName enum is texture-formats-tierN.
+            // Singular silently never matches, so tier1's r8unorm/r16float storage
+            // (and tier2's read-write storage) stay unavailable.
+            'texture-formats-tier1',
+            'texture-formats-tier2',
         ];
 
         const requiredFeatures = wantedFeatures.filter((f) => adapter.features.has(f));

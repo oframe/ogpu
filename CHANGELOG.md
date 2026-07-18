@@ -18,7 +18,7 @@ Port of the dgpu core audit outcome (parity-reviewed against dgpu as reference).
   via the new `Renderer` option `perDrawSize` (default 1 MiB), overflow logs
   loudly. `group(0)/binding(0)` is marked `hasDynamicOffset` on every
   `RenderPipeline` — non-Mesh direct draws must pass `pass.setBindGroup(0, bg,
-  [0])`; shaders that declare but never read `uniforms` are handled via
+[0])`; shaders that declare but never read `uniforms` are handled via
   `RenderPipeline.hasDynamicUniform`.
 - **`Renderer` `stencil` constructor option removed** — it was stored and never
   read.
@@ -29,7 +29,7 @@ Port of the dgpu core audit outcome (parity-reviewed against dgpu as reference).
 
 - **Canvas transparency never worked** — the context was configured with a
   misspelled `alphamode` key (silently ignored). Now `alphaMode:
-  'premultiplied'|'opaque'`.
+'premultiplied'|'opaque'`.
 - **`ComputeShader` crashed on devices without `timestamp-query`** — timestamp
   query-set creation throws per spec; all timestamp resources are now
   feature-gated and `timing: true` degrades to a no-op (also skipped for
@@ -86,8 +86,8 @@ Port of the dgpu core audit outcome (parity-reviewed against dgpu as reference).
   ~628 KB of greppable text (from 4.5 MB of HTML), and prefixes every heading with
   its `[#anchor]` so a grep hit traces straight back to a spec section.
 
-  **Benefits:** spec answers go from a slow, lossy whole-page fetch to a near-instant
-  local `grep` — exact identifiers and limit values (`GPUFeatureName`,
-  `GPUSupportedLimits`, default limits) come back verbatim instead of summarized, and
-  repeat lookups in a session reuse the same-day cache. Chrome "What's New" lookups
-  still use `WebFetch`. The downloaded cache (`webgpu-spec.txt`) is gitignored.
+    **Benefits:** spec answers go from a slow, lossy whole-page fetch to a near-instant
+    local `grep` — exact identifiers and limit values (`GPUFeatureName`,
+    `GPUSupportedLimits`, default limits) come back verbatim instead of summarized, and
+    repeat lookups in a session reuse the same-day cache. Chrome "What's New" lookups
+    still use `WebFetch`. The downloaded cache (`webgpu-spec.txt`) is gitignored.

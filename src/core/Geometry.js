@@ -3,7 +3,10 @@ import { Vec3 } from '@math';
 
 // Vertex data + GPU buffers (wraps webgpu-utils); non-instanced `data` + optional `instancedData`.
 export class Geometry {
-    constructor(gpu, { data, instancedData, interleave = false, drawBuffer = null } = {}) {
+    // usage: extra GPUBufferUsage flags OR'd into every vertex/instance buffer.
+    // webgpu-utils creates them VERTEX-only, so runtime updates via
+    // queue.writeBuffer need `usage: GPUBufferUsage.COPY_DST` here.
+    constructor(gpu, { data, instancedData, interleave = false, drawBuffer = null, usage = 0 } = {}) {
         if (!data) {
             console.warn('no data provided. unless indirectly drawn, nothing will be rendered');
         }
@@ -11,7 +14,7 @@ export class Geometry {
         this.attributes = data;
         this.drawBuffer = drawBuffer;
 
-        this.nonInstancedVerts = createBuffersAndAttributesFromArrays(gpu.device, data);
+        this.nonInstancedVerts = createBuffersAndAttributesFromArrays(gpu.device, data, { usage });
 
         const attributeCount = this?.nonInstancedVerts?.bufferLayouts[0]?.attributes?.length || 0;
         const instancedShaderLocation = this?.nonInstancedVerts?.bufferLayouts[0]?.attributes[Math.max(0, attributeCount - 1)].shaderLocation + 1 || 0;
@@ -20,6 +23,7 @@ export class Geometry {
             stepMode: 'instance',
             interleave,
             shaderLocation: instancedShaderLocation,
+            usage,
         };
 
         this.instancedVerts = instancedData ? createBuffersAndAttributesFromArrays(gpu.device, instancedData, instanceOptions) : {};

@@ -81,6 +81,17 @@ A misnamed field is silently skipped — no validation error, just a stale value
 `normalMatrix` is a Mat3 adjugate of `worldMatrix` (not the inverse-transpose
 of modelView) — correct for non-uniform scale, but only valid in world space.
 
+## Geometry — vertex/instance buffers are VERTEX-only by default
+
+webgpu-utils creates every attribute buffer with `usage | GPUBufferUsage.VERTEX`
+where the extra usage defaults to 0 and data is uploaded via `mappedAtCreation`.
+So `queue.writeBuffer` on a vertex/instance buffer **fails validation silently**
+(uncaptured error, draw keeps using creation contents) unless you construct the
+`Geometry` with `usage: GPUBufferUsage.COPY_DST`. Anything that live-updates
+vertex or instance attributes needs this. The primitive classes (`Sphere`,
+`Box`, …) don't forward `usage` — use a plain `Geometry` with
+`primitives.create*Vertices` when you need it.
+
 ## Frustum culling exclusions
 
 `Camera.frustumIntersectsMesh` skips auto-cull (returns `true`) for any

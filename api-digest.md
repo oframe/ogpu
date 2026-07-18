@@ -8,7 +8,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - **class Camera** extends Transform
   - constructor({ near = 0.1, far = 100, fov = 45, aspect = 1, left, right, bottom, top, zoom = 1 } = {})
   - perspective({ near = this.near, far = this.far, fov = this.fov, aspect = this.aspect } = {})
-  - orthographic({ near = this.near, far = this.far, left = this.left || -1, right = this.right || 1, bott…)
+  - orthographic({ near = this.near, far = this.far, left = this.left ?? -1, right = this.right ?? 1, bott…)
   - updateMatrixWorld()
   - updateProjectionMatrix()
   - lookAt(target)
@@ -41,7 +41,13 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - constructor(gpu, { label = 'basic mesh', pipeline, geometry, bindGroups, manualRender = false, render…)
   - onBeforeRender(f)
   - onAfterRender(f)
-  - draw({ camera = null, pass, time = 0 } = {})
+  - draw({ camera = null, pass, time = 0, resolution = null } = {})
+
+### src/core/PerDrawBuffer.js
+- **class PerDrawBuffer**
+  - constructor(gpu, { label = 'per-draw-uniforms', size = 1 << 20 } = {})
+  - alloc(byteLength)
+  - reset()
 
 ### src/core/RenderPipeline.js
 - **class RenderPipeline**
@@ -57,13 +63,14 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - createTextures()
   - createDepthTexture()
   - createView(i = 0)
+  - depthView()
   - getTargets()
   - destroy()
-  - onResize({ width, height, depth } = {})
+  - onResize({ width = this.width, height = this.height, depth = this.depth } = {})
 
 ### src/core/Renderer.js
 - **class Renderer**
-  - constructor({ canvas = null, dpr = null, transparent = false, depth = true, stencil = true } = {})
+  - constructor({ canvas = null, dpr = null, transparent = false, depth = true, perDrawSize = 1 << 20 } =…)
   - initDevice()
   - init(device)
   - createDepthTexture()
@@ -120,6 +127,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { Geometry } from './Geometry.js'
 - re-export { Box, Sphere, Plane, Torus, Cylinder, Disc, Cone, Quad, ThreeDF, FullscreenTriangle } from './primitives/index.js'
 - re-export { RenderPipeline } from './RenderPipeline.js'
+- re-export { PerDrawBuffer } from './PerDrawBuffer.js'
 - re-export { ComputeShader } from './ComputeShader.js'
 - re-export { Texture } from './Texture.js'
 - re-export { RenderTarget } from './RenderTarget.js'

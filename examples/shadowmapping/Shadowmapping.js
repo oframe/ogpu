@@ -137,11 +137,11 @@ export class Shadowmapping {
         shadowView.set({ projectionViewMatrix: shadowViewProjectionMatrix });
         this.gpu.device.queue.writeBuffer(shadowUniformBuffer, 0, shadowView.arrayBuffer);
 
-        const makeRenderBG = (uniformBuffer, gpuTexture) =>
+        const makeRenderBG = (uniformResource, gpuTexture) =>
             this.gpu.device.createBindGroup({
                 layout: renderPipeline.bindGroupLayout(0),
                 entries: [
-                    { binding: 0, resource: { buffer: uniformBuffer } },
+                    { binding: 0, resource: uniformResource },
                     { binding: 1, resource: { buffer: shadowUniformBuffer } },
                     { binding: 2, resource: shadowMapSampler },
                     { binding: 3, resource: this.shadowBuffer.depthTexture.createView() },
@@ -154,10 +154,10 @@ export class Shadowmapping {
             label: 'shadow-airplane',
             pipeline: shadowPipeline,
             geometry: airplaneGeometry,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     layout: shadowPipeline.bindGroupLayout(0),
-                    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+                    entries: [{ binding: 0, resource: uniformResource }],
                 }),
             ],
         });
@@ -166,14 +166,14 @@ export class Shadowmapping {
             label: 'airplane',
             pipeline: renderPipeline,
             geometry: airplaneGeometry,
-            bindGroups: (uniformBuffer) => [makeRenderBG(uniformBuffer, airplaneTex.texture)],
+            bindGroups: (uniformResource) => [makeRenderBG(uniformResource, airplaneTex.texture)],
         });
 
         this.floor = new Mesh(this.gpu, {
             label: 'floor',
             pipeline: renderPipeline,
             geometry: floorGeometry,
-            bindGroups: (uniformBuffer) => [makeRenderBG(uniformBuffer, waterTex.texture)],
+            bindGroups: (uniformResource) => [makeRenderBG(uniformResource, waterTex.texture)],
         });
 
         this.floor.position.y = -3;

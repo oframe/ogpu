@@ -81,11 +81,11 @@ export class MSAA {
             label: 'leaf',
             pipeline,
             geometry: this.geometry,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     layout: pipeline.bindGroupLayout(0),
                     entries: [
-                        { binding: 0, resource: { buffer: uniformBuffer } },
+                        { binding: 0, resource: uniformResource },
                         { binding: 1, resource: this.leafSampler },
                         { binding: 2, resource: this.leafView },
                     ],

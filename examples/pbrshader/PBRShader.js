@@ -222,11 +222,11 @@ export class PBRShader {
             label: `car-mesh-${this.carMeshes.length}`,
             pipeline,
             geometry,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     layout: pipeline.bindGroupLayout(0),
                     entries: [
-                        { binding: 0, resource: { buffer: uniformBuffer } },
+                        { binding: 0, resource: uniformResource },
                         { binding: 1, resource: ibl.specView },
                         { binding: 2, resource: { buffer: ibl.shBuffer } },
                         { binding: 3, resource: ibl.lutTexture.createView() },
@@ -273,11 +273,11 @@ export class PBRShader {
             label: 'car-shadow',
             pipeline,
             geometry,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     layout: pipeline.bindGroupLayout(0),
                     entries: [
-                        { binding: 0, resource: { buffer: uniformBuffer } },
+                        { binding: 0, resource: uniformResource },
                         { binding: 1, resource: sampler },
                         { binding: 2, resource: view },
                     ],
@@ -311,12 +311,12 @@ export class PBRShader {
                 label: `probe-mesh-mode-${mode}`,
                 pipeline,
                 geometry,
-                bindGroups: (uniformBuffer) => [
+                bindGroups: (uniformResource) => [
                     this.gpu.device.createBindGroup({
                         label: `probe-bind-group-mode-${mode}`,
                         layout: pipeline.bindGroupLayout(0),
                         entries: [
-                            { binding: 0, resource: { buffer: uniformBuffer } },
+                            { binding: 0, resource: uniformResource },
                             { binding: 1, resource: ibl.specView },
                             { binding: 2, resource: { buffer: ibl.shBuffer } },
                             { binding: 3, resource: iblSampler },

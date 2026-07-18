@@ -133,11 +133,11 @@ export class ComputeFrustumCulling {
             pipeline,
             geometry,
             frustumCulled: false,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     layout: pipeline.bindGroupLayout(0),
                     entries: [
-                        { binding: 0, resource: { buffer: uniformBuffer } },
+                        { binding: 0, resource: uniformResource },
                         { binding: 1, resource: sampler },
                         { binding: 2, resource: textureView },
                     ],
@@ -202,10 +202,10 @@ export class ComputeFrustumCulling {
             pipeline,
             geometry,
             frustumCulled: false,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     layout: pipeline.bindGroupLayout(0),
-                    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+                    entries: [{ binding: 0, resource: uniformResource }],
                 }),
             ],
         });

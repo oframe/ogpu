@@ -124,12 +124,20 @@ export class RenderTarget {
             sampleCount: this.sampleCount,
             usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
         });
+        this._depthView = null;
     }
 
     // View of attachment i (defaults to primary). Routes through Texture.createView
     // so cube targets get the right dimension.
     createView(i = 0) {
         return this.textures[i].createView();
+    }
+
+    // Cached view of depthTexture (a raw GPUTexture, not a Texture wrapper) —
+    // invalidated in createDepthTexture().
+    depthView() {
+        this._depthView ??= this.depthTexture.createView();
+        return this._depthView;
     }
 
     getTargets() {
@@ -144,41 +152,43 @@ export class RenderTarget {
         this.depthTexture?.destroy?.();
     }
 
-    onResize({ width, height, depth } = {}) {
-        if ((width > 0 && height > 0) || (width > 0 && height > 0) || depth > 0) {
-            this.width = width;
-            this.height = height;
-            this.depth = depth;
+    onResize({ width = this.width, height = this.height, depth = this.depth } = {}) {
+        if (!(width > 0 && height > 0)) return;
 
-            if (this.textures.length > 0) {
-                this.textures.forEach((texture) => {
+        this.width = width;
+        this.height = height;
+        this.depth = depth;
+
+        if (this.textures.length > 0) {
+            this.textures.forEach((texture) => {
+                texture.update({
+                    width: this.width,
+                    height: this.height,
+                    depth: this.depth,
+                    format: texture.format,
+                    dimension: this.textureParams.dimension,
+                    usage: texture.usage,
+                    sampleCount: 1,
+                    mipLevelCount: this.textureParams.mipLevelCount,
+                });
+            });
+
+            if (this.msaaTextures.length > 0) {
+                this.msaaTextures.forEach((texture) => {
                     texture.update({
                         width: this.width,
                         height: this.height,
                         depth: this.depth,
                         format: texture.format,
+                        dimension: this.textureParams.dimension,
                         usage: texture.usage,
-                        sampleCount: 1,
+                        sampleCount: this.sampleCount,
                         mipLevelCount: this.textureParams.mipLevelCount,
                     });
                 });
-
-                if (this.msaaTextures.length > 0) {
-                    this.msaaTextures.forEach((texture) => {
-                        texture.update({
-                            width: this.width,
-                            height: this.height,
-                            depth: this.depth,
-                            format: texture.format,
-                            usage: texture.usage,
-                            sampleCount: this.sampleCount,
-                            mipLevelCount: this.textureParams.mipLevelCount,
-                        });
-                    });
-                }
             }
-
-            this.depthTexture && this.createDepthTexture();
         }
+
+        this.depthTexture && this.createDepthTexture();
     }
 }

@@ -1,9 +1,9 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 128,
-    "edges": 233,
-    "modules": 81,
+    "nodes": 129,
+    "edges": 234,
+    "modules": 82,
     "shaders": 40,
     "external": 7
   },
@@ -22,7 +22,7 @@
     },
     {
       "id": "src/utils/BufferUtils.js",
-      "inDegree": 5
+      "inDegree": 4
     },
     {
       "id": "src/core/ComputeShader.js",
@@ -49,11 +49,11 @@
       "inDegree": 2
     },
     {
-      "id": "src/core/primitives/index.js",
+      "id": "src/core/PerDrawBuffer.js",
       "inDegree": 2
     },
     {
-      "id": "src/core/RenderPipeline.js",
+      "id": "src/core/primitives/index.js",
       "inDegree": 2
     }
   ],
@@ -482,13 +482,19 @@
       "id": "src/core/index.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 12
+      "outDegree": 13
     },
     {
       "id": "src/core/Mesh.js",
       "type": "module",
       "inDegree": 2,
-      "outDegree": 4
+      "outDegree": 3
+    },
+    {
+      "id": "src/core/PerDrawBuffer.js",
+      "type": "module",
+      "inDegree": 2,
+      "outDegree": 0
     },
     {
       "id": "src/core/primitives/Box.js",
@@ -560,7 +566,7 @@
       "id": "src/core/Renderer.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 4
+      "outDegree": 5
     },
     {
       "id": "src/core/RenderPipeline.js",
@@ -745,7 +751,7 @@
     {
       "id": "src/utils/BufferUtils.js",
       "type": "module",
-      "inDegree": 5,
+      "inDegree": 4,
       "outDegree": 0
     },
     {
@@ -1170,6 +1176,10 @@
     },
     {
       "from": "src/core/index.js",
+      "to": "src/core/PerDrawBuffer.js"
+    },
+    {
+      "from": "src/core/index.js",
       "to": "src/core/primitives/index.js"
     },
     {
@@ -1207,10 +1217,6 @@
     {
       "from": "src/core/Mesh.js",
       "to": "src/core/Transform.js"
-    },
-    {
-      "from": "src/core/Mesh.js",
-      "to": "src/utils/BufferUtils.js"
     },
     {
       "from": "src/core/primitives/Box.js",
@@ -1335,6 +1341,10 @@
     {
       "from": "src/core/Renderer.js",
       "to": "pkg:@math"
+    },
+    {
+      "from": "src/core/Renderer.js",
+      "to": "src/core/PerDrawBuffer.js"
     },
     {
       "from": "src/core/Renderer.js",

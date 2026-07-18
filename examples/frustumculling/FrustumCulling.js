@@ -65,21 +65,21 @@ export class FrustumCulling {
             addressModeV: 'repeat',
         });
 
-        const fieldBindGroups = (uniformBuffer) => [
+        const fieldBindGroups = (uniformResource) => [
             this.gpu.device.createBindGroup({
                 layout: pipeline.bindGroupLayout(0),
                 entries: [
-                    { binding: 0, resource: { buffer: uniformBuffer } },
+                    { binding: 0, resource: uniformResource },
                     { binding: 1, resource: sampler },
                     { binding: 2, resource: textureView },
                 ],
             }),
         ];
 
-        const makeBindGroups = (pl) => (uniformBuffer) => [
+        const makeBindGroups = (pl) => (uniformResource) => [
             this.gpu.device.createBindGroup({
                 layout: pl.bindGroupLayout(0),
-                entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+                entries: [{ binding: 0, resource: uniformResource }],
             }),
         ];
 

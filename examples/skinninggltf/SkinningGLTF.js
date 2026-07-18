@@ -157,11 +157,11 @@ export class SkinningGLTF {
             label: 'mixamo-mesh',
             pipeline,
             geometry,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     layout: pipeline.bindGroupLayout(0),
                     entries: [
-                        { binding: 0, resource: { buffer: uniformBuffer } },
+                        { binding: 0, resource: uniformResource },
                         { binding: 1, resource: { buffer: this.skin.skinnedPositionBuffer } },
                         { binding: 2, resource: { buffer: this.skin.skinnedNormalBuffer } },
                         { binding: 3, resource: ibl.specView },
@@ -200,11 +200,11 @@ export class SkinningGLTF {
             label: 'shadow-floor',
             pipeline: floorPipeline,
             geometry: floorGeo,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     layout: floorPipeline.bindGroupLayout(0),
                     entries: [
-                        { binding: 0, resource: { buffer: uniformBuffer } },
+                        { binding: 0, resource: uniformResource },
                         { binding: 1, resource: { buffer: shadowUniformBuffer } },
                         { binding: 2, resource: shadowMapSampler },
                         { binding: 3, resource: shadowDepthView },
@@ -232,11 +232,11 @@ export class SkinningGLTF {
             label: 'mixamo-shadow-caster',
             pipeline: casterPipeline,
             geometry,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     layout: casterPipeline.bindGroupLayout(0),
                     entries: [
-                        { binding: 0, resource: { buffer: uniformBuffer } },
+                        { binding: 0, resource: uniformResource },
                         { binding: 1, resource: { buffer: this.skin.skinnedPositionBuffer } },
                     ],
                 }),

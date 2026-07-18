@@ -52,8 +52,8 @@ export class HelloWebGPU {
 
         // each mesh owns its own scale + alpha uniform structs, bound at
         // binding 1 / 2 alongside the mesh's standard uniforms at binding 0.
-        const scaleAlphaEntries = (uniformBuffer, scale, alpha) => [
-            { binding: 0, resource: { buffer: uniformBuffer } },
+        const scaleAlphaEntries = (uniformResource, scale, alpha) => [
+            { binding: 0, resource: uniformResource },
             { binding: 1, resource: { buffer: scale.uniformBuffer } },
             { binding: 2, resource: { buffer: alpha.uniformBuffer } },
         ];
@@ -65,10 +65,10 @@ export class HelloWebGPU {
             label: 'second-webgpu-box',
             pipeline: boxRenderPipeline,
             geometry,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     layout: boxRenderPipeline.bindGroupLayout(0),
-                    entries: scaleAlphaEntries(uniformBuffer, this.secondScale, this.secondAlpha),
+                    entries: scaleAlphaEntries(uniformResource, this.secondScale, this.secondAlpha),
                 }),
             ],
         });
@@ -85,10 +85,10 @@ export class HelloWebGPU {
             label: 'third-webgpu-box',
             pipeline: boxRenderPipeline,
             geometry,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     layout: boxRenderPipeline.bindGroupLayout(0),
-                    entries: scaleAlphaEntries(uniformBuffer, this.thirdScale, this.thirdAlpha),
+                    entries: scaleAlphaEntries(uniformResource, this.thirdScale, this.thirdAlpha),
                 }),
             ],
         });

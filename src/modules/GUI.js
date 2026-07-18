@@ -41,10 +41,11 @@ export class GUI {
     }
 
     /**
-     * Bind a uniform on any object that owns a structured uniform view + buffer
-     * (a `Mesh`, or a pass that owns its uniforms). Tweakpane edits a local proxy;
-     * every change pushes the value through `target.uniforms.set` and writes the
-     * buffer to the GPU. `target` must expose `.uniforms`, `.uniformBuffer`, `.gpu`.
+     * Bind a uniform on any object that owns a structured uniform view (a `Mesh`,
+     * or a pass that owns its uniforms). Tweakpane edits a local proxy; every
+     * change pushes the value through `target.uniforms.set`. `target` must expose
+     * `.uniforms` + `.gpu`; `.uniformBuffer` is optional — present on passes that
+     * own a private buffer, absent on Meshes (uploaded at next draw instead).
      */
     uniform(target, key, opts = {}) {
         const view = target.uniforms.views?.[key];
@@ -56,7 +57,9 @@ export class GUI {
 
         const write = () => {
             target.uniforms.set({ [key]: proxy[key] });
-            target.gpu.device.queue.writeBuffer(target.uniformBuffer, 0, target.uniforms.arrayBuffer);
+            if (target.uniformBuffer) {
+                target.gpu.device.queue.writeBuffer(target.uniformBuffer, 0, target.uniforms.arrayBuffer);
+            }
         };
 
         const binding = this.pane.addBinding(proxy, key, opts);

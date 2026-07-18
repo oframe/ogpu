@@ -85,7 +85,11 @@ export class RenderPipeline {
 
         if (this.transparent || _blending.color) {
             _blending = _blending.color
-                ? _blending
+                ? // alpha is required by GPUBlendState — default it when the caller omits it
+                  {
+                      alpha: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha' },
+                      ..._blending,
+                  }
                 : {
                       color: {
                           srcFactor: 'src-alpha',
@@ -97,11 +101,8 @@ export class RenderPipeline {
                       },
                   };
 
-            _targets.forEach((t) => {
-                Object.assign(t, {
-                    blend: _blending,
-                });
-            });
+            // caller-owned descriptors, don't mutate
+            _targets = _targets.map((t) => ({ ...t, blend: _blending }));
         }
 
         const pipelineDesc = {
@@ -127,6 +128,15 @@ export class RenderPipeline {
         }
 
         const descriptors = makeBindGroupLayoutDescriptors(this.defs, pipelineDesc);
+
+        // uniforms live at group(0) binding(0) by engine convention — mark dynamic so
+        // Mesh.draw can re-base the binding per draw into the shared per-draw buffer
+        const uni = descriptors[0]?.entries?.find((e) => e.binding === 0 && e.buffer);
+        if (uni) uni.buffer.hasDynamicOffset = true;
+        // false when the shader declares no (used) uniforms at group(0) binding(0) —
+        // Mesh.draw must then bind group 0 without a dynamic offset.
+        this.hasDynamicUniform = !!uni;
+
         // Keep the explicit BGLs around so callers can build bind groups against
         // them via bindGroupLayout(i) instead of reaching into the compiled
         // pipeline (pipeline.getBindGroupLayout). Explicit layouts from identical

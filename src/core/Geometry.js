@@ -8,7 +8,9 @@ export class Geometry {
     // queue.writeBuffer need `usage: GPUBufferUsage.COPY_DST` here.
     constructor(gpu, { data, instancedData, interleave = false, drawBuffer = null, usage = 0 } = {}) {
         if (!data) {
-            console.warn('no data provided. unless indirectly drawn, nothing will be rendered');
+            throw new Error(
+                'Geometry: `data` attribute arrays are required — drawBuffer-only geometry without vertex data is not supported'
+            );
         }
 
         this.attributes = data;
@@ -16,8 +18,11 @@ export class Geometry {
 
         this.nonInstancedVerts = createBuffersAndAttributesFromArrays(gpu.device, data, { usage });
 
-        const attributeCount = this?.nonInstancedVerts?.bufferLayouts[0]?.attributes?.length || 0;
-        const instancedShaderLocation = this?.nonInstancedVerts?.bufferLayouts[0]?.attributes[Math.max(0, attributeCount - 1)].shaderLocation + 1 || 0;
+        // Max over ALL non-instanced buffer layouts, not just the first — a
+        // multi-buffer (non-interleaved) geometry has attributes spread across
+        // several layouts, any of which may hold the highest shaderLocation.
+        const lastLoc = Math.max(-1, ...this.nonInstancedVerts.bufferLayouts.flatMap((l) => l.attributes.map((a) => a.shaderLocation)));
+        const instancedShaderLocation = lastLoc + 1;
 
         const instanceOptions = {
             stepMode: 'instance',
@@ -113,11 +118,13 @@ export class Geometry {
         for (const buf of this.nonInstancedVerts.buffers) {
             buf.destroy();
         }
+        this.nonInstancedVerts.indexBuffer?.destroy();
 
         if (this.hasInstancedAttributes) {
             for (const buf of this.instancedVerts.buffers) {
                 buf.destroy();
             }
         }
+        this.instancedVerts.indexBuffer?.destroy();
     }
 }

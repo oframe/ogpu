@@ -59,10 +59,10 @@ export class HighMeshCount {
                 label: `mesh-${i}`,
                 pipeline: this.pipeline,
                 geometry: this.geometry,
-                bindGroups: (uniformBuffer) => [
+                bindGroups: (uniformResource) => [
                     this.gpu.device.createBindGroup({
                         layout: this.pipeline.bindGroupLayout(0),
-                        entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+                        entries: [{ binding: 0, resource: uniformResource }],
                     }),
                 ],
             });

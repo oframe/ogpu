@@ -68,11 +68,11 @@ export class Skinning {
             label: 'dancer-mesh',
             pipeline,
             geometry,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     layout: pipeline.bindGroupLayout(0),
                     entries: [
-                        { binding: 0, resource: { buffer: uniformBuffer } },
+                        { binding: 0, resource: uniformResource },
                         { binding: 1, resource: { buffer: this.skin.skinnedPositionBuffer } },
                         { binding: 2, resource: { buffer: this.skin.skinnedNormalBuffer } },
                         { binding: 3, resource: sampler },
@@ -105,11 +105,11 @@ export class Skinning {
             label: 'shadow-floor',
             pipeline: shadowPipeline,
             geometry: floorGeo,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     layout: shadowPipeline.bindGroupLayout(0),
                     entries: [
-                        { binding: 0, resource: { buffer: uniformBuffer } },
+                        { binding: 0, resource: uniformResource },
                         { binding: 1, resource: sampler },
                         { binding: 2, resource: shadowView },
                     ],

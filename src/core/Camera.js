@@ -1,5 +1,5 @@
 import { Transform } from './Transform.js';
-import { Mat4, Vec3 } from '@math';
+import { Mat4, Vec3, Quat } from '@math';
 
 const tempMat4 = /* @__PURE__ */ new Mat4();
 const tempVec3a = /* @__PURE__ */ new Vec3();
@@ -16,9 +16,10 @@ export class Camera extends Transform {
         this.viewMatrix = new Mat4();
         this.projectionViewMatrix = new Mat4();
         this.worldPosition = new Vec3(0, 0, 0);
+        this.worldQuaternion = new Quat();
 
         // Use orthographic if left/right set, else default to perspective camera
-        this.type = left || right ? 'orthographic' : 'perspective';
+        this.type = (left ?? right) !== undefined ? 'orthographic' : 'perspective';
 
         if (this.type === 'orthographic') this.orthographic();
         else this.perspective();
@@ -32,7 +33,7 @@ export class Camera extends Transform {
         return this;
     }
 
-    orthographic({ near = this.near, far = this.far, left = this.left || -1, right = this.right || 1, bottom = this.bottom || -1, top = this.top || 1, zoom = this.zoom } = {}) {
+    orthographic({ near = this.near, far = this.far, left = this.left ?? -1, right = this.right ?? 1, bottom = this.bottom ?? -1, top = this.top ?? 1, zoom = this.zoom } = {}) {
         Object.assign(this, { near, far, left, right, bottom, top, zoom });
         left /= zoom;
         right /= zoom;
@@ -47,6 +48,8 @@ export class Camera extends Transform {
         super.updateMatrixWorld();
         this.viewMatrix.copy(this.worldMatrix).invert();
         this.worldMatrix.getTranslation(this.worldPosition);
+        // assumes an unscaled camera — setFromRotationMatrix ignores scale skew
+        this.worldQuaternion.setFromRotationMatrix(this.worldMatrix);
 
         this.projectionViewMatrix.copy(this.projectionMatrix).multiply(this.viewMatrix);
         return this;
@@ -135,7 +138,7 @@ export class Camera extends Transform {
     }
 
     getFrustumSize(z) {
-        const height = Math.tan(this.fov * (Math.PI / 180.0) * 0.5) * (z || this.far);
+        const height = 2 * Math.tan(this.fov * (Math.PI / 180.0) * 0.5) * (z ?? this.far);
         const width = height * this.aspect;
         return { width, height };
     }

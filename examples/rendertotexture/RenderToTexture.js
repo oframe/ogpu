@@ -49,12 +49,12 @@ export class RenderToTexture {
             label: 'display-mesh',
             pipeline,
             geometry,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     label: 'display-rendering',
                     layout: pipeline.bindGroupLayout(0),
                     entries: [
-                        { binding: 0, resource: { buffer: uniformBuffer } },
+                        { binding: 0, resource: uniformResource },
                         {
                             binding: pipeline.defs.samplers.sampler2d.binding,
                             resource: this.displaySampler,
@@ -120,11 +120,11 @@ export class RenderToTexture {
             label: 'test-mesh',
             pipeline: testMeshPipeline,
             geometry,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     label: 'simple-box',
                     layout: testMeshPipeline.bindGroupLayout(0),
-                    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+                    entries: [{ binding: 0, resource: uniformResource }],
                 }),
             ],
         });
@@ -146,11 +146,11 @@ export class RenderToTexture {
             label: 'test-mesh',
             pipeline: testMeshTwoPipeline,
             geometry,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     label: 'simple-box',
                     layout: testMeshTwoPipeline.bindGroupLayout(0),
-                    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+                    entries: [{ binding: 0, resource: uniformResource }],
                 }),
             ],
         });
@@ -190,7 +190,7 @@ export class RenderToTexture {
             label: 'display-rendering',
             layout: this.displayPipeline.bindGroupLayout(0),
             entries: [
-                { binding: 0, resource: { buffer: this.display.uniformBuffer } },
+                { binding: 0, resource: this.display.uniformResource },
                 {
                     binding: this.displayPipeline.defs.samplers.sampler2d.binding,
                     resource: this.displaySampler,

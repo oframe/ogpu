@@ -177,12 +177,12 @@ export class Particles {
             label: 'particles',
             pipeline,
             geometry,
-            bindGroups: (uniformBuffer) => {
+            bindGroups: (uniformResource) => {
                 const makeBG = (posBuf) =>
                     this.gpu.device.createBindGroup({
                         layout: pipeline.bindGroupLayout(0),
                         entries: [
-                            { binding: 0, resource: { buffer: uniformBuffer } },
+                            { binding: 0, resource: uniformResource },
                             { binding: 1, resource: { buffer: posBuf } },
                         ],
                     });

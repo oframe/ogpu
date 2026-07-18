@@ -706,6 +706,8 @@ export class RenderTarget {
 
     createTextures(): void;
     createDepthTexture(): void;
+    /** Cached view of depthTexture; invalidated by createDepthTexture(). */
+    depthView(): GPUTextureView;
     /** Array of `{ format }` for RenderPipeline's `targets`. */
     getTargets(): GPUColorTargetState[];
     onResize(size: { width: number; height: number; depth?: number }): void;
@@ -758,7 +760,6 @@ export interface RendererOptions {
     dpr?: number | null;
     transparent?: boolean;
     depth?: boolean;
-    stencil?: boolean;
 }
 
 export interface RenderOptions {
@@ -791,7 +792,6 @@ export class Renderer {
     width: number;
     height: number;
     depth: boolean;
-    stencil: boolean;
     transparent: boolean;
     clearColor: ClearColor;
     time: number;

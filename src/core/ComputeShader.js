@@ -35,20 +35,24 @@ export class ComputeShader {
         this.build(code);
         this._unregister = registerShader(this);
 
-        this.querySet = device.createQuerySet({
-            type: 'timestamp',
-            count: 2,
-        });
+        // Spec throws a TypeError creating a 'timestamp' query set without the
+        // feature enabled — gate like TimingHelper does.
+        if (device.features.has('timestamp-query')) {
+            this.querySet = device.createQuerySet({
+                type: 'timestamp',
+                count: 2,
+            });
 
-        this.queryBuffer = device.createBuffer({
-            size: 8 * 2,
-            usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
-        });
+            this.queryBuffer = device.createBuffer({
+                size: 8 * 2,
+                usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
+            });
 
-        this.queryBufferResult = device.createBuffer({
-            size: 8 * 2,
-            usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
-        });
+            this.queryBufferResult = device.createBuffer({
+                size: 8 * 2,
+                usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+            });
+        }
     }
 
     // (Re)compiles the module and rebuilds one pipeline per entry point.
@@ -153,7 +157,7 @@ export class ComputeShader {
 
     async dispatch(encoder, { pass = null, kernel, bindGroup, bindGroupIndex = 0, dispatchCount, workgroupBuffer = null, timing = false } = {}) {
         if (!encoder) {
-            console.error('no enconder found');
+            console.error('no encoder found');
             return;
         }
 
@@ -167,14 +171,17 @@ export class ComputeShader {
             return;
         }
 
-        if (!dispatchCount || dispatchCount.length < 0) {
+        if (!dispatchCount || dispatchCount.length < 1) {
             console.error('no valid dispatch count passed');
             return;
         }
 
+        // timestamps only wrap a pass this method itself creates
+        const canTime = timing && !!this.querySet && !pass;
+
         const _pass = pass
             ? pass
-            : timing
+            : canTime
               ? encoder.beginComputePass({
                     label: kernel.label,
                     timestampWrites: {
@@ -194,13 +201,14 @@ export class ComputeShader {
 
         if (!pass) _pass.end();
 
-        if (timing) {
+        if (canTime) {
             encoder.resolveQuerySet(this.querySet, 0, 2, this.queryBuffer, 0);
             encoder.copyBufferToBuffer(this.queryBuffer, 0, this.queryBufferResult, 0, this.queryBufferResult.size);
         }
     }
 
     getTiming = async () => {
+        if (!this.queryBufferResult) return;
         await this.queryBufferResult.mapAsync(GPUMapMode.READ);
         const data = new BigInt64Array(this.queryBufferResult.getMappedRange());
         const timing = data[1] - data[0];

@@ -27,11 +27,11 @@ export class BoxMesh extends Transform {
             label: 'box-mesh',
             pipeline,
             geometry,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     layout: pipeline.bindGroupLayout(0),
                     entries: [
-                        { binding: 0, resource: { buffer: uniformBuffer } },
+                        { binding: 0, resource: uniformResource },
                         { binding: 1, resource: { buffer: this.scaleStruct.uniformBuffer } },
                         { binding: 2, resource: { buffer: this.alphaStruct.uniformBuffer } },
                     ],

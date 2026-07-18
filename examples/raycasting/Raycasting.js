@@ -43,10 +43,10 @@ export class Raycasting {
                 label,
                 pipeline,
                 geometry,
-                bindGroups: (uniformBuffer) => [
+                bindGroups: (uniformResource) => [
                     this.gpu.device.createBindGroup({
                         layout: pipeline.bindGroupLayout(0),
-                        entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+                        entries: [{ binding: 0, resource: uniformResource }],
                     }),
                 ],
             });

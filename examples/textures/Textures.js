@@ -51,11 +51,11 @@ export class Textures {
             label: 'saddle',
             pipeline: saddlePipeline,
             geometry: saddleGeo,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     layout: saddlePipeline.bindGroupLayout(0),
                     entries: [
-                        { binding: 0, resource: { buffer: uniformBuffer } },
+                        { binding: 0, resource: uniformResource },
                         { binding: 1, resource: sampler },
                         { binding: 2, resource: saddleView },
                     ],
@@ -85,11 +85,11 @@ export class Textures {
                 label: 'video-box',
                 pipeline: videoPipeline,
                 geometry: boxGeo,
-                bindGroups: (uniformBuffer) => [
+                bindGroups: (uniformResource) => [
                     this.gpu.device.createBindGroup({
                         layout: videoPipeline.bindGroupLayout(0),
                         entries: [
-                            { binding: 0, resource: { buffer: uniformBuffer } },
+                            { binding: 0, resource: uniformResource },
                             { binding: 1, resource: this.videoSampler },
                             { binding: 2, resource: video.createView() },
                         ],
@@ -130,7 +130,7 @@ export class Textures {
                 this.videoBox.bindGroups[0] = this.gpu.device.createBindGroup({
                     layout: this.videoPipeline.bindGroupLayout(0),
                     entries: [
-                        { binding: 0, resource: { buffer: this.videoBox.uniformBuffer } },
+                        { binding: 0, resource: this.videoBox.uniformResource },
                         { binding: 1, resource: this.videoSampler },
                         { binding: 2, resource: view },
                     ],

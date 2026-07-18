@@ -287,12 +287,12 @@ export class GLTFLoader {
             label: `${name}-mesh`,
             pipeline,
             geometry, // mesh owns the geometry; pipeline carries layout only
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     label: `${name}-material`,
                     layout: pipeline.bindGroupLayout(0),
                     entries: [
-                        { binding: 0, resource: { buffer: uniformBuffer } },
+                        { binding: 0, resource: uniformResource },
                         ...iblEntries,
                         { binding: 5, resource: baseColor.createView() },
                         { binding: 6, resource: metalRough.createView() },
@@ -608,11 +608,11 @@ export class GLTFLoader {
             label: `${label}-mesh`,
             pipeline,
             geometry,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     layout: pipeline.bindGroupLayout(0),
                     entries: [
-                        { binding: 0, resource: { buffer: uniformBuffer } },
+                        { binding: 0, resource: uniformResource },
                         { binding: 1, resource: { buffer: skin.skinnedPositionBuffer } },
                         { binding: 2, resource: { buffer: skin.skinnedNormalBuffer } },
                         { binding: 3, resource: ibl.specView },

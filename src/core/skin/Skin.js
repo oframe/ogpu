@@ -2,7 +2,7 @@
 // the render pipeline reads.
 // Ref: https://toji.dev/webgpu-best-practices/compute-vertex-data
 
-import { Vec3, Quat, Mat4 } from '@math';
+import { Mat4 } from '@math';
 import { createStorageBuffer } from '@utils/BufferUtils';
 import { ComputeShader } from '@core/ComputeShader';
 import { Transform } from '@core/Transform';
@@ -49,9 +49,9 @@ export class Skin {
             for (let a = 0; a < ancestors.count; a++) {
                 const t = new Transform();
                 t.label = ancestors.name[a];
-                t.position = new Vec3(ancestors.position[a * 3], ancestors.position[a * 3 + 1], ancestors.position[a * 3 + 2]);
-                t.quaternion = new Quat(ancestors.quaternion[a * 4], ancestors.quaternion[a * 4 + 1], ancestors.quaternion[a * 4 + 2], ancestors.quaternion[a * 4 + 3]);
-                t.scale = new Vec3(ancestors.scale[a * 3], ancestors.scale[a * 3 + 1], ancestors.scale[a * 3 + 2]);
+                t.position.set(ancestors.position[a * 3], ancestors.position[a * 3 + 1], ancestors.position[a * 3 + 2]);
+                t.quaternion.set(ancestors.quaternion[a * 4], ancestors.quaternion[a * 4 + 1], ancestors.quaternion[a * 4 + 2], ancestors.quaternion[a * 4 + 3]);
+                t.scale.set(ancestors.scale[a * 3], ancestors.scale[a * 3 + 1], ancestors.scale[a * 3 + 2]);
                 t.setParent(parentTransform);
                 this.skeletonBones.push(t);
                 parentTransform = t;
@@ -74,12 +74,9 @@ export class Skin {
         for (let i = 0; i < this.rig.bones.length; i++) {
             const bone = new Transform();
 
-            const bindPosePosition = new Vec3(bindPose.position[i * 3], bindPose.position[i * 3 + 1], bindPose.position[i * 3 + 2]);
-            const bindPoseQuaternion = new Quat(bindPose.quaternion[i * 4], bindPose.quaternion[i * 4 + 1], bindPose.quaternion[i * 4 + 2], bindPose.quaternion[i * 4 + 3]);
-            const bindPoseScale = new Vec3(bindPose.scale[i * 3], bindPose.scale[i * 3 + 1], bindPose.scale[i * 3 + 2]);
-            bone.position = bindPosePosition;
-            bone.quaternion = bindPoseQuaternion;
-            bone.scale = bindPoseScale;
+            bone.position.set(bindPose.position[i * 3], bindPose.position[i * 3 + 1], bindPose.position[i * 3 + 2]);
+            bone.quaternion.set(bindPose.quaternion[i * 4], bindPose.quaternion[i * 4 + 1], bindPose.quaternion[i * 4 + 2], bindPose.quaternion[i * 4 + 3]);
+            bone.scale.set(bindPose.scale[i * 3], bindPose.scale[i * 3 + 1], bindPose.scale[i * 3 + 2]);
 
             this.bones.push(bone);
         }

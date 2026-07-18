@@ -2,18 +2,19 @@ import { Vec3 } from '@math';
 import { TimingHelper } from '@utils/TimingHelper';
 import { NonNegativeRollingAverage } from '@utils/miscutils';
 import { getPromise } from '@utils/utils';
+import { PerDrawBuffer } from './PerDrawBuffer.js';
 
 const tempVec3 = /* @__PURE__ */ new Vec3(0, 0, 0);
 
 export class Renderer {
-    constructor({ canvas = null, dpr = null, transparent = false, depth = true, stencil = true } = {}) {
+    constructor({ canvas = null, dpr = null, transparent = false, depth = true, perDrawSize = 1 << 20 } = {}) {
         this.canvas = canvas;
         this.dpr = dpr || Math.min(2, devicePixelRatio);
         this.width = 2;
         this.height = 2;
+        this.perDrawSize = perDrawSize;
 
         this.depth = depth;
-        this.stencil = stencil;
         this.transparent = transparent;
         this.setClearColor();
 
@@ -50,7 +51,13 @@ export class Renderer {
 
     async initDevice() {
         if (!navigator.gpu) {
-            console.error('this browser does not support WebGPU');
+            // On recovery (post-boot) `ready` already settled, so reject() here is
+            // a no-op — the message is what actually reaches the console/user.
+            console.error(
+                this._initialized
+                    ? '[webgpu] device recovery failed — could not re-acquire an adapter/device; engine halted'
+                    : 'this browser does not support WebGPU'
+            );
             this.ready.reject();
             return;
         }
@@ -59,7 +66,11 @@ export class Renderer {
             powerPreference: 'high-performance',
         });
         if (!adapter) {
-            console.error('this browser supports webgpu but it appears disabled');
+            console.error(
+                this._initialized
+                    ? '[webgpu] device recovery failed — could not re-acquire an adapter/device; engine halted'
+                    : 'this browser supports webgpu but it appears disabled'
+            );
             this.ready.reject();
             return;
         }
@@ -135,7 +146,12 @@ export class Renderer {
         // device.lost resolves once, for the first loss of THIS device, so it's
         // freshly armed for every device we acquire. reason 'destroyed' means a
         // deliberate teardown — don't fight it.
-        device.lost.then((info) => this._onDeviceLost(info));
+        device.lost.then((info) => {
+            // A superseded device (recovery already swapped in a newer one)
+            // reporting its own loss later isn't a real loss to react to.
+            if (this.gpu?.device && this.gpu.device !== device) return;
+            this._onDeviceLost(info);
+        });
 
         if (this._initialized) {
             this._restore(device);
@@ -152,6 +168,8 @@ export class Renderer {
         }
 
         this._configureContext(device);
+
+        this.perDraw = new PerDrawBuffer(this.gpu, { size: this.perDrawSize });
 
         this.isReady = true;
         this._initialized = true;
@@ -177,7 +195,7 @@ export class Renderer {
         this.gpu.configure({
             device,
             format: this.presentationFormat,
-            alphamode: this.transparent ? 'premultiplied' : '',
+            alphaMode: this.transparent ? 'premultiplied' : 'opaque',
         });
 
         this.gpu.presentationFormat = this.presentationFormat;
@@ -205,7 +223,13 @@ export class Renderer {
         // without destroy() (destroying a lost device's resources is a no-op at
         // best, a warning at worst) and remake at the current canvas size.
         this.depthTexture = null;
+        this._depthView = null;
         this.depth && this.createDepthTexture();
+
+        // Same story: the old PerDrawBuffer's GPUBuffer died with the device.
+        // Drop the reference (no destroy — same rationale as depth texture
+        // above) and remake against the fresh gpu.
+        this.perDraw = new PerDrawBuffer(this.gpu, { size: this.perDrawSize });
 
         this.isReady = true;
         this._deviceLost = false;
@@ -232,6 +256,7 @@ export class Renderer {
             format: 'depth24plus',
             usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
         });
+        this._depthView = null;
     }
 
     addHandlers() {
@@ -327,6 +352,9 @@ export class Renderer {
     };
 
     resume = () => {
+        // Reset so updateClock's prevTime===0 guard eats this frame's delta
+        // instead of reporting the entire hidden/paused duration as a spike.
+        this.prevTime = 0;
         this.paused = false;
     };
 
@@ -517,6 +545,11 @@ export class Renderer {
 
         if (this._debug && !encoder && target === null) timing = true;
 
+        // getResult() only runs on the renderer-owned submit path below, so a
+        // timed pass on an external encoder would leave the helper stuck
+        // waiting and wedge the next timed pass.
+        if (encoder) timing = false;
+
         if (!this._bootStarted) this._startBoot();
 
         // Walk + refresh world matrices (each node still dirty-flag gated, and a
@@ -534,14 +567,14 @@ export class Renderer {
             target.textures.forEach((texture, i) => {
                 if (texture.isDestroyed) return;
                 let colorAttachment = {
-                    view: target.msaaTextures.length > 0 ? target.msaaTextures[i].texture?.createView?.() : texture?.texture?.createView?.(),
+                    view: target.msaaTextures.length > 0 ? target.msaaTextures[i]?.createView?.() : texture?.createView?.(),
                     clearValue: texture?.clearValue || (i === 0 ? this.clearColor : { r: 0, g: 0, b: 0, a: 0 }),
                     loadOp,
                     storeOp,
                 };
                 if (target.msaaTextures.length > 0) {
                     Object.assign(colorAttachment, {
-                        resolveTarget: texture?.texture?.createView?.(),
+                        resolveTarget: texture?.createView?.(),
                     });
                 }
                 colorAttachments.push(colorAttachment);
@@ -555,7 +588,7 @@ export class Renderer {
                 renderPassDescriptor = {
                     colorAttachments,
                     depthStencilAttachment: {
-                        view: target?.depthTexture?.createView?.(),
+                        view: target?.depthView?.(),
                         depthClearValue: 1.0,
                         depthLoadOp,
                         depthStoreOp,
@@ -563,8 +596,8 @@ export class Renderer {
                 };
             }
         } else {
-            if (!this.depthTexture || this.depthTexture.width !== this.width || this.depthTexture.height !== this.height) {
-                this.depth && !this.depthTexture && this.createDepthTexture();
+            if (this.depth && (!this.depthTexture || this.depthTexture.width !== this.width || this.depthTexture.height !== this.height)) {
+                this.createDepthTexture();
             }
 
             renderPassDescriptor = {
@@ -576,13 +609,19 @@ export class Renderer {
                         storeOp,
                     },
                 ],
-                depthStencilAttachment: {
-                    view: this?.depthTexture?.createView?.(),
+            };
+
+            // Without this.depthTexture (depth: false) there's nothing to attach —
+            // an attachment with an undefined view fails validation.
+            if (this.depthTexture) {
+                this._depthView ??= this.depthTexture.createView();
+                renderPassDescriptor.depthStencilAttachment = {
+                    view: this._depthView,
                     depthClearValue: 1.0,
                     depthLoadOp,
                     depthStoreOp,
-                },
-            };
+                };
+            }
         }
 
         let _encoder = encoder || this.gpu.device.createCommandEncoder({ label: 'renderer-encoder' });
@@ -596,8 +635,9 @@ export class Renderer {
 
         this.getRenderQueue({ scene, camera, frustumCull });
 
+        const resolution = target ? [target.width, target.height] : [this.gpu.canvas.width, this.gpu.canvas.height];
         this.renderQueue?.forEach?.((node) => {
-            node.draw({ camera, pass, time: this.time });
+            node.draw({ camera, pass, time: this.time, resolution });
         });
 
         pass.end();
@@ -629,6 +669,12 @@ export class Renderer {
         }
 
         this._rafHandle = requestAnimationFrame(this.update);
+        if (this.paused) return;
+
+        // One reset per rendered frame — allocations accumulate across every
+        // render() call within the frame (multi-pass chains), that's the point.
+        this.perDraw?.reset();
+
         this.updateClock(time);
         this.callBacks.forEach((cb) => cb && cb({ time: this.time, deltaTime: this.deltaTime }));
     };

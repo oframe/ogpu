@@ -20,13 +20,15 @@ AABB when both exist.
 
 ## GUI.js
 
-`gui.uniform(target, key)` maintains a local proxy object, calls
-`target.uniforms.set({[key]: value})` and writes the buffer to the GPU on every
-Tweakpane change. `target` is any object owning `.uniforms` + `.uniformBuffer` +
-`.gpu` — a `Mesh`, or any pass owning its own uniform buffer — NOT a `RenderPipeline`
-(pipelines no longer own uniforms). Scalar uniforms (length-1 typed-array view) are
-unwrapped to a number for the proxy; vec uniforms stay arrays. The `opts` object is
-passed straight through to Tweakpane, so `min`/`max`/`step`/`options` all work.
+`gui.uniform(target, key)` maintains a local proxy object and calls
+`target.uniforms.set({[key]: value})` on every Tweakpane change. `target` is any
+object owning `.uniforms` + `.gpu` — a `Mesh`, or any pass owning its own
+uniform buffer — NOT a `RenderPipeline` (pipelines no longer own uniforms).
+`.uniformBuffer` is optional: passes owning a private buffer get it written
+immediately; Meshes have none (their struct uploads into the per-draw buffer on
+the next draw). Scalar uniforms (length-1 typed-array view) are unwrapped to a
+number for the proxy; vec uniforms stay arrays. The `opts` object is passed
+straight through to Tweakpane, so `min`/`max`/`step`/`options` all work.
 
 `gui.folder(title)` returns a new `GUI` instance wrapping a Tweakpane FolderApi — you can
 chain `.uniform`/`.add`/`.button` on it normally.

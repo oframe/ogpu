@@ -31,13 +31,17 @@ moment `isReady` is false, see `_loopRunning`/`_startLoop`), fires
 means a recovery that races the dying loop can't spawn a second one.
 
 The engine only restores **engine-owned** state on recovery (context
-reconfigure, depth texture). Everything app code built — pipelines, buffers,
-textures, bind groups, `Mesh`/`Geometry`/`ComputeShader` instances — was tied to
-the dead device and is gone. Owners must rebuild them in a
-`renderer.addDeviceRestoredHandler(gpu => {...})` callback (returns an
-unsubscribe fn); the callback receives the fresh `gpu`. Without it the loop
-recovers and the canvas paints, but the scene is empty. There's no automatic
-scene rebuild — that boundary is deliberate.
+reconfigure, depth texture, the per-draw uniform buffer). Everything app code
+built — pipelines, buffers, textures, bind groups, `Mesh`/`Geometry`/
+`ComputeShader` instances — was tied to the dead device and is gone. Owners must
+rebuild them in a `renderer.addDeviceRestoredHandler(gpu => {...})` callback
+(returns an unsubscribe fn); the callback receives the fresh `gpu`. Without it
+the loop recovers and the canvas paints, but the scene is empty. There's no
+automatic scene rebuild — that boundary is deliberate. Recreate `Mesh`
+INSTANCES here, don't just rebuild their bind groups: a surviving mesh's
+`uniformResource` still points at the dead device's per-draw buffer, so the
+bind-group-only rebuild pattern (valid for same-device texture resizes) binds
+cross-device after a loss.
 
 Test it without a real GPU loss via `renderer.forceDeviceLoss()`: WebGPU exposes
 no way to synthetically lose a device (`destroy()` reports `'destroyed'`, which
@@ -114,36 +118,62 @@ to callers via `pipeline.bindGroupLayout(i)` (mirrors `ComputeShader.bindGroupLa
 — don't reach into `pipeline.pipeline.getBindGroupLayout(i)`; the getter returns
 the explicit, hot-reload-stable BGL it built.
 
-Each **`Mesh`** owns its own uniform buffer (`mesh.uniformBuffer`, built from the
-pipeline's reflected `uniforms` struct → `mesh.uniforms`) and its bind groups
-(`mesh.bindGroups`). The constructor REQUIRES `bindGroups`: either a
-`GPUBindGroup[]` or a factory `(uniformBuffer) => GPUBindGroup[]` — the factory
-receives the mesh's own buffer so group(0) can bind it at binding 0. Build groups
-against `pipeline.bindGroupLayout(i)`, one per group index. Set custom
-uniforms via `mesh.uniforms.set({...})` (NOT `pipeline.uniforms`).
+Each **`Mesh`** owns a structured uniform view (`mesh.uniforms`, built from the
+pipeline's reflected `uniforms` struct) and a slice descriptor (`mesh.uniformResource`
+= `{buffer, offset: 0, size: mesh.structSize}`) into the renderer-owned
+`PerDrawBuffer` (`gpu.renderer.perDraw`) — the mesh does NOT own a uniform buffer.
+The constructor REQUIRES `bindGroups`: either a `GPUBindGroup[]` or a factory
+`(uniformResource) => GPUBindGroup[]` — the factory receives that slice descriptor
+so group(0) binds it verbatim at binding 0. Build groups against
+`pipeline.bindGroupLayout(i)`, one per group index. Set custom uniforms via
+`mesh.uniforms.set({...})` (NOT `pipeline.uniforms`).
+
+Every `draw()` allocates a fresh slice from `perDraw` (`perDraw.alloc(byteLength)`),
+writes this mesh's uniforms there, and binds group(0) with a dynamic offset
+(`pass.setBindGroup(0, bindGroup, [offset])`) — `RenderPipeline.build` marks the
+group(0)/binding(0) buffer entry `hasDynamicOffset: true` for this reason. The
+buffer's `pointer` resets once per rendered frame (`Renderer.update`, after the
+paused early-return) and accumulates across every `render()` call within that
+frame — that's what lets one mesh draw into multiple chained passes safely.
+Overflowing the buffer (`perDrawSize`, default 1 MiB, set via the `Renderer`
+constructor) logs a console error instead of growing it — growing would
+invalidate every already-bound group(0). Device recovery recreates `perDraw`
+alongside the depth texture in `_restore`; app-owned bind groups still rebuild
+in `deviceRestoredHandler`s as before.
 
 **Texture resize:** destroying/recreating a `Texture` invalidates its
 `GPUTextureView`s, so any bind group holding them is stale. Rebuild the affected
 group: `mesh.bindGroups[i] = device.createBindGroup({ layout:
 pipeline.bindGroupLayout(i), entries: [...fresh...] })` (use
-`mesh.uniformBuffer` for binding 0). For a per-frame ping-pong, prebuild the
+`mesh.uniformResource` for binding 0). For a per-frame ping-pong, prebuild the
 variants and swap the slot: `mesh.bindGroups[0] = variants[t % 2]`.
 
 **Non-Mesh draw issuers** (fullscreen / blit passes that draw without a `Mesh`)
 own their uniform buffer the same way: `makeStructuredView(pipeline.defs.
 uniforms.uniforms)` + `createUniformBuffer`, written with `device.queue.writeBuffer`, bound
-via `device.createBindGroup` against the pipeline layout.
+via `device.createBindGroup` against the pipeline layout. One consequence of the
+per-draw model: `RenderPipeline.build` marks group(0)/binding(0) `hasDynamicOffset`
+on EVERY pipeline, so a direct draw must pass a zero offset —
+`pass.setBindGroup(0, bindGroup, [0])` — or the pass fails validation with a
+dynamic-offset count mismatch.
+
+**Repeat draws across passes are fine.** Each draw allocates its own slice of the
+renderer-owned `PerDrawBuffer` (dynamic offsets), so a mesh can draw into a
+shadow pass and a main pass — or repeat within any chained-`encoder` submit —
+without the second draw's uniforms clobbering the first.
 
 **Hot-reload:** the pipeline only rebuilds module/defs/layouts/`pipeline`. Each
 `Mesh` detects the reload by comparing its cached `_defs` against `pipeline.defs`
 on the next `draw`, then rebuilds its structured view — preserving values when the
-struct byte length is unchanged, else recreating the buffer and warning that bind
-groups must be recreated.
+struct byte length is unchanged, else updating `uniformResource.size` to the new
+byte length and warning that bind groups must be recreated (no buffer to
+recreate — it's a slice of the shared `PerDrawBuffer`).
 
-`gui.uniform(target, key)` takes any object exposing `.uniforms` + `.uniformBuffer`
-
-- `.gpu` (a `Mesh`, or any pass owning its own uniform buffer) — pass the mesh/pass,
-  not the pipeline.
+`gui.uniform(target, key)` takes any object exposing `.uniforms` + `.gpu` (a
+`Mesh`, or any pass owning its own uniform buffer) — pass the mesh/pass, not the
+pipeline. `.uniformBuffer` is optional: passes that own a private buffer get it
+written immediately; a `Mesh` has none, so the value lands in `.uniforms` and
+uploads at its next `draw`.
 
 Entry points are hardcoded: vertex = `vs`, fragment = `fs`. The vertex stage
 is always emitted; the **fragment stage is emitted only if `defs.entryPoints.fs`

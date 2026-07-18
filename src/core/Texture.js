@@ -221,7 +221,12 @@ export class Texture {
                             {
                                 width: mipWidth,
                                 height: mipHeight,
-                                depthOrArrayLayers: this.isCubeMap ? 1 : mipDepth,
+                                // layers don't shrink per mip, only 3d depth does
+                                depthOrArrayLayers: this.isCubeMap
+                                    ? 1
+                                    : this.dimension === '3d'
+                                      ? mipDepth
+                                      : this.depth,
                             }
                         );
                     }
@@ -249,15 +254,14 @@ export class Texture {
     }
 
     createView() {
-        if (this.isCubeMap) {
-            return this.texture.createView({ dimension: 'cube', arrayLayerCount: 6 });
-        }
-        return this.texture.createView();
+        this._view ??= this.isCubeMap ? this.texture.createView({ dimension: 'cube', arrayLayerCount: 6 }) : this.texture.createView();
+        return this._view;
     }
 
     destroy() {
         this?.texture && this?.texture?.destroy?.();
         this.texture = null;
+        this._view = null;
         this.isDestroyed = true;
     }
 }

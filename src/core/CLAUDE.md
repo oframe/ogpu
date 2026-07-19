@@ -155,7 +155,10 @@ via `device.createBindGroup` against the pipeline layout. One consequence of the
 per-draw model: `RenderPipeline.build` marks group(0)/binding(0) `hasDynamicOffset`
 on EVERY pipeline, so a direct draw must pass a zero offset —
 `pass.setBindGroup(0, bindGroup, [0])` — or the pass fails validation with a
-dynamic-offset count mismatch.
+dynamic-offset count mismatch. Fullscreen passes can skip hand-rolling that
+call via the shared `blit(encoder, { pipeline, targetView, bindGroup, clear })`
+helper (`@utils/RenderUtils`), which records the color-only pass and applies
+the `[0]` offset internally (see the `rendertotexture` example).
 
 **Repeat draws across passes are fine.** Each draw allocates its own slice of the
 renderer-owned `PerDrawBuffer` (dynamic offsets), so a mesh can draw into a
@@ -237,7 +240,9 @@ right usage flags; `update()` recreates the texture if usage changes.
 `createDepthTexture`. `onResize` recreates it but does NOT destroy the old one —
 if you resize frequently, call the old one's `.destroy()` yourself or leak.
 Passing `target` to `Renderer.render` without a `depthTexture` on it means no
-depth testing at all; fullscreen / blit passes rely on this intentionally.
+depth testing at all. (Fullscreen `blit` passes don't go through
+`Renderer.render` — they record a color-only pass with `depthStencil: false`
+and no depth attachment; see `@utils/RenderUtils`.)
 
 ## Skin — world-space bones and split update
 

@@ -1,9 +1,9 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 129,
-    "edges": 234,
-    "modules": 82,
+    "nodes": 130,
+    "edges": 236,
+    "modules": 83,
     "shaders": 40,
     "external": 7
   },
@@ -308,7 +308,7 @@
       "id": "examples/rendertotexture/RenderToTexture.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 3
+      "outDegree": 4
     },
     {
       "id": "examples/scenegraph/SceneGraph.js",
@@ -451,7 +451,7 @@
     {
       "id": "pkg:webgpu-utils",
       "type": "external",
-      "inDegree": 22,
+      "inDegree": 23,
       "outDegree": 0
     },
     {
@@ -620,7 +620,7 @@
       "id": "src/index.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 16
+      "outDegree": 17
     },
     {
       "id": "src/main.js",
@@ -810,6 +810,12 @@
     },
     {
       "id": "src/utils/miscutils.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/utils/RenderUtils.js",
       "type": "module",
       "inDegree": 1,
       "outDegree": 0
@@ -1045,6 +1051,10 @@
     {
       "from": "examples/rendertotexture/RenderToTexture.js",
       "to": "pkg:ogpu"
+    },
+    {
+      "from": "examples/rendertotexture/RenderToTexture.js",
+      "to": "pkg:webgpu-utils"
     },
     {
       "from": "examples/scenegraph/SceneGraph.js",
@@ -1461,6 +1471,10 @@
     {
       "from": "src/index.js",
       "to": "src/utils/JSONLoader.js"
+    },
+    {
+      "from": "src/index.js",
+      "to": "src/utils/RenderUtils.js"
     },
     {
       "from": "src/index.js",

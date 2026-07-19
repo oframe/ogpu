@@ -13,25 +13,20 @@ struct Uniforms {
 @group(0) @binding(2) var map: texture_2d<f32>;
 @group(0) @binding(3) var normals: texture_2d<f32>;
 
-struct Vertex {
-    @location(0) position: vec3f,
-    @location(1) uv: vec2f,
-}
-
 struct VertexOutput {
     @builtin(position) position : vec4f,
     @location(0) uv: vec2f,
 }
 
+// buffer-less fullscreen quad (triangle-strip, draw(4)) — driven by the blit
+// util in @utils/RenderUtils; vUv (0,0) lands at clip (-1,-1).
 @vertex
-fn vs(v: Vertex) -> VertexOutput {
-
+fn vs(@builtin(vertex_index) i : u32) -> VertexOutput {
     var vsOut: VertexOutput;
-
-    vsOut.position = vec4f(v.position, 1.0);
-    vsOut.uv = v.uv;
+    let pos = vec2f(f32(i & 1u), f32(i >> 1u)); // (0,0) (1,0) (0,1) (1,1)
+    vsOut.position = vec4f(pos * 2.0 - 1.0, 0.0, 1.0);
+    vsOut.uv = pos;
     return vsOut;
-
 }
 
 //https://mattlockyer.github.io/iat455/documents/rgb-hsv.pdf

@@ -1,4 +1,5 @@
-import { Box, FullscreenTriangle, Mesh, Renderer, RenderPipeline, Transform, RenderTarget, Camera, Orbit } from 'ogpu';
+import { Box, Mesh, Renderer, RenderPipeline, Transform, RenderTarget, Camera, Orbit, blit, createUniformBuffer } from 'ogpu';
+import { makeStructuredView } from 'webgpu-utils';
 
 import display from './display.wgsl?raw';
 import cubeShader from './cube.wgsl?raw';
@@ -26,18 +27,15 @@ export class RenderToTexture {
     }
 
     initDisplay() {
-        this.scene = new Transform();
-
-        const geometry = new FullscreenTriangle(this.gpu);
-
-        const pipeline = new RenderPipeline(this.gpu, {
+        this.displayPipeline = new RenderPipeline(this.gpu, {
             label: 'display-pipeline',
             code: display,
-            vertexBuffers: geometry.bufferLayouts,
+            vertexBuffers: [],
+            topology: 'triangle-strip',
             cullMode: 'none',
+            depthStencil: false, // color-only blit pass, no depth attachment
         });
 
-        this.displayPipeline = pipeline;
         this.displaySampler = this.gpu.device.createSampler({
             minFilter: 'linear',
             magFilter: 'linear',
@@ -45,30 +43,35 @@ export class RenderToTexture {
             addressModeV: 'clamp-to-edge',
         });
 
-        this.display = new Mesh(this.gpu, {
-            label: 'display-mesh',
-            pipeline,
-            geometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    label: 'display-rendering',
-                    layout: pipeline.bindGroupLayout(0),
-                    entries: [
-                        { binding: 0, resource: uniformResource },
-                        {
-                            binding: pipeline.defs.samplers.sampler2d.binding,
-                            resource: this.displaySampler,
-                        },
-                        {
-                            binding: pipeline.defs.textures.map.binding,
-                            resource: this.sceneBuffer.createView(0),
-                        },
-                        {
-                            binding: pipeline.defs.textures.normals.binding,
-                            resource: this.sceneBuffer.createView(1),
-                        },
-                    ],
-                }),
+        // binding 0 is unused by the fragment shader but the layout still needs
+        // a buffer bound there (group(0)/binding(0) is the engine's dynamic slot).
+        this.displayUniforms = createUniformBuffer(this.gpu, {
+            label: 'display-uniforms',
+            size: makeStructuredView(this.displayPipeline.defs.uniforms.uniforms).arrayBuffer.byteLength,
+        });
+
+        this.displayBindGroup = this.buildDisplayBindGroup();
+    }
+
+    buildDisplayBindGroup() {
+        const pipeline = this.displayPipeline;
+        return this.gpu.device.createBindGroup({
+            label: 'display-rendering',
+            layout: pipeline.bindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: { buffer: this.displayUniforms } },
+                {
+                    binding: pipeline.defs.samplers.sampler2d.binding,
+                    resource: this.displaySampler,
+                },
+                {
+                    binding: pipeline.defs.textures.map.binding,
+                    resource: this.sceneBuffer.createView(0),
+                },
+                {
+                    binding: pipeline.defs.textures.normals.binding,
+                    resource: this.sceneBuffer.createView(1),
+                },
             ],
         });
     }
@@ -174,7 +177,16 @@ export class RenderToTexture {
             camera: this.camera,
             target: this.sceneBuffer,
         });
-        this.renderer.render({ scene: this.display });
+
+        // display pass — blit the two render-target attachments to the swapchain
+        const encoder = this.gpu.device.createCommandEncoder({ label: 'display-encoder' });
+        blit(encoder, {
+            pipeline: this.displayPipeline.pipeline,
+            targetView: this.gpu.getCurrentTexture().createView(),
+            bindGroup: this.displayBindGroup,
+            label: 'display-pass',
+        });
+        this.gpu.device.queue.submit([encoder.finish()]);
     };
 
     handleResize = () => {
@@ -186,24 +198,7 @@ export class RenderToTexture {
             height: this.gpu.canvas.height,
         });
 
-        this.display.bindGroups[0] = this.gpu.device.createBindGroup({
-            label: 'display-rendering',
-            layout: this.displayPipeline.bindGroupLayout(0),
-            entries: [
-                { binding: 0, resource: this.display.uniformResource },
-                {
-                    binding: this.displayPipeline.defs.samplers.sampler2d.binding,
-                    resource: this.displaySampler,
-                },
-                {
-                    binding: this.displayPipeline.defs.textures.map.binding,
-                    resource: this.sceneBuffer.createView(0),
-                },
-                {
-                    binding: this.displayPipeline.defs.textures.normals.binding,
-                    resource: this.sceneBuffer.createView(1),
-                },
-            ],
-        });
+        // sceneBuffer textures were recreated — its views are stale, rebuild
+        this.displayBindGroup = this.buildDisplayBindGroup();
     };
 }

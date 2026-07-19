@@ -284,6 +284,9 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - fn `compose(dstMat, srcRotation, srcTranslation, srcScale)`
 - fn `decompose(srcMat, dstRotation, dstTranslation, dstScale)`
 
+### src/utils/RenderUtils.js
+- fn `blit(encoder, { pipeline, targetView, bindGroup, clear = true, label } = {})`
+
 ### src/utils/TimingHelper.js
 - **class TimingHelper**
   - constructor(device)
@@ -420,6 +423,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - constructor({ el = null } = {})
   - init(el)
   - initDisplay()
+  - buildDisplayBindGroup()
   - initTestScene()
 
 ### examples/scenegraph/SceneGraph.js
@@ -475,6 +479,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { VideoTexture } from './modules/VideoTexture.js'
 - re-export { KTXTexture } from './modules/KTXTexture.js'
 - re-export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js'
+- re-export { blit } from './utils/RenderUtils.js'
 - re-export { loadJSON, loadJSONAll } from './utils/JSONLoader.js'
 - re-export { loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from './utils/IBLUtils/IBLUtils.js'
 - re-export { TimingHelper } from './utils/TimingHelper.js'

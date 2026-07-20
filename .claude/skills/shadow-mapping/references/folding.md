@@ -149,8 +149,12 @@ const SHADOW_FORMAT = 'depth32float';
 
 // depth-only target
 this.shadowBuffer = new RenderTarget(this.gpu, {
-  width: SHADOW_SIZE, height: SHADOW_SIZE, depth: 1,
-  color: false, depthTexture: true, depthFormat: SHADOW_FORMAT,
+    width: SHADOW_SIZE,
+    height: SHADOW_SIZE,
+    depth: 1,
+    color: false,
+    depthTexture: true,
+    depthFormat: SHADOW_FORMAT,
 });
 
 // orthographic light camera
@@ -166,10 +170,12 @@ const lightDir = [lightPos[0] - lightTarget[0], lightPos[1] - lightTarget[1], li
 const lightLen = Math.hypot(...lightDir);
 
 const shadowMapSampler = this.gpu.device.createSampler({
-  label: 'shadow-map-sampler',
-  minFilter: 'linear', magFilter: 'linear',
-  addressModeU: 'clamp-to-edge', addressModeV: 'clamp-to-edge',
-  compare: 'less',
+    label: 'shadow-map-sampler',
+    minFilter: 'linear',
+    magFilter: 'linear',
+    addressModeU: 'clamp-to-edge',
+    addressModeV: 'clamp-to-edge',
+    compare: 'less',
 });
 
 // Shadow uniform buffer — structured view off ANY receiver pipeline's defs
@@ -181,27 +187,31 @@ const shadowDepthView = this.shadowBuffer.depthTexture.createView();
 
 // caster pipeline (note depthStencil with slope bias, no fragment stage in the WGSL)
 const casterPipeline = new RenderPipeline(this.gpu, {
-  label: 'shadow-caster',
-  code: casterShader,
-  vertexBuffers: geometry.bufferLayouts,
-  depthStencil: {
-    depthWriteEnabled: true, depthCompare: 'less', format: SHADOW_FORMAT,
-    depthBias: 1, depthBiasSlopeScale: 1.75, depthBiasClamp: 0.0,
-  },
+    label: 'shadow-caster',
+    code: casterShader,
+    vertexBuffers: geometry.bufferLayouts,
+    depthStencil: {
+        depthWriteEnabled: true,
+        depthCompare: 'less',
+        format: SHADOW_FORMAT,
+        depthBias: 1,
+        depthBiasSlopeScale: 1.75,
+        depthBiasClamp: 0.0,
+    },
 });
 this.shadowMesh = new Mesh(this.gpu, {
-  label: 'shadow-caster',
-  pipeline: casterPipeline,
-  geometry,
-  bindGroups: (uniformBuffer) => [
-    this.gpu.device.createBindGroup({
-      layout: casterPipeline.bindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: { buffer: uniformBuffer } },
-        // skinned only: { binding: 1, resource: { buffer: skin.skinnedPositionBuffer } },
-      ],
-    }),
-  ],
+    label: 'shadow-caster',
+    pipeline: casterPipeline,
+    geometry,
+    bindGroups: (uniformBuffer) => [
+        this.gpu.device.createBindGroup({
+            layout: casterPipeline.bindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: { buffer: uniformBuffer } },
+                // skinned only: { binding: 1, resource: { buffer: skin.skinnedPositionBuffer } },
+            ],
+        }),
+    ],
 });
 this.shadowMesh.frustumCulled = false; // skinned/storage-positioned casters
 ```

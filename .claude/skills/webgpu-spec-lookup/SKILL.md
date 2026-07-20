@@ -34,20 +34,20 @@ Two sources answer different things — query each its own way:
    The spec is one 4.5 MB page; WebFetch'ing it per question is slow and lossy.
    Instead query a preprocessed local copy:
 
-   ```sh
-   # Prints the cache path; (re)downloads + strips to text only when the cached
-   # copy's date != today. Run it first, then grep the path it prints.
-   python3 .claude/skills/webgpu-spec-lookup/update_spec.py
-   grep -n -i "maxStorageBufferBindingSize" .claude/skills/webgpu-spec-lookup/webgpu-spec.txt
-   ```
+    ```sh
+    # Prints the cache path; (re)downloads + strips to text only when the cached
+    # copy's date != today. Run it first, then grep the path it prints.
+    python3 .claude/skills/webgpu-spec-lookup/update_spec.py
+    grep -n -i "maxStorageBufferBindingSize" .claude/skills/webgpu-spec-lookup/webgpu-spec.txt
+    ```
 
-   The text keeps each heading prefixed `[#anchor]`, so a grep hit traces back to
-   a spec section (open `https://www.w3.org/TR/webgpu/#<anchor>` for the source).
-   Use this for: exact feature names (the `GPUFeatureName` enum — e.g.
-   `timestamp-query`, `shader-f16`, `float32-filterable`, `depth32float-stencil8`,
-   texture-compression families), default and required limit values
-   (`GPUSupportedLimits`), and whether a capability exists in the spec at all
-   versus being a proposal. Quote the exact identifier and value.
+    The text keeps each heading prefixed `[#anchor]`, so a grep hit traces back to
+    a spec section (open `https://www.w3.org/TR/webgpu/#<anchor>` for the source).
+    Use this for: exact feature names (the `GPUFeatureName` enum — e.g.
+    `timestamp-query`, `shader-f16`, `float32-filterable`, `depth32float-stencil8`,
+    texture-compression families), default and required limit values
+    (`GPUSupportedLimits`), and whether a capability exists in the spec at all
+    versus being a proposal. Quote the exact identifier and value.
 
 You usually need both: the spec says what the feature is _called_ and what it
 guarantees; the Chrome docs say whether it's _actually available_ and where.

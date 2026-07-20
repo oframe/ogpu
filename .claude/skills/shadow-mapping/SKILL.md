@@ -54,12 +54,12 @@ in every case — `references/folding.md` has the copy-paste blocks.
 4. **Caster pipeline:** vertex-only WGSL — declare NO `fs` entry point so
    `RenderPipeline` emits no fragment stage and no color target (it auto-detects
    `defs.entryPoints.fs`). Pass `depthStencil` verbatim with `format:
-   'depth32float'`, `depthWriteEnabled: true`, `depthCompare: 'less'`, and slope
+'depth32float'`, `depthWriteEnabled: true`, `depthCompare: 'less'`, and slope
    bias (`depthBias: 1`, `depthBiasSlopeScale: 1.75`). Make a separate `Mesh`
    sharing the geometry (and the skin storage buffer for skinned). Set
    `frustumCulled = false` on skinned casters.
 5. **Shadow uniform buffer:** a `Shadow { projectionViewMatrix : mat4x4f,
-   lightDirection : vec3f }` block. `makeStructuredView` it off any receiver
+lightDirection : vec3f }` block. `makeStructuredView` it off any receiver
    pipeline's `defs.uniforms.shadowUniforms`, `set` both fields, write once.
    Keep the struct identical across every receiver that shares this buffer.
 6. **Comparison sampler:** `compare: 'less'`, `min/magFilter: 'linear'`,
@@ -67,7 +67,7 @@ in every case — `references/folding.md` has the copy-paste blocks.
    `texture_depth_2d` view of the target's `depthTexture`.
 7. **Fold receiving into each receiver shader:** add the `Shadow` uniform +
    `sampler_comparison` + `texture_depth_2d` bindings and an `override
-   shadowDepthTextureSize`. Vertex computes `vShadowCoord` (NDC→UV, **flip y**).
+shadowDepthTextureSize`. Vertex computes `vShadowCoord` (NDC→UV, **flip y**).
    Fragment runs PCF (`shadowVisibility`) and gates the light term. Full blocks
    in `references/folding.md`.
 8. **Render loop:** render the caster scene to the depth target with the light
@@ -101,7 +101,7 @@ in every case — `references/folding.md` has the copy-paste blocks.
   `shadowUniformBuffer` must declare an identical `Shadow` struct (keep
   `lightDirection` even if a receiver ignores it) or std140 offsets diverge.
 - **IBL-only shaders need an added light.** Multiplying IBL ambient by the shadow
-  factor wrongly darkens the whole object. Gate an *added directional* term
+  factor wrongly darkens the whole object. Gate an _added directional_ term
   instead; leave the ambient/IBL untouched.
 - **`depth32float` is fine for comparison sampling** but can't be linearly
   filtered as a color texture — don't bind it for display/debug without a copy.

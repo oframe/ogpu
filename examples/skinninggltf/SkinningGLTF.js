@@ -1,4 +1,23 @@
-import { Camera, Renderer, Transform, Orbit, Skin, Animation, Mesh, Geometry, GLTFLoader, RenderPipeline, RenderTarget, Plane, Mat4, createUniformBuffer, loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from 'ogpu';
+import {
+    Camera,
+    Renderer,
+    Transform,
+    Orbit,
+    Skin,
+    Animation,
+    Mesh,
+    Geometry,
+    GLTFLoader,
+    RenderPipeline,
+    RenderTarget,
+    Plane,
+    Mat4,
+    createUniformBuffer,
+    loadIBLCubeMap,
+    loadSphericalHarmonics,
+    createBrdfLUT,
+    TextureFormat,
+} from 'ogpu';
 import { makeStructuredView } from 'webgpu-utils';
 
 import skinnedmesh from './skinnedmesh.wgsl?raw';
@@ -6,7 +25,7 @@ import shadowCasterShader from './shadowcaster.wgsl?raw';
 import floorShader from './floor.wgsl?raw';
 
 const SHADOW_SIZE = 2048;
-const SHADOW_FORMAT = 'depth32float';
+const SHADOW_FORMAT = TextureFormat.DEPTH32FLOAT;
 
 // glTF rig + animation skinning, PBR-lit (metallic-roughness + IBL). The JSON
 // path lives in examples/skinning.
@@ -75,7 +94,11 @@ export class SkinningGLTF {
         });
 
         // Real material maps from the glb; fallbacks for the maps it lacks.
-        const [baseColor, normalMap, metalRough] = await Promise.all([loader.getMaterialTexture(0, 'baseColor'), loader.getMaterialTexture(0, 'normal'), loader.getMaterialTexture(0, 'metallicRoughness')]);
+        const [baseColor, normalMap, metalRough] = await Promise.all([
+            loader.getMaterialTexture(0, 'baseColor'),
+            loader.getMaterialTexture(0, 'normal'),
+            loader.getMaterialTexture(0, 'metallicRoughness'),
+        ]);
         const white = this.solidTexture([255, 255, 255, 255], 'white-placeholder');
         const black = this.solidTexture([0, 0, 0, 255], 'black-placeholder');
 
@@ -131,7 +154,7 @@ export class SkinningGLTF {
         });
 
         const shadowView = makeStructuredView(pipeline.defs.uniforms.shadowUniforms);
-        shadowView.set({ projectionViewMatrix: shadowVP});
+        shadowView.set({ projectionViewMatrix: shadowVP });
         const shadowUniformBuffer = createUniformBuffer(this.gpu, { label: 'shadow-uniforms', size: shadowView.arrayBuffer.byteLength });
         this.gpu.device.queue.writeBuffer(shadowUniformBuffer, 0, shadowView.arrayBuffer);
         const shadowDepthView = this.shadowBuffer.depthTexture.createView();
@@ -263,7 +286,7 @@ export class SkinningGLTF {
     solidTexture(rgba, label) {
         const texture = this.gpu.device.createTexture({
             size: [2, 2],
-            format: 'rgba8unorm',
+            format: TextureFormat.RGBA8UNORM,
             usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
             label,
         });

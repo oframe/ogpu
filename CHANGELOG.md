@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.3.0
+
+Fullscreen/blit pass system (ported from dgpu), a feedback-trails example, and `GPUEnums`.
+
+### Added
+
+- **Shared fullscreen geometries + `blit` util.** `Renderer` exposes `gpu.TRIANGLE`
+  (a `FullscreenTriangle`, the default) and `gpu.QUAD` (a `Quad`, for exact
+  4-corner interpolation — e.g. frustum-ray depth→world reconstruction). New
+  `blit(encoder, { pipeline, geometry, targetView, bindGroup, clear, label })`
+  (`@utils/RenderUtils`, barrel-exported) records a color-only fullscreen pass; it
+  takes the `RenderPipeline` wrapper and reads `pipeline.hasDynamicUniform` to
+  decide whether group(0) needs the per-draw dynamic offset — a pass with no
+  uniform binds only sampler+texture.
+- **Feedback Trails example** (`?example=feedback`) — motion-trail feedback built
+  on `blit`: a falling-leaves scene renders to an offscreen target, a ping-pong
+  pair of accumulation textures blends it over the decayed previous frame, and a
+  present blit shows the result.
+- **`GPUEnums`** — frozen named-constant tables for the WebGPU string enums
+  (`TextureFormat.RGBA16FLOAT`, `AlphaMode.PREMULTIPLIED`, …); string literals
+  migrated to enum references across the engine and examples.
+- **`RenderPipeline.hasDynamicUniform`** — true iff reflection found a used
+  uniform buffer at group(0)/binding(0).
+
+### Changed
+
+- The `rendertotexture` example's display pass now draws the shared `gpu.TRIANGLE`
+  through `blit` instead of a `FullscreenTriangle` mesh.
+
 ## 0.2.0
 
 Port of the dgpu core audit outcome (parity-reviewed against dgpu as reference).

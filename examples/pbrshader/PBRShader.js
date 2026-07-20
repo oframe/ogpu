@@ -22,6 +22,7 @@ import {
     loadSphericalHarmonics,
     loadJSON,
     createBrdfLUT,
+    TextureFormat,
 } from 'ogpu';
 
 export class PBRShader {
@@ -159,7 +160,7 @@ export class PBRShader {
 
         const texture = this.gpu.device.createTexture({
             size: [bitmap.width, bitmap.height],
-            format: 'rgba8unorm',
+            format: TextureFormat.RGBA8UNORM,
             usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
             label: 'rmo-swizzled',
         });
@@ -363,7 +364,7 @@ export class PBRShader {
     solidTexture(rgba, label) {
         const texture = this.gpu.device.createTexture({
             size: [2, 2],
-            format: 'rgba8unorm',
+            format: TextureFormat.RGBA8UNORM,
             usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
             label,
         });

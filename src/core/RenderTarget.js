@@ -1,4 +1,5 @@
 import { Texture } from './Texture';
+import { TextureFormat } from './GPUEnums.js';
 
 // Owns color Texture(s) (MRT) + optional MSAA resolve + optional depth; render off-screen.
 //TODO: MSAA
@@ -9,11 +10,11 @@ export class RenderTarget {
             width = 1280,
             height = 720,
             depth = 1,
-            format = 'bgra8unorm',
+            format = TextureFormat.BGRA8UNORM,
             dimension = '2d',
             color = true,
             depthTexture = false,
-            depthFormat = 'depth24plus',
+            depthFormat = TextureFormat.DEPTH24PLUS,
             sampleCount = 1,
             generateMipmaps = false,
             mipLevelCount = 1,

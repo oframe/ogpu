@@ -29,6 +29,9 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - bindGroupLayout(kernelOrKey, groupIndex = 0)
   - dispatch(encoder, { pass = null, kernel, bindGroup, bindGroupIndex = 0, dispatchCount, workgroupBu…)
 
+### src/core/GPUEnums.js
+- const `TextureFormat`, `VertexFormat`, `AlphaMode`, `BlendFactor`, `BlendOperation`, `CompareFunction`, `StencilOperation`, `PrimitiveTopology`, `FrontFace`, `CullMode`, `IndexFormat`, `VertexStepMode`, `LoadOp`, `StoreOp`, `AddressMode`, `FilterMode`, `MipmapFilterMode`, `TextureDimension`, `TextureViewDimension`, `TextureAspect`, `BufferBindingType`, `SamplerBindingType`, `TextureSampleType`, `StorageTextureAccess`, `AutoLayoutMode`, `CanvasToneMappingMode`, `QueryType`, `PowerPreference`, `BufferMapState`, `DeviceLostReason`, `ErrorFilter`, `CompilationMessageType`, `PipelineErrorReason`, `FeatureName`
+
 ### src/core/Geometry.js
 - **class Geometry**
   - constructor(gpu, { data, instancedData, interleave = false, drawBuffer = null, usage = 0 } = {})
@@ -59,7 +62,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 
 ### src/core/RenderTarget.js
 - **class RenderTarget**
-  - constructor(gpu, { width = 1280, height = 720, depth = 1, format = 'bgra8unorm', dimension = '2d', co…)
+  - constructor(gpu, { width = 1280, height = 720, depth = 1, format = TextureFormat.BGRA8UNORM, dimensio…)
   - createTextures()
   - createDepthTexture()
   - createView(i = 0)
@@ -132,6 +135,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { Texture } from './Texture.js'
 - re-export { RenderTarget } from './RenderTarget.js'
 - re-export { Skin } from './skin/Skin.js'
+- re-export * from './GPUEnums.js'
 
 ### src/core/primitives/Box.js
 - **class Box** extends Geometry
@@ -252,7 +256,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 
 ### src/modules/VideoTexture.js
 - **class VideoTexture**
-  - constructor(gpu, { video, format = 'rgba8unorm', label = '', autoStart = true, flipY = false } = {})
+  - constructor(gpu, { video, format = TextureFormat.RGBA8UNORM, label = '', autoStart = true, flipY = fa…)
   - start()
   - stop()
   - createView()
@@ -285,7 +289,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - fn `decompose(srcMat, dstRotation, dstTranslation, dstScale)`
 
 ### src/utils/RenderUtils.js
-- fn `blit(encoder, { pipeline, targetView, bindGroup, clear = true, label } = {})`
+- fn `blit(encoder, { pipeline, geometry, targetView, bindGroup, clear = true, label } = {})`
 
 ### src/utils/TimingHelper.js
 - **class TimingHelper**
@@ -327,6 +331,15 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - **class CubeMapExample**
   - constructor()
   - init()
+
+### examples/feedback/Feedback.js
+- **class FeedbackTrails**
+  - constructor()
+  - init()
+  - initScene()
+  - initFeedback()
+  - allocFeedbackTextures(w, h)
+  - buildBindGroups()
 
 ### examples/frustumculling/FrustumCulling.js
 - **class FrustumCulling**

@@ -131,7 +131,7 @@ export class Mesh extends Transform {
             this.gpu.device.queue.writeBuffer(perDraw.buffer, offset, this.uniforms.arrayBuffer);
         }
 
-        // ponytail: dropped the redundant-bind dedup — external pass.setPipeline calls on a
+        // No redundant-bind dedup — external pass.setPipeline calls on a
         // shared pass desync an expando cache; upgrade path is a renderer-owned per-pass cache
         // if profiling ever shows redundant setPipeline calls matter.
         pass.setPipeline(this.pipeline.pipeline);

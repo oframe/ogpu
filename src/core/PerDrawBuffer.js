@@ -19,7 +19,7 @@ export class PerDrawBuffer {
     alloc(byteLength) {
         const offset = this.pointer;
         this.pointer += Math.ceil(byteLength / this.align) * this.align;
-        // ponytail: no growth — growing invalidates every group(0); raise the
+        // No growth — growing invalidates every group(0); raise the
         // renderer's perDrawSize instead if this ever fires.
         if (this.pointer > this.size) {
             console.error(`per-draw uniform buffer overflow (${this.pointer} > ${this.size}) — raise Renderer's perDrawSize`);

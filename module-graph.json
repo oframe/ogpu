@@ -1,16 +1,20 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 130,
-    "edges": 236,
-    "modules": 83,
-    "shaders": 40,
+    "nodes": 135,
+    "edges": 252,
+    "modules": 85,
+    "shaders": 43,
     "external": 7
   },
   "hubs": [
     {
       "id": "src/core/Geometry.js",
       "inDegree": 12
+    },
+    {
+      "id": "src/core/GPUEnums.js",
+      "inDegree": 8
     },
     {
       "id": "src/core/Texture.js",
@@ -50,10 +54,6 @@
     },
     {
       "id": "src/core/PerDrawBuffer.js",
-      "inDegree": 2
-    },
-    {
-      "id": "src/core/primitives/index.js",
       "inDegree": 2
     }
   ],
@@ -97,6 +97,30 @@
     {
       "id": "examples/examples.css",
       "type": "module",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "examples/feedback/Feedback.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 5
+    },
+    {
+      "id": "examples/feedback/feedback.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "examples/feedback/present.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "examples/feedback/scene.wgsl",
+      "type": "shader",
       "inDegree": 1,
       "outDegree": 0
     },
@@ -433,7 +457,7 @@
     {
       "id": "pkg:ogpu",
       "type": "external",
-      "inDegree": 26,
+      "inDegree": 27,
       "outDegree": 0
     },
     {
@@ -451,7 +475,7 @@
     {
       "id": "pkg:webgpu-utils",
       "type": "external",
-      "inDegree": 23,
+      "inDegree": 24,
       "outDegree": 0
     },
     {
@@ -479,10 +503,16 @@
       "outDegree": 2
     },
     {
+      "id": "src/core/GPUEnums.js",
+      "type": "module",
+      "inDegree": 8,
+      "outDegree": 0
+    },
+    {
       "id": "src/core/index.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 13
+      "outDegree": 14
     },
     {
       "id": "src/core/Mesh.js",
@@ -523,7 +553,7 @@
     {
       "id": "src/core/primitives/FullscreenTriangle.js",
       "type": "module",
-      "inDegree": 1,
+      "inDegree": 2,
       "outDegree": 1
     },
     {
@@ -541,7 +571,7 @@
     {
       "id": "src/core/primitives/Quad.js",
       "type": "module",
-      "inDegree": 1,
+      "inDegree": 2,
       "outDegree": 2
     },
     {
@@ -566,19 +596,19 @@
       "id": "src/core/Renderer.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 5
+      "outDegree": 8
     },
     {
       "id": "src/core/RenderPipeline.js",
       "type": "module",
       "inDegree": 2,
-      "outDegree": 3
+      "outDegree": 4
     },
     {
       "id": "src/core/RenderTarget.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 1
+      "outDegree": 2
     },
     {
       "id": "src/core/ShaderReload.js",
@@ -626,7 +656,7 @@
       "id": "src/main.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 26
+      "outDegree": 27
     },
     {
       "id": "src/math/Color.js",
@@ -698,7 +728,7 @@
       "id": "src/modules/GLTFLoader.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 10
+      "outDegree": 11
     },
     {
       "id": "src/modules/GUI.js",
@@ -710,7 +740,7 @@
       "id": "src/modules/KTXTexture.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 2
+      "outDegree": 3
     },
     {
       "id": "src/modules/Orbit.js",
@@ -740,7 +770,7 @@
       "id": "src/modules/VideoTexture.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 0
+      "outDegree": 1
     },
     {
       "id": "src/style.css",
@@ -770,7 +800,7 @@
       "id": "src/utils/IBLUtils/IBLUtils.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 11
+      "outDegree": 12
     },
     {
       "id": "src/utils/IBLUtils/unpackequirect.wgsl",
@@ -863,6 +893,26 @@
     {
       "from": "examples/cubemap/CubeMap.js",
       "to": "pkg:ogpu"
+    },
+    {
+      "from": "examples/feedback/Feedback.js",
+      "to": "examples/feedback/feedback.wgsl"
+    },
+    {
+      "from": "examples/feedback/Feedback.js",
+      "to": "examples/feedback/present.wgsl"
+    },
+    {
+      "from": "examples/feedback/Feedback.js",
+      "to": "examples/feedback/scene.wgsl"
+    },
+    {
+      "from": "examples/feedback/Feedback.js",
+      "to": "pkg:ogpu"
+    },
+    {
+      "from": "examples/feedback/Feedback.js",
+      "to": "pkg:webgpu-utils"
     },
     {
       "from": "examples/frustumculling/FrustumCulling.js",
@@ -1182,6 +1232,10 @@
     },
     {
       "from": "src/core/index.js",
+      "to": "src/core/GPUEnums.js"
+    },
+    {
+      "from": "src/core/index.js",
       "to": "src/core/Mesh.js"
     },
     {
@@ -1354,7 +1408,19 @@
     },
     {
       "from": "src/core/Renderer.js",
+      "to": "src/core/GPUEnums.js"
+    },
+    {
+      "from": "src/core/Renderer.js",
       "to": "src/core/PerDrawBuffer.js"
+    },
+    {
+      "from": "src/core/Renderer.js",
+      "to": "src/core/primitives/FullscreenTriangle.js"
+    },
+    {
+      "from": "src/core/Renderer.js",
+      "to": "src/core/primitives/Quad.js"
     },
     {
       "from": "src/core/Renderer.js",
@@ -1374,11 +1440,19 @@
     },
     {
       "from": "src/core/RenderPipeline.js",
+      "to": "src/core/GPUEnums.js"
+    },
+    {
+      "from": "src/core/RenderPipeline.js",
       "to": "src/core/ShaderReload.js"
     },
     {
       "from": "src/core/RenderPipeline.js",
       "to": "src/utils/wgslOverrides.js"
+    },
+    {
+      "from": "src/core/RenderTarget.js",
+      "to": "src/core/GPUEnums.js"
     },
     {
       "from": "src/core/RenderTarget.js",
@@ -1495,6 +1569,10 @@
     {
       "from": "src/main.js",
       "to": "examples/examples.css"
+    },
+    {
+      "from": "src/main.js",
+      "to": "examples/feedback/Feedback.js"
     },
     {
       "from": "src/main.js",
@@ -1686,6 +1764,10 @@
     },
     {
       "from": "src/modules/GLTFLoader.js",
+      "to": "src/core/GPUEnums.js"
+    },
+    {
+      "from": "src/modules/GLTFLoader.js",
       "to": "src/core/Mesh.js"
     },
     {
@@ -1718,6 +1800,10 @@
     },
     {
       "from": "src/modules/KTXTexture.js",
+      "to": "src/core/GPUEnums.js"
+    },
+    {
+      "from": "src/modules/KTXTexture.js",
       "to": "src/core/Texture.js"
     },
     {
@@ -1733,6 +1819,10 @@
       "to": "pkg:@math"
     },
     {
+      "from": "src/modules/VideoTexture.js",
+      "to": "src/core/GPUEnums.js"
+    },
+    {
       "from": "src/utils/IBLUtils/IBLUtils.js",
       "to": "pkg:parse-exr"
     },
@@ -1743,6 +1833,10 @@
     {
       "from": "src/utils/IBLUtils/IBLUtils.js",
       "to": "src/core/ComputeShader.js"
+    },
+    {
+      "from": "src/utils/IBLUtils/IBLUtils.js",
+      "to": "src/core/GPUEnums.js"
     },
     {
       "from": "src/utils/IBLUtils/IBLUtils.js",

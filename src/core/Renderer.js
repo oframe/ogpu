@@ -3,6 +3,9 @@ import { TimingHelper } from '@utils/TimingHelper';
 import { NonNegativeRollingAverage } from '@utils/miscutils';
 import { getPromise } from '@utils/utils';
 import { PerDrawBuffer } from './PerDrawBuffer.js';
+import { TextureFormat, AlphaMode } from './GPUEnums.js';
+import { FullscreenTriangle } from './primitives/FullscreenTriangle.js';
+import { Quad } from './primitives/Quad.js';
 
 const tempVec3 = /* @__PURE__ */ new Vec3(0, 0, 0);
 
@@ -53,11 +56,7 @@ export class Renderer {
         if (!navigator.gpu) {
             // On recovery (post-boot) `ready` already settled, so reject() here is
             // a no-op — the message is what actually reaches the console/user.
-            console.error(
-                this._initialized
-                    ? '[webgpu] device recovery failed — could not re-acquire an adapter/device; engine halted'
-                    : 'this browser does not support WebGPU'
-            );
+            console.error(this._initialized ? '[webgpu] device recovery failed — could not re-acquire an adapter/device; engine halted' : 'this browser does not support WebGPU');
             this.ready.reject();
             return;
         }
@@ -66,11 +65,7 @@ export class Renderer {
             powerPreference: 'high-performance',
         });
         if (!adapter) {
-            console.error(
-                this._initialized
-                    ? '[webgpu] device recovery failed — could not re-acquire an adapter/device; engine halted'
-                    : 'this browser supports webgpu but it appears disabled'
-            );
+            console.error(this._initialized ? '[webgpu] device recovery failed — could not re-acquire an adapter/device; engine halted' : 'this browser supports webgpu but it appears disabled');
             this.ready.reject();
             return;
         }
@@ -195,10 +190,17 @@ export class Renderer {
         this.gpu.configure({
             device,
             format: this.presentationFormat,
-            alphaMode: this.transparent ? 'premultiplied' : 'opaque',
+            alphaMode: this.transparent ? AlphaMode.PREMULTIPLIED : AlphaMode.OPAQUE,
         });
 
         this.gpu.presentationFormat = this.presentationFormat;
+
+        // Shared fullscreen geometries for blit / fullscreen passes. TRIANGLE is
+        // the default (oversized single triangle, seamless, cheapest); QUAD is for
+        // passes needing exact 4-corner interpolation (e.g. frustum-ray depth->world
+        // reconstruction). Recreated here so device-loss recovery rebinds them.
+        this.gpu.TRIANGLE = new FullscreenTriangle(this.gpu);
+        this.gpu.QUAD = new Quad(this.gpu);
     }
 
     // device.lost handler. Drops isReady so the render loop bails before it
@@ -253,7 +255,7 @@ export class Renderer {
 
         this.depthTexture = this.gpu.device.createTexture({
             size: [this.gpu.canvas.width, this.gpu.canvas.height],
-            format: 'depth24plus',
+            format: TextureFormat.DEPTH24PLUS,
             usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
         });
         this._depthView = null;

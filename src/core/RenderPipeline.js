@@ -3,6 +3,7 @@ let ID = 1;
 import { makeBindGroupLayoutDescriptors, makeShaderDataDefinitions } from 'webgpu-utils';
 import { registerShader } from './ShaderReload';
 import { applyOverrideConstants } from '@utils/wgslOverrides';
+import { TextureFormat, BlendFactor } from './GPUEnums.js';
 
 // Wraps GPURenderPipeline: reflects raw WGSL (webgpu-utils) into bind-group layouts
 // and a compiled GPURenderPipeline. Does NOT own uniform buffers or bind groups —
@@ -87,17 +88,17 @@ export class RenderPipeline {
             _blending = _blending.color
                 ? // alpha is required by GPUBlendState — default it when the caller omits it
                   {
-                      alpha: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha' },
+                      alpha: { srcFactor: BlendFactor.SRC_ALPHA, dstFactor: BlendFactor.ONE_MINUS_SRC_ALPHA },
                       ..._blending,
                   }
                 : {
                       color: {
-                          srcFactor: 'src-alpha',
-                          dstFactor: 'one-minus-src-alpha',
+                          srcFactor: BlendFactor.SRC_ALPHA,
+                          dstFactor: BlendFactor.ONE_MINUS_SRC_ALPHA,
                       },
                       alpha: {
-                          srcFactor: 'src-alpha',
-                          dstFactor: 'one-minus-src-alpha',
+                          srcFactor: BlendFactor.SRC_ALPHA,
+                          dstFactor: BlendFactor.ONE_MINUS_SRC_ALPHA,
                       },
                   };
 
@@ -162,7 +163,7 @@ export class RenderPipeline {
                   ? {
                         depthWriteEnabled: this.depthWrite,
                         depthCompare: !this.depthTest ? 'always' : 'less',
-                        format: 'depth24plus',
+                        format: TextureFormat.DEPTH24PLUS,
                     }
                   : null;
 

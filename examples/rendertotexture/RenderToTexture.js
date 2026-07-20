@@ -1,4 +1,4 @@
-import { Box, Mesh, Renderer, RenderPipeline, Transform, RenderTarget, Camera, Orbit, blit, createUniformBuffer } from 'ogpu';
+import { Box, Mesh, Renderer, RenderPipeline, Transform, RenderTarget, Camera, Orbit, blit, createUniformBuffer, TextureFormat } from 'ogpu';
 import { makeStructuredView } from 'webgpu-utils';
 
 import display from './display.wgsl?raw';
@@ -30,8 +30,7 @@ export class RenderToTexture {
         this.displayPipeline = new RenderPipeline(this.gpu, {
             label: 'display-pipeline',
             code: display,
-            vertexBuffers: [],
-            topology: 'triangle-strip',
+            vertexBuffers: this.gpu.TRIANGLE.bufferLayouts,
             cullMode: 'none',
             depthStencil: false, // color-only blit pass, no depth attachment
         });
@@ -81,7 +80,7 @@ export class RenderToTexture {
             this.gpu,
             {
                 label: 'scene-one-buffer',
-                format: 'bgra8unorm',
+                format: TextureFormat.BGRA8UNORM,
                 width: this.gpu.canvas.width,
                 height: this.gpu.canvas.height,
                 depthTexture: true,
@@ -89,11 +88,11 @@ export class RenderToTexture {
             },
             [
                 {
-                    format: 'bgra8unorm',
+                    format: TextureFormat.BGRA8UNORM,
                     usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
                 },
                 {
-                    format: 'rgba16float',
+                    format: TextureFormat.RGBA16FLOAT,
                     usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
                 },
             ]
@@ -181,7 +180,8 @@ export class RenderToTexture {
         // display pass — blit the two render-target attachments to the swapchain
         const encoder = this.gpu.device.createCommandEncoder({ label: 'display-encoder' });
         blit(encoder, {
-            pipeline: this.displayPipeline.pipeline,
+            pipeline: this.displayPipeline,
+            geometry: this.gpu.TRIANGLE,
             targetView: this.gpu.getCurrentTexture().createView(),
             bindGroup: this.displayBindGroup,
             label: 'display-pass',

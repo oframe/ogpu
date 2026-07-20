@@ -1,4 +1,4 @@
-import { Mesh, Renderer, RenderPipeline, Transform, Camera, Orbit, Plane, RenderTarget, Mat4, Geometry, Texture, loadJSON, createUniformBuffer } from 'ogpu';
+import { Mesh, Renderer, RenderPipeline, Transform, Camera, Orbit, Plane, RenderTarget, Mat4, Geometry, Texture, loadJSON, createUniformBuffer, TextureFormat } from 'ogpu';
 
 import meshShader from './mesh.wgsl?raw';
 import shadow from './shadow.wgsl?raw';
@@ -27,7 +27,7 @@ export class Shadowmapping {
 
         this.scene = new Transform();
 
-        const DEPTH_FORMAT = 'depth32float';
+        const DEPTH_FORMAT = TextureFormat.DEPTH32FLOAT;
         const SHADOW_SIZE = 2048;
 
         this.shadowBuffer = new RenderTarget(this.gpu, {

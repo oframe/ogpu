@@ -1,7 +1,9 @@
-// Blit a buffer-less fullscreen quad (triangle-strip, draw(4)) into targetView.
-// group(0)/binding(0) uniforms are dynamic engine-wide, hence the [0] offset.
-// clearValue is inert — the quad covers every pixel — so it's not exposed.
-export function blit(encoder, { pipeline, targetView, bindGroup, clear = true, label } = {}) {
+// Blit a fullscreen geometry (pass gpu.TRIANGLE, or gpu.QUAD for depth-reconstruction)
+// through a RenderPipeline into targetView. Pass the RenderPipeline WRAPPER, not the
+// raw .pipeline: blit reads .hasDynamicUniform to decide whether group(0)/binding(0)
+// takes the per-draw dynamic offset ([0]) or none — passes with no uniform skip it.
+// clearValue is inert — the geometry covers every pixel — so it's not exposed.
+export function blit(encoder, { pipeline, geometry, targetView, bindGroup, clear = true, label } = {}) {
     const pass = encoder.beginRenderPass({
         label,
         colorAttachments: [
@@ -13,8 +15,16 @@ export function blit(encoder, { pipeline, targetView, bindGroup, clear = true, l
             },
         ],
     });
-    pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup, [0]);
-    pass.draw(4);
+    pass.setPipeline(pipeline.pipeline);
+    pass.setBindGroup(0, bindGroup, pipeline.hasDynamicUniform ? [0] : []);
+
+    const verts = geometry.nonInstancedVerts;
+    verts.buffers.forEach((buffer, i) => pass.setVertexBuffer(i, buffer));
+    if (verts.indexBuffer) {
+        pass.setIndexBuffer(verts.indexBuffer, verts.indexFormat);
+        pass.drawIndexed(verts.numElements);
+    } else {
+        pass.draw(verts.numElements);
+    }
     pass.end();
 }

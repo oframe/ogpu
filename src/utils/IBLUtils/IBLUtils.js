@@ -2,6 +2,7 @@ import { makeShaderDataDefinitions, makeStructuredView, generateMipmap } from 'w
 import parseExr from 'parse-exr';
 import { Texture } from '@core/Texture';
 import { ComputeShader } from '@core/ComputeShader';
+import { TextureFormat } from '@core/GPUEnums.js';
 import { createUniformBuffer } from '../BufferUtils';
 import { parseKTXHeader } from '../ktxutils';
 import { loadJSON } from '../JSONLoader';
@@ -103,7 +104,7 @@ export async function loadSphericalHarmonics(url) {
 export function createBrdfLUT(gpu, { size = 512, label = 'brdflut' } = {}) {
     const texture = gpu.device.createTexture({
         size: [size, size],
-        format: 'rgba16float',
+        format: TextureFormat.RGBA16FLOAT,
         usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC,
         label: `${label}-texture`,
     });
@@ -131,7 +132,7 @@ function createDestinationCube(gpu, { faceSize, mipLevels, label }) {
     return gpu.device.createTexture({
         label: `${label}-dest-cube`,
         size: [faceSize, faceSize, 6],
-        format: 'rgba16float',
+        format: TextureFormat.RGBA16FLOAT,
         mipLevelCount: mipLevels,
         usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST,
     });
@@ -334,7 +335,7 @@ function createEquirectTexture(gpu, { width, height, data, label }) {
         height,
         depth: 1,
         data: half,
-        format: 'rgba16float',
+        format: TextureFormat.RGBA16FLOAT,
         dimension: '2d',
         label,
     }).texture;

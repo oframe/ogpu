@@ -17,12 +17,14 @@
  *   // bind vt.createView() into your mesh's bind group (see Mesh `bindGroups` factory)
  */
 
+import { TextureFormat } from '@core/GPUEnums.js';
+
 let TEXTURE_ID = 1;
 
 const USE_RVFC = 'requestVideoFrameCallback' in HTMLVideoElement.prototype;
 
 export class VideoTexture {
-    constructor(gpu, { video, format = 'rgba8unorm', label = '', autoStart = true, flipY = false } = {}) {
+    constructor(gpu, { video, format = TextureFormat.RGBA8UNORM, label = '', autoStart = true, flipY = false } = {}) {
         this.gpu = gpu;
         this.id = TEXTURE_ID++;
         this.label = `Texture ${this.id}: ${label}`;

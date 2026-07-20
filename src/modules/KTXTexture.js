@@ -1,5 +1,6 @@
 import { Texture } from '@core/Texture.js';
 import { parseKTXHeader, formatBlockInfo } from '@utils/ktxutils';
+import { TextureFormat } from '@core/GPUEnums.js';
 
 // Pick a transcode target the device can actually sample. Basis Universal
 // (`.ktx2` with vkFormat 0) is GPU-agnostic until transcoded; order by
@@ -7,10 +8,10 @@ import { parseKTXHeader, formatBlockInfo } from '@utils/ktxutils';
 function pickTranscodeTarget(device) {
     const tt = window.ktx.TranscodeTarget;
     const f = device.features;
-    if (f.has('texture-compression-astc')) return { target: tt.ASTC_4x4_RGBA, format: 'astc-4x4-unorm' };
-    if (f.has('texture-compression-bc')) return { target: tt.BC7_RGBA, format: 'bc7-rgba-unorm' };
-    if (f.has('texture-compression-etc2')) return { target: tt.ETC2_RGBA, format: 'etc2-rgba8unorm' };
-    return { target: tt.RGBA32, format: 'rgba8unorm' };
+    if (f.has('texture-compression-astc')) return { target: tt.ASTC_4x4_RGBA, format: TextureFormat.ASTC_4X4_UNORM };
+    if (f.has('texture-compression-bc')) return { target: tt.BC7_RGBA, format: TextureFormat.BC7_RGBA_UNORM };
+    if (f.has('texture-compression-etc2')) return { target: tt.ETC2_RGBA, format: TextureFormat.ETC2_RGBA8UNORM };
+    return { target: tt.RGBA32, format: TextureFormat.RGBA8UNORM };
 }
 
 /**

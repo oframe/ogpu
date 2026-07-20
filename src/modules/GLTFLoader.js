@@ -12,6 +12,7 @@ import { Mesh } from '@core/Mesh';
 import { Transform } from '@core/Transform';
 import { RenderPipeline } from '@core/RenderPipeline';
 import { Skin } from '@core/skin/Skin';
+import { TextureFormat } from '@core/GPUEnums.js';
 import { Animation } from './Animation.js';
 
 // --- glTF constant tables (https://www.khronos.org/registry/glTF/specs/2.0/glTF-2.0.html) ---
@@ -806,7 +807,7 @@ export class GLTFLoader {
             width: size,
             height: size,
             data: pixels,
-            format: srgb ? 'rgba8unorm-srgb' : 'rgba8unorm',
+            format: srgb ? TextureFormat.RGBA8UNORM_SRGB : TextureFormat.RGBA8UNORM,
         });
     }
 
@@ -843,7 +844,7 @@ export class GLTFLoader {
             src: bitmap,
             mips: true,
             flipY: false,
-            format: srgb ? 'rgba8unorm-srgb' : 'rgba8unorm',
+            format: srgb ? TextureFormat.RGBA8UNORM_SRGB : TextureFormat.RGBA8UNORM,
         });
         await tex.ready;
         return tex;

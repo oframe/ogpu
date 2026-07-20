@@ -14,3 +14,4 @@ export { ComputeShader } from './ComputeShader.js';
 export { Texture } from './Texture.js';
 export { RenderTarget } from './RenderTarget.js';
 export { Skin } from './skin/Skin.js';
+export * from './GPUEnums.js';

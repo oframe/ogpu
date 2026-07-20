@@ -1,4 +1,4 @@
-import { Camera, Renderer, Orbit, RenderPipeline, Mesh, Transform, Color, Texture, Plane, FullscreenTriangle, RenderTarget, GUI } from 'ogpu';
+import { Camera, Renderer, Orbit, RenderPipeline, Mesh, Transform, Color, Texture, Plane, FullscreenTriangle, RenderTarget, GUI, TextureFormat } from 'ogpu';
 
 // Reuse the sort-transparency leaf shader unchanged — same Uniforms struct,
 // same green-channel alpha cutout.
@@ -59,7 +59,7 @@ export class MSAA {
 
         this.target = new RenderTarget(this.gpu, {
             label: 'msaa-target',
-            format: 'bgra8unorm',
+            format: TextureFormat.BGRA8UNORM,
             width: this.gpu.canvas.width,
             height: this.gpu.canvas.height,
             depthTexture: true,

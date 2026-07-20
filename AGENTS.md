@@ -62,9 +62,9 @@ Any build request that overlaps an existing capability (shadows, skinning, PBR/I
 
 1. Read `api-digest.md` and `module-graph.json` to map the public surface and importers, then open the relevant `examples/<name>/` and the `src/` it leans on.
 2. Decide whether what's there carries enough context to do the task:
-   - **Enough** → build on the existing primitive/pattern; don't reinvent it.
-   - **Partial** → extend the existing path; note the gap explicitly before coding.
-   - **Missing** → only then write new core code, following the cross-cutting contracts above.
+    - **Enough** → build on the existing primitive/pattern; don't reinvent it.
+    - **Partial** → extend the existing path; note the gap explicitly before coding.
+    - **Missing** → only then write new core code, following the cross-cutting contracts above.
 3. If the work adds/changes public surface or imports, regenerate the navigation aids so they don't drift: `npm run repomap` (or `node scripts/build-api-digest.mjs` + `node scripts/build-module-graph.mjs`), and commit the updated `api-digest.md` / `module-graph.json`. The pre-commit drift gate blocks stale copies.
 
 Example: a "add shadows" prompt first checks whether any example already does depth-pass / render-target shadow work before introducing a new shadow path.

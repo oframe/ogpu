@@ -8,9 +8,7 @@ export class Geometry {
     // queue.writeBuffer need `usage: GPUBufferUsage.COPY_DST` here.
     constructor(gpu, { data, instancedData, interleave = false, drawBuffer = null, usage = 0 } = {}) {
         if (!data) {
-            throw new Error(
-                'Geometry: `data` attribute arrays are required — drawBuffer-only geometry without vertex data is not supported'
-            );
+            throw new Error('Geometry: `data` attribute arrays are required — drawBuffer-only geometry without vertex data is not supported');
         }
 
         this.attributes = data;

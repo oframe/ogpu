@@ -222,11 +222,7 @@ export class Texture {
                                 width: mipWidth,
                                 height: mipHeight,
                                 // layers don't shrink per mip, only 3d depth does
-                                depthOrArrayLayers: this.isCubeMap
-                                    ? 1
-                                    : this.dimension === '3d'
-                                      ? mipDepth
-                                      : this.depth,
+                                depthOrArrayLayers: this.isCubeMap ? 1 : this.dimension === '3d' ? mipDepth : this.depth,
                             }
                         );
                     }

@@ -113,7 +113,16 @@ shaders tend to also live in `examples/`, `demos/`, `sandbox/`, and a batch chec
 that quietly misses most of them is worse than no batch check. It also accepts
 explicit paths: `node scripts/validate-shaders.mjs path/to/one.wgsl`.
 
-Worth widening `SKIP` if the repo has a big generated or vendored directory.
+Worth widening `SKIP` if the repo has a big generated or vendored directory the
+default set misses.
+
+**In a monorepo**, the script's scope is the parent of wherever you put it —
+`packages/renderer/scripts/` validates just that package, the repo root validates
+every package. Ask which the user wants rather than defaulting; per-package is
+usually right when only one package has shaders, root when several do. The npm
+entry then goes in whichever `package.json` sits beside it. The hook is unaffected
+either way: it gets an absolute path from the tool payload, so it validates the
+edited file no matter which package it lives in or what the cwd is.
 
 Exit codes: 0 all valid, 1 a shader failed, 2 naga not installed.
 

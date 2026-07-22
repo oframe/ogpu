@@ -13,9 +13,12 @@ import { spawnSync } from 'node:child_process';
 import { readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
+// Scope is the parent of this script's directory — so in a monorepo, dropping this
+// in packages/foo/scripts/ validates only that package, at the root it validates all.
 const ROOT = new URL('..', import.meta.url).pathname;
-// Walk the whole repo, not just src/ — most shaders live in examples/.
-const SKIP = new Set(['node_modules', '.git', 'dist', 'build', 'public']);
+// Walk the whole tree, not just src/ — most shaders live in examples/. Skipping is
+// about not descending into generated/vendored dirs, which can be huge (target/).
+const SKIP = new Set(['node_modules', '.git', 'dist', 'build', 'out', 'target', '.next', 'coverage', 'vendor']);
 
 function hasNaga() {
     const r = spawnSync('naga', ['--version'], { encoding: 'utf8' });

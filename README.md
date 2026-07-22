@@ -70,7 +70,7 @@ The **Math** component (`src/math/`) is a set of chainable, THREE-style wrappers
 
 **Utils** (`src/utils/`, alias `@utils`) are standalone helpers: `BufferUtils`, `RenderUtils` (`blit`), `IBLUtils`, `ktxutils`, `TimingHelper`, `JSONLoader`, the `Mat3`/`Mat4`/`Euler` helpers, and `wgslOverrides` (bakes `override` constants into `const` literals, since Safari has no pipeline-overridable constants).
 
-Examples live in `examples/` (repo root, outside `src/`), switched by a `?src=` query string in `src/main.js`. With no `?src=`, the root serves a gallery of every example.
+Examples live in `examples/` (repo root, outside `src/`), switched by a query string in `src/main.js`. The root serves a gallery — sidebar of links plus a preview iframe — and `?example=<name>` deep-links a specific one. `?src=<name>` is the inner URL the iframe loads: that example alone, no gallery chrome.
 
 ## Fullscreen passes
 
@@ -82,7 +82,7 @@ blit(encoder, { pipeline, geometry: gpu.TRIANGLE, targetView, bindGroup, clear: 
 
 It takes the `RenderPipeline` wrapper, not the raw GPU pipeline, and reads `pipeline.hasDynamicUniform` to decide whether group(0) needs the per-draw dynamic offset — so a pass whose shader binds only a sampler + texture doesn't need a `Uniforms` struct at all.
 
-The `feedback` example (`?src=feedback`) is the full shape: a scene renders to an offscreen target, a ping-pong pair of accumulation textures blends it over the decayed previous frame, and a present blit shows the result.
+The `feedback` example (`?example=feedback`) chains three passes per frame: the scene renders into an offscreen target, a feedback blit blends that over a decayed copy of the previous frame into an accumulation texture, and a present blit puts the result on the swapchain. The two accumulation textures ping-pong — each frame the sampled "previous" and the written target swap — so the pass never reads and writes the same texture.
 
 ## PBR shading & IBL
 

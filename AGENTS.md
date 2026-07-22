@@ -41,7 +41,12 @@ Both are kept honest by a **drift gate**: `npm run repomap` regenerates both; `n
 
 ## Running examples
 
-`src/main.js` reads a `src=` query string and instantiates a single example class from its `views` map — `?src=<key>`. Read that map for the current list rather than trusting a copy here; it is the only place example keys are defined. With no `src=` (or an unknown one) the root renders a gallery of every example instead, built from the `links` array further down the same file.
+`src/main.js` handles two query strings — don't confuse them:
+
+- **`?example=<key>`** — the user-facing URL. Renders the gallery (sidebar of links + preview iframe) with that example selected; the iframe loads `./?src=<key>` internally. This is what you link to and what `history.replaceState` writes as you click through. With no `example=`, the gallery opens on a random one.
+- **`?src=<key>`** — boots that example standalone on the page's own canvas, no gallery chrome. This is what the iframe (and cmd/ctrl-click) uses.
+
+Example keys live in the `views` map; the gallery rows live in the `links` array below it. Read those two rather than trusting a copy here.
 
 To add a new example: drop a class under `examples/<name>/`, import it in `src/main.js`, add a `views` entry, and add a `links` entry so it shows in the gallery.
 

@@ -1,6 +1,23 @@
 # Changelog
 
-## Unreleased
+## 0.4.0
+
+WGSL validation tooling, and the `ThreeDF` primitive removed.
+
+### Added
+
+- **`naga-setup` skill** (`.claude/skills/naga-setup/`) — installs WGSL validation
+  into a repo: the `PostToolUse` hook that runs `naga` on every `.wgsl` an agent
+  writes, the batch `scripts/validate-shaders.mjs`, and the `naga`/`jq` toolchain
+  they need. Also covers the fresh-clone case, where the hook arrives with the
+  repo but the `naga` binary doesn't — leaving a hook that fires and silently does
+  nothing.
+
+### Changed
+
+- **`npm run validate:shaders` now walks the whole repo, not just `src/`.** It was
+  checking 7 of 44 shaders; the other 37 live in `examples/` and had never been
+  batch-validated. Generated and vendored directories are skipped via a `SKIP` set.
 
 ### Removed
 

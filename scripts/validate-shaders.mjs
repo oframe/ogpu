@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Validate every WGSL shader under src/ with naga (the wgpu reference compiler).
-// Install naga first:  brew install naga   (or  cargo install naga-cli)
+// Install naga first:  brew install naga-cli   (or  cargo install naga-cli)
+// Not `brew install naga` — that formula is a Snake game and conflicts on the `naga` binary.
 //
 // Usage:
 //   npm run validate:shaders            validate all src/**/*.wgsl
@@ -32,7 +33,7 @@ function walk(dir) {
 
 if (!hasNaga()) {
     console.error('naga not found. Install it for WGSL validation:');
-    console.error('  brew install naga      # macOS / Linux (Homebrew)');
+    console.error('  brew install naga-cli  # macOS / Linux (Homebrew) — NOT `naga`, that is a Snake game');
     console.error('  cargo install naga-cli # any platform with Rust');
     process.exit(2);
 }

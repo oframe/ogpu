@@ -72,7 +72,7 @@ wrong and the pipeline silently shades garbage or fails construction:
 4. Validate the WGSL without a browser — `node scripts/validate-shaders.mjs
 <file>` runs `naga`. The freshly-generated base always passes; run it again
    after your edits to catch syntax/type errors before the user loads the page.
-   (If `naga` is absent the script exits 2 — `brew install naga`.)
+   (If `naga` is absent the script exits 2 — `brew install naga-cli`, not `naga`.)
 5. If JS wiring requested, write it from `references/js-wiring.md` (no-texture
    variant is the short path; texture variant adds the sampler/texture bind-group
    entries via `pipeline.defs.samplers.*` / `pipeline.defs.textures.*`).

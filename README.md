@@ -46,7 +46,7 @@ The framework is split into **Core**, **Math**, and **Modules**.
 
 The **Core** (`src/core/`) holds the engine primitives. Two classes carry the weight and are worth understanding first:
 
-- **`RenderPipeline`** — wraps a WGSL render module. It reflects the shader with `webgpu-utils` and compiles the pipeline — pure compiled state, shareable across meshes. It owns no uniform buffers or bind groups; it serves the bind group layouts via `pipeline.bindGroupLayout(i)`, and each `Mesh` builds its own uniform buffer and bind groups against them. `Mesh.draw` matches standard per-frame uniforms (matrices, camera, time, resolution) to your `Uniforms` struct **by field name**. You write WGSL with a `vs`/`fs` entry pair; reflection wires it up.
+- **`RenderPipeline`** — wraps a WGSL render module. It reflects the shader with `webgpu-utils` and compiles the pipeline — pure compiled state, shareable across meshes. It owns no uniform buffers or bind groups; it serves the bind group layouts via `pipeline.bindGroupLayout(i)`, and each `Mesh` builds its bind groups against them. Uniforms come from one renderer-owned `PerDrawBuffer`: every `Mesh.draw` takes an aligned slice of that shared buffer and binds group(0) with a dynamic offset, so the same mesh can be drawn in several passes of one submit (shadow + main) without stomping itself. `Mesh.draw` matches standard per-frame uniforms (matrices, camera, time, resolution) to your `Uniforms` struct **by field name**. You write WGSL with a `vs`/`fs` entry pair; reflection wires it up.
 - **`ComputeShader`** — the compute counterpart. Every entry point in a WGSL compute module becomes a dispatchable kernel keyed by its name, with optional timestamp-query timing. This is the path for GPU compute work — simulation, culling, image processing — without leaving the framework.
 
 The rest of Core:
@@ -58,14 +58,31 @@ The rest of Core:
 - `Geometry.js`
 - `Texture.js`
 - `RenderTarget.js`
+- `PerDrawBuffer.js` — the shared dynamic-offset uniform buffer behind every draw
+- `GPUEnums.js` — frozen named-constant tables for the WebGPU string enums (`TextureFormat.RGBA16FLOAT`, `AlphaMode.PREMULTIPLIED`, …), so a typo is a `ReferenceError` instead of a silently ignored string
 - `ShaderReload.js` — WGSL hot-reload
+- `primitives/` — `Box`, `Sphere`, `Plane`, `Disc`, `Cone`, `Cylinder`, `Torus`, `Quad`, `FullscreenTriangle`
 - `skin/` — GPU skinning
 
 The **Math** component (`src/math/`) is a set of chainable, THREE-style wrappers over [`wgpu-matrix`](https://github.com/greggman/wgpu-matrix) — `Vec2`–`Vec4`, `Quat`, `Mat3`/`Mat4`, `Euler`, `Color` — each a `Float32Array` subclass.
 
 **Modules** (`src/modules/`) are the optional higher-level pieces, kept out of Core to reduce bloat: `Orbit`, `Raycast`, `GUI`, `Animation`, `GLTFLoader`, `CubeMap`, `VideoTexture`, and a shader-only `pbr/` IBL library.
 
-Examples live in `examples/` (repo root, outside `src/`), switched by a `?src=` query string in `src/main.js`.
+**Utils** (`src/utils/`, alias `@utils`) are standalone helpers: `BufferUtils`, `RenderUtils` (`blit`), `IBLUtils`, `ktxutils`, `TimingHelper`, `JSONLoader`, the `Mat3`/`Mat4`/`Euler` helpers, and `wgslOverrides` (bakes `override` constants into `const` literals, since Safari has no pipeline-overridable constants).
+
+Examples live in `examples/` (repo root, outside `src/`), switched by a `?src=` query string in `src/main.js`. With no `?src=`, the root serves a gallery of every example.
+
+## Fullscreen passes
+
+Post-processing, feedback, and display passes all run through one path instead of a per-effect fullscreen mesh. `Renderer` exposes two shared geometries — `gpu.TRIANGLE` (a `FullscreenTriangle`, the default) and `gpu.QUAD` (a `Quad`, when you need exact 4-corner interpolation, e.g. frustum-ray depth→world reconstruction). `blit` (`@utils/RenderUtils`) records a color-only pass with either:
+
+```js
+blit(encoder, { pipeline, geometry: gpu.TRIANGLE, targetView, bindGroup, clear: true });
+```
+
+It takes the `RenderPipeline` wrapper, not the raw GPU pipeline, and reads `pipeline.hasDynamicUniform` to decide whether group(0) needs the per-draw dynamic offset — so a pass whose shader binds only a sampler + texture doesn't need a `Uniforms` struct at all.
+
+The `feedback` example (`?src=feedback`) is the full shape: a scene renders to an offscreen target, a ping-pong pair of accumulation textures blends it over the decayed previous frame, and a present blit shows the result.
 
 ## PBR shading & IBL
 

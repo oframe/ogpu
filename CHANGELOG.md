@@ -23,7 +23,7 @@ Fullscreen/blit pass system (ported from dgpu), a feedback-trails example, and `
   takes the `RenderPipeline` wrapper and reads `pipeline.hasDynamicUniform` to
   decide whether group(0) needs the per-draw dynamic offset — a pass with no
   uniform binds only sampler+texture.
-- **Feedback Trails example** (`?example=feedback`) — motion-trail feedback built
+- **Feedback Trails example** (`?src=feedback`) — motion-trail feedback built
   on `blit`: a falling-leaves scene renders to an offscreen target, a ping-pong
   pair of accumulation textures blends it over the decayed previous frame, and a
   present blit shows the result.

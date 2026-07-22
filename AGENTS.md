@@ -41,18 +41,9 @@ Both are kept honest by a **drift gate**: `npm run repomap` regenerates both; `n
 
 ## Running examples
 
-`src/main.js` switches on a `src=` query string and instantiates a single example class. Examples available:
+`src/main.js` reads a `src=` query string and instantiates a single example class from its `views` map — `?src=<key>`. Read that map for the current list rather than trusting a copy here; it is the only place example keys are defined. With no `src=` (or an unknown one) the root renders a gallery of every example instead, built from the `links` array further down the same file.
 
-- `?src=particles` → `Particles`
-- `?src=triangle` → `Triangle`
-- `?src=rendertargets` → `RenderToTexture`
-- `?src=pbrshader` → `PBRShader`
-- `?src=skinning` → `Skinning`
-- `?src=skinninggltf` → `SkinningGLTF` (glTF PBR + real-time shadow map)
-- `?src=gltf` → `GLTF`
-- (no `src`) → `HelloWebGPU`
-
-To add a new example: drop a class under `examples/<name>/`, import it in `src/main.js`, and add a switch case.
+To add a new example: drop a class under `examples/<name>/`, import it in `src/main.js`, add a `views` entry, and add a `links` entry so it shows in the gallery.
 
 WebGPU requires a recent Chromium-based browser. See "Browser floor" below for the (currently very high) feature requirements.
 
@@ -86,7 +77,7 @@ Each source directory carries its own `CLAUDE.md` with that area's footguns — 
 
 ### Directory map
 
-- `src/core/` — engine primitives: Renderer, Transform, Camera, Mesh, RenderPipeline, Geometry, ComputeShader, Texture, RenderTarget, `skin/`, ShaderReload. → **`src/core/CLAUDE.md`**
+- `src/core/` — engine primitives: Renderer, Transform, Camera, Mesh, RenderPipeline, Geometry, ComputeShader, Texture, RenderTarget, PerDrawBuffer, GPUEnums, `primitives/`, `skin/`, ShaderReload. → **`src/core/CLAUDE.md`**
 - `src/math/` — chainable three.js-style wrappers over `wgpu-matrix` (Vec2–4, Quat, Mat3/4, Euler, Color), each a `Float32Array` subclass; alias `@math`. → **`src/math/CLAUDE.md`**
 - `src/modules/` — optional higher-level pieces: Orbit, Raycast, GUI, Animation, GLTFLoader, CubeMap, VideoTexture, `pbr/` (shader-only IBL library); alias `@modules`. → **`src/modules/CLAUDE.md`**.
 - `src/utils/` — standalone helpers; alias `@utils` (see "Assets and external deps").
@@ -97,7 +88,7 @@ Each source directory carries its own `CLAUDE.md` with that area's footguns — 
 Two contracts hold across every file — internalize these; per-file traps are in the nested CLAUDE.md files:
 
 - **Pass the `gpu` object, never the raw `device`.** `Renderer.init` augments the canvas context with `.device`/`.presentationFormat`/`.renderer`; that augmented object (`renderer.gpu`) is what every class takes and stores. It's async — `await renderer.ready` before any GPU work (it also bootstraps `window.ktx`).
-- **Standard uniforms are written by name.** `Mesh.draw` writes the per-frame uniforms (`projectionMatrix`, `viewMatrix`, `modelMatrix`, `modelViewMatrix`, `objectMatrix`, `normalMatrix`, `cameraPosition`, `cameraQuaternion`, `resolution`, `time`) into the mesh's own uniform buffer (built from the pipeline's reflected `uniforms` struct) via webgpu-utils reflection, matched by struct field name. Any shader bound through a Mesh declares a `Uniforms` struct with the subset it uses; a misnamed field is **silently skipped**, no error. (Per-file details in `src/core/CLAUDE.md`.)
+- **Standard uniforms are written by name.** `Mesh.draw` writes the per-frame uniforms (`projectionMatrix`, `viewMatrix`, `modelMatrix`, `modelViewMatrix`, `objectMatrix`, `normalMatrix`, `cameraPosition`, `cameraQuaternion`, `resolution`, `time`) into a per-draw slice of the renderer-owned `PerDrawBuffer` (the mesh's structured view is built from the pipeline's reflected `uniforms` struct) via webgpu-utils reflection, matched by struct field name — group(0) binds with a dynamic offset, so one mesh can draw in several passes of a single submit. Any shader bound through a Mesh declares a `Uniforms` struct with the subset it uses; a misnamed field is **silently skipped**, no error. (Per-file details in `src/core/CLAUDE.md`.)
 
 Scene graph, frustum culling, hot-reload (`ShaderReload` globs `src/**/*.wgsl` and rebuilds matching pipelines on edit), and the per-frame queue all live in `src/core/` — read its CLAUDE.md before touching render flow.
 
@@ -146,7 +137,7 @@ Aliases work for `?raw` shader imports too (`import s from '@modules/pbr/pbr.wgs
 - `webgpu-utils` — shader reflection, buffer/attribute creation, primitive generators (`primitives.createCubeVertices()` etc).
 - `parse-exr` — used by `src/utils/IBLUtils/IBLUtils.js` to load EXR environment maps; `IBLUtils` also builds IBL cubemaps (GGX prefilter + octahedral/equirect unpack, shaders co-located in `src/utils/IBLUtils/`) — `loadIBLCubeMap(gpu, {...})` is the entry point; its result carries `mipLevels`, which `pbr.wgsl` consumers feed back as the `roughnessLevels` override constant.
 
-`src/utils/` holds standalone helpers reached via the `@utils/*` alias (signatures in api-digest): `BufferUtils`, `RenderUtils` (the `blit` buffer-less fullscreen-quad helper), `IBLUtils`, `ktxutils`, `Mat3Utils`/`Mat4Utils`/`EulerUtils`, `TimingHelper`, `JSONLoader`, `miscutils`/`utils`. The one worth knowing the _why_ of: `wgslOverrides` (`applyOverrideConstants`) — Safari lacks pipeline-overridable constants, so this bakes `override` decls into module-scope `const` literals before compile, resolving default expressions that reference earlier overrides/consts to numeric literals so webgpu-utils' parser doesn't choke.
+`src/utils/` holds standalone helpers reached via the `@utils/*` alias (signatures in api-digest): `BufferUtils`, `RenderUtils` (the `blit` fullscreen-pass helper — draws `gpu.TRIANGLE`/`gpu.QUAD` through a `RenderPipeline` wrapper into a color-only pass), `IBLUtils`, `ktxutils`, `Mat3Utils`/`Mat4Utils`/`EulerUtils`, `TimingHelper`, `JSONLoader`, `miscutils`/`utils`. The one worth knowing the _why_ of: `wgslOverrides` (`applyOverrideConstants`) — Safari lacks pipeline-overridable constants, so this bakes `override` decls into module-scope `const` literals before compile, resolving default expressions that reference earlier overrides/consts to numeric literals so webgpu-utils' parser doesn't choke.
 
 ### Notes when adding code
 

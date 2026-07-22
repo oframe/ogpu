@@ -15,5 +15,4 @@ export { Cylinder } from './Cylinder.js';
 export { Disc } from './Disc.js';
 export { Cone } from './Cone.js';
 export { Quad } from './Quad.js';
-export { ThreeDF } from './ThreeDF.js';
 export { FullscreenTriangle } from './FullscreenTriangle.js';

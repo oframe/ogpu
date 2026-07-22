@@ -128,7 +128,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { Camera } from './Camera.js'
 - re-export { Mesh } from './Mesh.js'
 - re-export { Geometry } from './Geometry.js'
-- re-export { Box, Sphere, Plane, Torus, Cylinder, Disc, Cone, Quad, ThreeDF, FullscreenTriangle } from './primitives/index.js'
+- re-export { Box, Sphere, Plane, Torus, Cylinder, Disc, Cone, Quad, FullscreenTriangle } from './primitives/index.js'
 - re-export { RenderPipeline } from './RenderPipeline.js'
 - re-export { PerDrawBuffer } from './PerDrawBuffer.js'
 - re-export { ComputeShader } from './ComputeShader.js'
@@ -169,10 +169,6 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - **class Sphere** extends Geometry
   - constructor(gpu, { instancedData, interleave, ...opts } = {})
 
-### src/core/primitives/ThreeDF.js
-- **class ThreeDF** extends Geometry
-  - constructor(gpu, { instancedData, interleave } = {})
-
 ### src/core/primitives/Torus.js
 - **class Torus** extends Geometry
   - constructor(gpu, { instancedData, interleave, ...opts } = {})
@@ -186,7 +182,6 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { Disc } from './Disc.js'
 - re-export { Cone } from './Cone.js'
 - re-export { Quad } from './Quad.js'
-- re-export { ThreeDF } from './ThreeDF.js'
 - re-export { FullscreenTriangle } from './FullscreenTriangle.js'
 
 ### src/core/skin/Skin.js

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Removed
+
+- **`ThreeDF` primitive.** The 3D-"F" orientation-test geometry (a thin wrap of
+  webgpu-utils' `create3DFVertices`) is gone, along with its barrel export and its
+  slot in the `primitives` example. webgpu-utils still ships the function if you
+  want it back: `new Geometry(gpu, { data: primitives.create3DFVertices() })`.
+
 ## 0.3.0
 
 Fullscreen/blit pass system (ported from dgpu), a feedback-trails example, and `GPUEnums`.

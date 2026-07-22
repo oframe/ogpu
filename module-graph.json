@@ -1,16 +1,16 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 135,
-    "edges": 252,
-    "modules": 85,
+    "nodes": 134,
+    "edges": 249,
+    "modules": 84,
     "shaders": 43,
     "external": 7
   },
   "hubs": [
     {
       "id": "src/core/Geometry.js",
-      "inDegree": 12
+      "inDegree": 11
     },
     {
       "id": "src/core/GPUEnums.js",
@@ -475,7 +475,7 @@
     {
       "id": "pkg:webgpu-utils",
       "type": "external",
-      "inDegree": 24,
+      "inDegree": 23,
       "outDegree": 0
     },
     {
@@ -499,7 +499,7 @@
     {
       "id": "src/core/Geometry.js",
       "type": "module",
-      "inDegree": 12,
+      "inDegree": 11,
       "outDegree": 2
     },
     {
@@ -560,7 +560,7 @@
       "id": "src/core/primitives/index.js",
       "type": "module",
       "inDegree": 2,
-      "outDegree": 11
+      "outDegree": 10
     },
     {
       "id": "src/core/primitives/Plane.js",
@@ -576,12 +576,6 @@
     },
     {
       "id": "src/core/primitives/Sphere.js",
-      "type": "module",
-      "inDegree": 1,
-      "outDegree": 2
-    },
-    {
-      "id": "src/core/primitives/ThreeDF.js",
       "type": "module",
       "inDegree": 1,
       "outDegree": 2
@@ -1356,10 +1350,6 @@
     },
     {
       "from": "src/core/primitives/index.js",
-      "to": "src/core/primitives/ThreeDF.js"
-    },
-    {
-      "from": "src/core/primitives/index.js",
       "to": "src/core/primitives/Torus.js"
     },
     {
@@ -1384,14 +1374,6 @@
     },
     {
       "from": "src/core/primitives/Sphere.js",
-      "to": "src/core/Geometry.js"
-    },
-    {
-      "from": "src/core/primitives/ThreeDF.js",
-      "to": "pkg:webgpu-utils"
-    },
-    {
-      "from": "src/core/primitives/ThreeDF.js",
       "to": "src/core/Geometry.js"
     },
     {

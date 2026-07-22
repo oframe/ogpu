@@ -1,4 +1,4 @@
-import { Camera, Renderer, Orbit, RenderPipeline, Mesh, Transform, Box, Sphere, Plane, Torus, Cylinder, Disc, Cone, Quad, ThreeDF } from 'ogpu';
+import { Camera, Renderer, Orbit, RenderPipeline, Mesh, Transform, Box, Sphere, Plane, Torus, Cylinder, Disc, Cone, Quad } from 'ogpu';
 
 import primitivesShader from './primitives.wgsl?raw';
 
@@ -34,7 +34,6 @@ export class Primitives {
             new Disc(this.gpu),
             new Plane(this.gpu),
             new Quad(this.gpu),
-            new ThreeDF(this.gpu),
         ];
 
         const cols = 3;

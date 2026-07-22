@@ -10,13 +10,12 @@
 // Exit 0 = all valid, 1 = a shader failed, 2 = naga not installed.
 
 import { spawnSync } from 'node:child_process';
-import { readdirSync, statSync, existsSync } from 'node:fs';
+import { readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
-const SKIP = new Set(['node_modules', '.git', 'dist', 'build', '.next', 'target']);
-// Search src/ when it exists, otherwise the whole repo.
-const ROOTS = existsSync(join(ROOT, 'src')) ? [join(ROOT, 'src')] : [ROOT];
+// Walk the whole repo, not just src/ — most shaders live in examples/.
+const SKIP = new Set(['node_modules', '.git', 'dist', 'build', 'public']);
 
 function hasNaga() {
     const r = spawnSync('naga', ['--version'], { encoding: 'utf8' });
@@ -41,8 +40,7 @@ if (!hasNaga()) {
     process.exit(2);
 }
 
-const args = process.argv.slice(2);
-const files = args.length ? args : ROOTS.flatMap(walk).sort();
+const files = process.argv.slice(2).length ? process.argv.slice(2) : walk(ROOT).sort();
 
 let failed = 0;
 for (const file of files) {

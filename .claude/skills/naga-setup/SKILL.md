@@ -107,9 +107,13 @@ Already a `scripts/validate-shaders.mjs`? Leave it — a repo's own copy may hav
 been adapted, and overwriting it to install a near-identical file is a bad trade.
 
 Otherwise copy `assets/validate-shaders.mjs` from this skill into the repo's
-`scripts/` directory (create it if needed). The script walks `src/` when it exists,
-otherwise the repo root, skipping `node_modules`/`.git`/build output. It also
-accepts explicit paths: `node scripts/validate-shaders.mjs path/to/one.wgsl`.
+`scripts/` directory (create it if needed). It walks the whole repo from the root,
+skipping `node_modules`/`.git`/build output — deliberately not just `src/`, since
+shaders tend to also live in `examples/`, `demos/`, `sandbox/`, and a batch check
+that quietly misses most of them is worse than no batch check. It also accepts
+explicit paths: `node scripts/validate-shaders.mjs path/to/one.wgsl`.
+
+Worth widening `SKIP` if the repo has a big generated or vendored directory.
 
 Exit codes: 0 all valid, 1 a shader failed, 2 naga not installed.
 

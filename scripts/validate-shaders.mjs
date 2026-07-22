@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// Validate every WGSL shader under src/ with naga (the wgpu reference compiler).
+// Validate every WGSL shader in the repo with naga (the wgpu reference compiler).
 // Install naga first:  brew install naga-cli   (or  cargo install naga-cli)
 // Not `brew install naga` — that formula is a Snake game and conflicts on the `naga` binary.
 //
 // Usage:
-//   npm run validate:shaders            validate all src/**/*.wgsl
+//   npm run validate:shaders            validate all **/*.wgsl
 //   node scripts/validate-shaders.mjs path/to/one.wgsl [more.wgsl ...]
 //
 // Exit 0 = all valid, 1 = a shader failed, 2 = naga not installed.
@@ -14,7 +14,8 @@ import { readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
-const SRC = join(ROOT, 'src');
+// Walk the whole repo, not just src/ — most shaders live in examples/.
+const SKIP = new Set(['node_modules', '.git', 'dist', 'build', 'public']);
 
 function hasNaga() {
     const r = spawnSync('naga', ['--version'], { encoding: 'utf8' });
@@ -24,6 +25,7 @@ function hasNaga() {
 function walk(dir) {
     const out = [];
     for (const name of readdirSync(dir)) {
+        if (SKIP.has(name)) continue;
         const p = join(dir, name);
         if (statSync(p).isDirectory()) out.push(...walk(p));
         else if (name.endsWith('.wgsl')) out.push(p);
@@ -38,7 +40,7 @@ if (!hasNaga()) {
     process.exit(2);
 }
 
-const files = process.argv.slice(2).length ? process.argv.slice(2) : walk(SRC).sort();
+const files = process.argv.slice(2).length ? process.argv.slice(2) : walk(ROOT).sort();
 
 let failed = 0;
 for (const file of files) {

@@ -14,7 +14,7 @@ This file provides guidance to coding agents (Claude Code, OpenAI Codex, Cursor,
 - `npm run preview` — serve built output
 - `npm run lint` / `npm run lint:fix` — ESLint (flat config, `eslint.config.js`)
 - `npm run format` / `npm run format:check` — Prettier (config under the `"prettier"` key in `package.json`)
-- `npm run validate:shaders` — validate every `src/**/*.wgsl` with `naga` (the wgpu WGSL compiler). Install via `brew install naga-cli` (or `cargo install naga-cli`) — **not** `brew install naga`, which is an unrelated Snake game that conflicts on the same binary name; script exits 2 if absent. Use this to check shader edits without a browser. Single file: `node scripts/validate-shaders.mjs <file>`.
+- `npm run validate:shaders` — validate every `**/*.wgsl` in the repo (`src/` and `examples/` both) with `naga` (the wgpu WGSL compiler). Install via `brew install naga-cli` (or `cargo install naga-cli`) — **not** `brew install naga`, which is an unrelated Snake game that conflicts on the same binary name; script exits 2 if absent. Use this to check shader edits without a browser. Single file: `node scripts/validate-shaders.mjs <file>`.
 
 No tests or typechecker configured. ESLint + Prettier are set up (format-on-save in the repo). No TypeScript, though hand-written ambient declarations live in `types/ogpu.d.ts` for anyone consuming/migrating to TS.
 

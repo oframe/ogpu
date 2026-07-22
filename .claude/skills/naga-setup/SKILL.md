@@ -1,6 +1,6 @@
 ---
 name: naga-setup
-description: One-time installation of naga WGSL validation into a repo that doesn't have it yet — writes a PostToolUse hook, a batch validate-shaders script, and an npm entry, so shader checking then happens automatically forever after with no skill involved. Use ONLY for the setup act itself: "set up naga here", "add the shader validation hook to this project", "wire up WGSL checking in my new repo", "port my naga setup over", or scaffolding a fresh WebGPU project that will need it. Do NOT use this to validate a shader — validating is the installed hook's job, and if the repo is already set up there is nothing here to do.
+description: Get naga WGSL validation working in a repo — installs the `naga`/`jq` toolchain, a PostToolUse hook that compiles every .wgsl on write, and a batch validate-shaders script, so shader checking then happens automatically with no skill involved. Use for the setup act: "set up naga here", "add the shader validation hook", "wire up WGSL checking in my new repo", "port my naga setup over", scaffolding a fresh WebGPU project — and also on a fresh clone of a repo that already ships the hook, since the config arrives with the clone but the naga binary does not, leaving a hook that silently does nothing. Do NOT use this to validate a shader; validating is the installed hook's job or a plain `naga <file>`.
 ---
 
 # naga-setup
@@ -9,12 +9,22 @@ Wire a repo so every WGSL edit is compiled by `naga` immediately, and the whole
 shader tree can be checked in one command. WGSL errors otherwise only surface in
 the browser console after a reload — the hook collapses that loop to zero.
 
-This is a one-shot installer, not a validator. Once it runs, the hook does the
-checking on its own for every future session — nobody invokes this skill again.
-So the first move is to check whether the repo is already set up: if
-`.claude/settings.json` already has a naga `PostToolUse` hook, say so and stop.
-Re-running would duplicate the hook, and a shader that needs checking just needs
-`naga <file>`, not this.
+This is a one-shot installer, not a validator. Once it's in place, the hook does
+the checking on its own for every future session — nobody invokes this skill to
+validate a shader.
+
+Setup has two halves that travel differently, which is the thing to keep straight:
+
+- **Repo config** — the hook and the script are files, so they arrive with a
+  `git clone`.
+- **Local toolchain** — `naga` and `jq` are binaries on the machine, and they do
+  not.
+
+So someone cloning a repo that's already wired still has half a setup: a hook
+that fires and silently does nothing, or errors, because `naga` isn't installed.
+Check the toolchain first (step 1) and the config second (step 2), and act on
+whichever half is missing. Only when *both* halves are present is there nothing
+to do — say so and stop rather than duplicating the hook.
 
 Two pieces get installed:
 
@@ -29,13 +39,16 @@ Two pieces get installed:
 
 ## Steps
 
-### 1. Check naga is installed
+### 1. Check the local toolchain
 
 ```bash
 naga --version
+jq --version
 ```
 
-If missing, tell the user to install it and stop — the hook is inert without it:
+If `naga` is missing the hook is inert, so this is the half worth fixing first.
+Offer to run the install rather than just quoting it — on a fresh clone this is
+usually the *only* thing missing:
 
 ```
 brew install naga-cli    # macOS / Linux — NOT `brew install naga`, that formula
@@ -46,10 +59,14 @@ cargo install naga-cli   # any platform with Rust
 That `naga` vs `naga-cli` collision is a real trap worth naming out loud; people
 install the wrong one and get a game.
 
-Also check `jq --version` — the hook uses it to read the tool payload. On macOS
-it usually ships already; if absent, `brew install jq`.
+`jq` is what the hook uses to read the tool payload. On macOS it usually ships
+already; if absent, `brew install jq`.
 
 ### 2. Install the hook
+
+First look at whether it's already there — `.claude/settings.json` with a naga
+entry under `hooks.PostToolUse` means this half came with the clone. In that case
+skip to step 4 and verify it fires; adding it again would just duplicate it.
 
 The hook goes in the **repo's** `.claude/settings.json` (project-scoped, so it
 travels with the repo and doesn't fire in unrelated projects).
@@ -86,8 +103,11 @@ Notes on the command, in case it needs adapting:
 
 ### 3. Install the batch script
 
-Copy `assets/validate-shaders.mjs` from this skill into the repo's `scripts/`
-directory (create it if needed). The script walks `src/` when that exists,
+Already a `scripts/validate-shaders.mjs`? Leave it — a repo's own copy may have
+been adapted, and overwriting it to install a near-identical file is a bad trade.
+
+Otherwise copy `assets/validate-shaders.mjs` from this skill into the repo's
+`scripts/` directory (create it if needed). The script walks `src/` when it exists,
 otherwise the repo root, skipping `node_modules`/`.git`/build output. It also
 accepts explicit paths: `node scripts/validate-shaders.mjs path/to/one.wgsl`.
 

@@ -7,35 +7,24 @@ description: Get naga WGSL validation working in a repo — installs the `naga`/
 
 Wire a repo so every WGSL edit is compiled by `naga` immediately, and the whole
 shader tree can be checked in one command. WGSL errors otherwise only surface in
-the browser console after a reload — the hook collapses that loop to zero.
+the browser console after a reload — this collapses that loop to zero.
 
-This is a one-shot installer, not a validator. Once it's in place, the hook does
-the checking on its own for every future session — nobody invokes this skill to
-validate a shader.
+## The thing to keep straight
 
-Setup has two halves that travel differently, which is the thing to keep straight:
+A working setup is four artifacts, and they arrive by different routes:
 
-- **Repo config** — the hook and the script are files, so they arrive with a
-  `git clone`.
-- **Local toolchain** — `naga` and `jq` are binaries on the machine, and they do
-  not.
+| | Artifact | Travels with a `git clone`? |
+|---|---|---|
+| **Repo config** | `.claude/settings.json` hook — runs `naga` after each `Edit`/`Write` of a `.wgsl`, exits 2 on failure so the compiler error blocks and gets fixed in the same turn | yes |
+| | `scripts/validate-shaders.mjs` + npm entry — batch check for CI or a refactor that touched many shaders; the hook only sees files an agent writes, the script sees all of them | yes |
+| **Local toolchain** | `naga` binary | **no** |
+| | `jq` binary | **no** |
 
-So someone cloning a repo that's already wired still has half a setup: a hook
-that fires and silently does nothing, or errors, because `naga` isn't installed.
-Check the toolchain first (step 1) and the config second (step 2), and act on
-whichever half is missing. Only when *both* halves are present is there nothing
-to do — say so and stop rather than duplicating the hook.
-
-Two pieces get installed:
-
-1. **A `PostToolUse` hook** in the repo's `.claude/settings.json`. It fires after
-   `Edit`/`Write`/`MultiEdit`, checks whether the touched file ends in `.wgsl`,
-   and runs `naga` on it. On failure it exits 2, which feeds the compiler error
-   back to the agent as a blocking error — so a broken shader is caught and fixed
-   in the same turn instead of at runtime.
-2. **`scripts/validate-shaders.mjs`** + an npm script, for batch checks (CI, or
-   after a refactor that touched many shaders). The hook only sees files the
-   agent writes; the script sees everything.
+So a fresh clone of an already-wired repo still has half a setup: a hook that
+fires and does nothing, because `naga` isn't on the machine. That's why step 1 is
+the toolchain and not the config. Check each artifact, install whichever are
+missing, and when all four are present say so and stop — re-adding the hook just
+duplicates it.
 
 ## Steps
 
@@ -46,9 +35,9 @@ naga --version
 jq --version
 ```
 
-If `naga` is missing the hook is inert, so this is the half worth fixing first.
-Offer to run the install rather than just quoting it — on a fresh clone this is
-usually the *only* thing missing:
+Missing `naga` makes everything else inert, so fix it first — and offer to run the
+install rather than just quoting it, since on a fresh clone this is usually the
+only gap:
 
 ```
 brew install naga-cli    # macOS / Linux — NOT `brew install naga`, that formula
@@ -56,20 +45,20 @@ brew install naga-cli    # macOS / Linux — NOT `brew install naga`, that formu
 cargo install naga-cli   # any platform with Rust
 ```
 
-That `naga` vs `naga-cli` collision is a real trap worth naming out loud; people
-install the wrong one and get a game.
+If `naga --version` succeeds but prints something that isn't a wgpu version
+string, that's the Snake game — people hit this often enough to be worth checking
+rather than assuming a zero exit means the compiler.
 
-`jq` is what the hook uses to read the tool payload. On macOS it usually ships
-already; if absent, `brew install jq`.
+`jq` reads the tool payload for the hook. Usually present on macOS; `brew install jq`
+otherwise.
 
 ### 2. Install the hook
 
-First look at whether it's already there — `.claude/settings.json` with a naga
-entry under `hooks.PostToolUse` means this half came with the clone. In that case
-skip to step 4 and verify it fires; adding it again would just duplicate it.
+Already a naga entry under `hooks.PostToolUse` in the repo's `.claude/settings.json`?
+Leave it and move on.
 
-The hook goes in the **repo's** `.claude/settings.json` (project-scoped, so it
-travels with the repo and doesn't fire in unrelated projects).
+Otherwise add it there — the repo's file, not the user's global one, so it travels
+with the repo and doesn't fire in unrelated projects:
 
 ```json
 {
@@ -90,39 +79,28 @@ travels with the repo and doesn't fire in unrelated projects).
 }
 ```
 
-**Merge, don't clobber.** If `.claude/settings.json` already exists, read it and
-add this entry to the existing `hooks.PostToolUse` array — overwriting someone's
-settings to add a shader check is a bad trade. If a naga hook is already there,
-say so and stop rather than adding a duplicate.
+**Merge, don't clobber.** If `.claude/settings.json` exists, read it and append to
+the existing `hooks.PostToolUse` array — overwriting someone's settings to add a
+shader check is a bad trade.
 
-Notes on the command, in case it needs adapting:
+Notes in case the command needs adapting:
 
-- The hook receives the tool payload as JSON on stdin; `jq -r '.tool_input.file_path'` pulls the path out.
+- The payload arrives as JSON on stdin; `jq -r '.tool_input.file_path'` pulls the path out. It's absolute, so the hook works regardless of cwd.
 - The `case` guard means non-WGSL edits cost one shell spawn and exit silently — cheap enough to leave unconditional.
 - Exit code 2 is what makes it *blocking*: stderr goes back to the agent. Any other non-zero code just warns.
 
 ### 3. Install the batch script
 
-Already a `scripts/validate-shaders.mjs`? Leave it — a repo's own copy may have
-been adapted, and overwriting it to install a near-identical file is a bad trade.
+Already a `scripts/validate-shaders.mjs`? Leave it — a repo's copy may have been
+adapted, and overwriting it with a near-identical file is a bad trade.
 
-Otherwise copy `assets/validate-shaders.mjs` from this skill into the repo's
-`scripts/` directory (create it if needed). It walks the whole repo from the root,
-skipping `node_modules`/`.git`/build output — deliberately not just `src/`, since
-shaders tend to also live in `examples/`, `demos/`, `sandbox/`, and a batch check
-that quietly misses most of them is worse than no batch check. It also accepts
-explicit paths: `node scripts/validate-shaders.mjs path/to/one.wgsl`.
-
-Worth widening `SKIP` if the repo has a big generated or vendored directory the
-default set misses.
-
-**In a monorepo**, the script's scope is the parent of wherever you put it —
-`packages/renderer/scripts/` validates just that package, the repo root validates
-every package. Ask which the user wants rather than defaulting; per-package is
-usually right when only one package has shaders, root when several do. The npm
-entry then goes in whichever `package.json` sits beside it. The hook is unaffected
-either way: it gets an absolute path from the tool payload, so it validates the
-edited file no matter which package it lives in or what the cwd is.
+Otherwise copy `assets/validate-shaders.mjs` into the repo's `scripts/` (create it
+if needed). It walks the whole tree from the root, skipping generated and vendored
+directories — deliberately not just `src/`, since shaders also live in `examples/`,
+`demos/`, `sandbox/`, and a batch check that quietly misses most of them is worse
+than no batch check. Widen its `SKIP` set if the repo has a big generated directory
+the default misses. It also takes explicit paths:
+`node scripts/validate-shaders.mjs path/to/one.wgsl`.
 
 Exit codes: 0 all valid, 1 a shader failed, 2 naga not installed.
 
@@ -132,29 +110,38 @@ If the repo has a `package.json`, add:
 "scripts": { "validate:shaders": "node scripts/validate-shaders.mjs" }
 ```
 
-Repo isn't a node project? Skip the npm entry and just leave the script — it only
-needs a `node` binary. If node isn't available at all, install the hook alone and
-tell the user the batch command is unavailable.
+Not a node project? Leave the script without the npm entry — it only needs a `node`
+binary. No node at all? Install the hook alone and say the batch command isn't
+available.
+
+**In a monorepo**, the script's scope is the parent of wherever it sits:
+`packages/renderer/scripts/` validates that package, the repo root validates all of
+them. Ask which the user wants — per-package when one package has shaders, root
+when several do — and put the npm entry in whichever `package.json` sits beside it.
+The hook needs no such choice; one at the repo root covers every package.
 
 ### 4. Verify it actually fires
 
-Don't declare victory on a config write. Prove it:
+Don't declare victory on a config write. Prove both halves:
 
 ```bash
-node scripts/validate-shaders.mjs   # should print ok/FAIL lines for real shaders
+node scripts/validate-shaders.mjs   # expect ok/FAIL lines for the repo's real shaders
 ```
 
-Then confirm the hook itself works by writing a deliberately broken shader with
-the Write tool (e.g. `let x: f32 = ;`) — the hook should block with naga's error.
-Delete the file after. If the hook is silent, the usual causes are: settings not
-picked up yet (hooks load at session start — the user may need to restart the
-session or run `/hooks` to reload), `jq` missing, or `naga` not on the PATH the
-hook shell sees.
+Then test the hook by writing a deliberately broken shader — `let x: f32 = ;` —
+with the Write tool. Use a temp path outside the repo (`/tmp/naga-hook-check.wgsl`);
+the hook matches on the tool, not the location, so it fires just the same and
+nothing lands in the user's tree. Expect it to block with naga's parse error.
+Delete the file after.
+
+Hook silent? Usual causes, in order: settings not loaded yet (hooks load at session
+start — restart the session or run `/hooks` to reload), `jq` missing, or `naga` not
+on the PATH the hook's shell sees.
 
 ### 5. Mention it in the repo's agent docs
 
-If the repo has an `AGENTS.md` / `CLAUDE.md` with a commands section, add a line
-so future agents know the check exists and can run it without a browser:
+If there's an `AGENTS.md` / `CLAUDE.md` with a commands section, add a line so
+future agents know the check exists and can use it instead of a browser round-trip:
 
 ```
 - `npm run validate:shaders` — validate every `**/*.wgsl` with `naga`. Install via
@@ -162,10 +149,16 @@ so future agents know the check exists and can run it without a browser:
   `node scripts/validate-shaders.mjs <file>`.
 ```
 
-## Scope
+## What this does and doesn't catch
 
-`naga` validates a single WGSL file in isolation. It catches syntax errors, type
-errors, and bad builtins — the bulk of shader mistakes. It does **not** know
-about the host side: bind group layouts, vertex buffer formats, or uniform struct
-field names that the JS expects. A shader can compile clean and still render
-nothing. Say this plainly if the user seems to expect a full correctness check.
+`naga` compiles one WGSL file standalone. That covers syntax, types, and bad
+builtins — the bulk of shader mistakes — but it knows nothing about the host side:
+bind group layouts, vertex buffer formats, uniform struct field names the JS
+expects. A shader can validate clean and still render nothing. Say so plainly if
+the user seems to expect a correctness guarantee.
+
+The standalone part also cuts the other way: a `.wgsl` file that's a *fragment*
+meant to be concatenated into a larger shader will fail validation on its own,
+which is a false alarm rather than a bug. Repos with a shader-chunk system either
+want those paths in the script's `SKIP` set or want the hook narrowed — worth
+raising before the user concludes the setup is broken.

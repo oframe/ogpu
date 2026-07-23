@@ -14,7 +14,8 @@ export class HighMeshCount {
 
     async init() {
         const canvas = document.getElementById('web-gpu-canvas');
-        this.renderer = new Renderer({ canvas, dpr: 2 });
+        // 256 B worst-case per-draw slice × gui max mesh count
+        this.renderer = new Renderer({ canvas, dpr: 2, perDrawSize: 50000 * 256 });
         await this.renderer.ready;
 
         this.gpu = this.renderer.gpu;

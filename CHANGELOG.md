@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.5.0
+
+Multi-canvas rendering — one device and one frame loop driving any number of canvases.
+
+### Added
+
+- **`Renderer.setContext(canvas)`** — points the **next** `render()` at another
+  canvas; `render()` hands the default canvas back on its way out, so a binding
+  lasts exactly one render (`setContext(null)` restores immediately). Each extra
+  canvas is configured on first bind and carries its own depth texture, parked on
+  the context object itself — `getContext('webgpu')` returns the same object per
+  canvas, so the context doubles as the per-canvas record, and a device loss
+  reconfigures it on the next bind. Extra canvases are **not** observed: set
+  `canvas.width/height` yourself (the renderer only watches its own).
+- **`Renderer.contextFor(canvas)`** — the same lazy configure **without** binding.
+  Hand a fullscreen pass `contextFor(c).getCurrentTexture().createView()` as its
+  `target` to land composited output on another canvas; the pass pipeline's
+  `targets[0].format` must be the canvas format, which every canvas here shares.
+
+- **`?src=multicanvas` example** — eight primitives (box, sphere, torus,
+  cylinder, cone, disc, ring, plane), one per canvas, in a scrollable 2×2 CSS
+  grid. Backing stores follow the CSS-laid-out boxes via a `ResizeObserver`, an
+  `IntersectionObserver` skips cells scrolled out of view, the page canvas is
+  reused as the first cell, and every cell records into one command encoder —
+  one submit per frame for the whole grid.
+
+### Changed
+
+- **The swapchain depth texture is sized against the bound canvas**
+  (`this.gpu.canvas`) instead of `this.width`/`this.height`, which track the
+  default canvas only.
+- **`Renderer.render` reads as flow, not attachment plumbing.** Descriptor
+  building moved into `_targetPassDescriptor` (RenderTarget/MRT, MSAA resolve,
+  optional depth) and `_canvasPassDescriptor` (bound canvas + engine depth); the
+  body is wrapped in the `try/finally` that enforces the one-render binding,
+  including on its early returns (no device / not ready / paused).
+
 ## 0.4.0
 
 WGSL validation tooling, and the `ThreeDF` primitive removed.

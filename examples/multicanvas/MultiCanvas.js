@@ -1,4 +1,4 @@
-import { Camera, Renderer, RenderPipeline, Mesh, Box, Sphere, Torus, Cylinder, Cone, Disc, Plane } from 'ogpu';
+import { Camera, Renderer, RenderPipeline, Mesh, Vec3, Box, Sphere, Torus, Cylinder, Cone, Disc, Plane } from 'ogpu';
 
 // normal-shaded vs/fs, no textures — fine for every primitive here
 import primitiveShader from '@examples/primitives/primitives.wgsl?raw';
@@ -11,6 +11,9 @@ import './multicanvas.css';
 // CSS; a ResizeObserver copies the laid-out box into the canvas backing store
 // (the renderer only observes its own canvas), and the engine remakes that
 // canvas's depth texture on mismatch.
+// eye position for a landscape cell; handleResize dollies it out for portrait ones
+const EYE = /* @__PURE__ */ new Vec3(0, 1.4, 3.4);
+
 const CELLS = [
     { label: 'box', geometry: (gpu) => new Box(gpu) },
     { label: 'sphere', geometry: (gpu) => new Sphere(gpu, { subdivisionsAxis: 32 }) },
@@ -87,7 +90,7 @@ export class MultiCanvas {
         });
 
         const camera = new Camera({ aspect: 1, fov: 45 });
-        camera.position.set(0, 1.4, 3.4);
+        camera.position.copy(EYE);
         camera.lookAt([0, 0, 0]);
 
         const cell = { label, canvas, camera, mesh, visible: true };
@@ -103,13 +106,25 @@ export class MultiCanvas {
 
         for (const entry of entries) {
             const cell = this.byCanvas.get(entry.target);
-            const width = entry.devicePixelContentBoxSize?.[0].inlineSize || entry.contentBoxSize[0].inlineSize * this.renderer.dpr;
-            const height = entry.devicePixelContentBoxSize?.[0].blockSize || entry.contentBoxSize[0].blockSize * this.renderer.dpr;
+
+            // devicePixelContentBoxSize is the honest one; contentBoxSize × dpr is the
+            // fallback, and contentRect covers Safari versions that ship neither array.
+            const devicePixels = entry.devicePixelContentBoxSize?.[0];
+            const cssBox = entry.contentBoxSize?.[0];
+            const width = devicePixels?.inlineSize ?? (cssBox?.inlineSize ?? entry.contentRect.width) * this.renderer.dpr;
+            const height = devicePixels?.blockSize ?? (cssBox?.blockSize ?? entry.contentRect.height) * this.renderer.dpr;
 
             entry.target.width = Math.max(1, Math.min(width, maxTextureDimension2D));
             entry.target.height = Math.max(1, Math.min(height, maxTextureDimension2D));
 
-            cell.camera.aspect = entry.target.width / entry.target.height;
+            const aspect = entry.target.width / entry.target.height;
+
+            // fov is vertical, so a portrait cell narrows the horizontal view and clips
+            // the primitive sideways — back the eye off by the same factor to keep every
+            // cell framed the same, phone or desktop.
+            cell.camera.position.copy(EYE).scale(1 / Math.min(1, aspect));
+
+            cell.camera.aspect = aspect;
             cell.camera.updateProjectionMatrix();
         }
     };

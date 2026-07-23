@@ -3,3 +3,5 @@ node_modules
 public
 package-lock.json
 *.wgsl
+module-graph.json
+api-digest.md

@@ -5,10 +5,7 @@ import { applyOverrideConstants } from '@utils/wgslOverrides';
 // Wraps a compute module: one pipeline per entry point, keyed by name in this.kernels.
 export class ComputeShader {
     constructor(gpu, { label = '', code = ``, layout = 'auto', constants = {}, size = 0 } = {}) {
-        if (!gpu) {
-            console.error('no webgpu context provided');
-            return;
-        }
+        if (!gpu) throw new Error(`[compute-shader ${label}] no webgpu context (gpu) provided`);
 
         this.label = label;
         this.gpu = gpu;
@@ -32,7 +29,11 @@ export class ComputeShader {
         this._pipelineLayouts = {};
         this._bindGroupLayouts = {};
 
-        this.build(code);
+        try {
+            this.build(code);
+        } catch (e) {
+            throw new Error(`[compute-shader ${label}] shader build failed: ${e.message}`, { cause: e });
+        }
         this._unregister = registerShader(this);
 
         // Spec throws a TypeError creating a 'timestamp' query set without the
@@ -205,6 +206,16 @@ export class ComputeShader {
             encoder.resolveQuerySet(this.querySet, 0, 2, this.queryBuffer, 0);
             encoder.copyBufferToBuffer(this.queryBuffer, 0, this.queryBufferResult, 0, this.queryBufferResult.size);
         }
+    }
+
+    // Releases the timestamp-query resources and drops out of the hot-reload
+    // registry. Pipelines/layouts have no destroy in WebGPU — refs just drop.
+    destroy() {
+        this._unregister?.();
+        this.querySet?.destroy();
+        this.queryBuffer?.destroy();
+        this.queryBufferResult?.destroy();
+        this.querySet = this.queryBuffer = this.queryBufferResult = null;
     }
 
     getTiming = async () => {

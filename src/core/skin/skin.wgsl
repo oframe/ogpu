@@ -69,8 +69,14 @@ fn getMatrix(indices: vec4u, weights: vec4f) -> mat4x4f {
     let weights = getWeights(id);
     let boneIndices = getBoneIndices(id);
 
-    let pos = (getMatrix(boneIndices, weights) * vec4f(position, 1.0)).xyz;
-    let n = (getMatrix(boneIndices, weights) * vec4f(normal, 0.0)).xyz;
+    let skinMatrix = getMatrix(boneIndices, weights);
+    let pos = (skinMatrix * vec4f(position, 1.0)).xyz;
+
+    // cofactor of the upper 3x3 — inverse-transpose up to a positive scale, so
+    // normals stay correct under non-uniformly scaled bones
+    let m = mat3x3f(skinMatrix[0].xyz, skinMatrix[1].xyz, skinMatrix[2].xyz);
+    let cof = mat3x3f(cross(m[1], m[2]), cross(m[2], m[0]), cross(m[0], m[1]));
+    let n = cof * normal;
 
     positionOutBuffer[id * 3] = pos.x;
     positionOutBuffer[id * 3 + 1] = pos.y;

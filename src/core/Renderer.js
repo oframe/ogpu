@@ -33,6 +33,9 @@ export class Renderer {
         this.deviceLostHandlers = new Set();
         this.deviceRestoredHandlers = new Set();
         this.resizeHandlers = new Set();
+        this.errorHandlers = new Set();
+        // every context this renderer configured (extra canvases) — released in destroy()
+        this._contexts = new Set();
         this.ready = getPromise();
         this.isReady = false;
         // first initDevice() runs init() (one-time canvas/handler setup); later
@@ -56,8 +59,9 @@ export class Renderer {
         if (!navigator.gpu) {
             // On recovery (post-boot) `ready` already settled, so reject() here is
             // a no-op — the message is what actually reaches the console/user.
-            console.error(this._initialized ? '[webgpu] device recovery failed — could not re-acquire an adapter/device; engine halted' : 'this browser does not support WebGPU');
-            this.ready.reject();
+            const msg = this._initialized ? '[webgpu] device recovery failed — could not re-acquire an adapter/device; engine halted' : 'this browser does not support WebGPU';
+            console.error(msg);
+            this.ready.reject(new Error(msg));
             return;
         }
 
@@ -65,8 +69,9 @@ export class Renderer {
             powerPreference: 'high-performance',
         });
         if (!adapter) {
-            console.error(this._initialized ? '[webgpu] device recovery failed — could not re-acquire an adapter/device; engine halted' : 'this browser supports webgpu but it appears disabled');
-            this.ready.reject();
+            const msg = this._initialized ? '[webgpu] device recovery failed — could not re-acquire an adapter/device; engine halted' : 'this browser supports webgpu but it appears disabled';
+            console.error(msg);
+            this.ready.reject(new Error(msg));
             return;
         }
 
@@ -120,20 +125,29 @@ export class Renderer {
         });
 
         // KTX reader is device-independent — load once, reuse across recoveries.
+        // Optional: without libktx_read.js on the page the engine still boots,
+        // only KTX texture loading is unavailable.
         if (!window.ktx) {
-            const ktxReady = getPromise();
-
-            await window
-                .createKtxReadModule({
+            if (typeof window.createKtxReadModule === 'function') {
+                window.ktx = await window.createKtxReadModule({
                     locateFile: (p) => (p.endsWith('.wasm') ? `${import.meta.env.BASE_URL}libktx_read.wasm` : p),
-                })
-                .then((ktx) => {
-                    window.ktx = ktx;
-                    ktxReady.resolve();
                 });
-
-            await ktxReady;
+            } else {
+                console.warn('[webgpu] libktx_read.js not loaded — KTX textures unavailable');
+            }
         }
+
+        if (this._destroyed) {
+            device.destroy();
+            return;
+        }
+
+        // Surface uncaptured GPU validation/OOM errors to app code. Without
+        // registered handlers the browser's own console report still fires (we
+        // never preventDefault here — a handler can, via the event).
+        device.addEventListener('uncapturederror', (e) => {
+            this.errorHandlers.forEach((cb) => cb?.(e.error, e));
+        });
 
         this.gpuAverage ??= new NonNegativeRollingAverage();
         this.timingHelper = new TimingHelper(device); // bound to the device, remake each time
@@ -160,6 +174,7 @@ export class Renderer {
             this.canvas = document.createElement('canvas');
             this.canvas.id = 'web-gpu-canvas';
             document.body.appendChild(this.canvas);
+            this._ownsCanvas = true;
         }
 
         this._configureContext(device);
@@ -207,6 +222,7 @@ export class Renderer {
     // reschedules (see update()), notifies app code, then re-acquires a device
     // unless the loss was a deliberate destroy().
     _onDeviceLost(info) {
+        if (this._destroyed) return;
         console.error(`WebGPU device was lost: ${info.message} (reason: ${info.reason})`);
         this.isReady = false;
         this._deviceLost = true;
@@ -262,11 +278,11 @@ export class Renderer {
     }
 
     addHandlers() {
-        const resizeObserver = new ResizeObserver(this.handleResize);
+        this._resizeObserver = new ResizeObserver(this.handleResize);
         try {
-            resizeObserver.observe(this.canvas, { box: 'device-pixel-content-box' });
+            this._resizeObserver.observe(this.canvas, { box: 'device-pixel-content-box' });
         } catch {
-            resizeObserver.observe(this.canvas, { box: 'content-box' });
+            this._resizeObserver.observe(this.canvas, { box: 'content-box' });
         }
 
         document.addEventListener('visibilitychange', this.handleVisibilityChange);
@@ -327,6 +343,14 @@ export class Renderer {
         return () => this.deviceRestoredHandlers.delete(cb);
     }
 
+    // Fired for every uncaptured GPU error on the current device; receives
+    // (error, event). event.preventDefault() suppresses the browser's own
+    // console report. Returns an unsubscribe fn.
+    addErrorHandler(cb) {
+        this.errorHandlers.add(cb);
+        return () => this.errorHandlers.delete(cb);
+    }
+
     // Boot progress, 0–100 (monotonic). Returns an unsubscribe fn.
     addBootProgressHandler(cb) {
         this.bootProgressHandlers.add(cb);
@@ -347,6 +371,51 @@ export class Renderer {
     // The old device stays alive and orphaned until GC — fine for a one-off test.
     forceDeviceLoss() {
         this._onDeviceLost({ reason: 'simulated', message: 'forced via forceDeviceLoss()' });
+    }
+
+    // Full teardown (SPA route change): stops the loop, removes the resize
+    // observer and document listener, destroys engine-owned GPU state and the
+    // device, and releases every canvas context this renderer configured. The
+    // renderer is dead afterwards — make a new one to render again.
+    destroy() {
+        if (this._destroyed) return;
+        this._destroyed = true;
+
+        this.isReady = false;
+        this._loopRunning = false;
+        if (this._rafHandle) cancelAnimationFrame(this._rafHandle);
+
+        this._resizeObserver?.disconnect();
+        document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+
+        this.callBacks.clear();
+        this.deviceLostHandlers.clear();
+        this.deviceRestoredHandlers.clear();
+        this.resizeHandlers.clear();
+        this.errorHandlers.clear();
+        this.bootProgressHandlers.clear();
+        this.bootCompleteHandlers.clear();
+
+        // extra canvases: parked depth textures + their context configuration
+        this._contexts.forEach((context) => {
+            context.depthTexture?.destroy();
+            context.depthTexture = context.depthView = null;
+            context.unconfigure?.();
+        });
+        this._contexts.clear();
+
+        this.depthTexture?.destroy();
+        this.depthTexture = this._depthView = null;
+        this.perDraw?.buffer?.destroy();
+        this.perDraw = null;
+
+        // reason 'destroyed' — _onDeviceLost deliberately doesn't recover from
+        // it, and the _destroyed guard above silences the loss report
+        this.gpu?.device?.destroy();
+        this.gpu?.unconfigure?.();
+        this.gpu = null;
+
+        if (this._ownsCanvas) this.canvas.remove();
     }
 
     pause = () => {
@@ -502,8 +571,10 @@ export class Renderer {
 
                 node.zDepth = 0;
 
-                // Only calculate z-depth if renderOrder unset and depthTest is true
-                if (node.renderOrder !== 0 || !node.pipeline.depthTest || !camera) return;
+                // z-depth for depth-aware sorting: opaque tiebreak, transparent
+                // far-to-near WITHIN each renderOrder group — so it's computed
+                // regardless of renderOrder (only UI/depthTest-off skips it)
+                if (!node.pipeline.depthTest || !camera) return;
 
                 node.worldMatrix.getTranslation(tempVec3);
                 tempVec3.applyMat4(camera.projectionViewMatrix);
@@ -529,6 +600,8 @@ export class Renderer {
     // needs no per-canvas buffers. Only Renderer.render follows the binding —
     // fullscreen VFX passes draw into whatever `gpu` they were built with.
     setContext(canvas = null) {
+        // pre-ready or destroyed: nothing bound yet, nothing to restore
+        if (!this.gpu) return;
         const target = canvas || this.canvas;
         if (target === this.gpu.canvas) return;
 
@@ -567,6 +640,8 @@ export class Renderer {
             depthTexture: null,
             depthView: null,
         });
+
+        this._contexts.add(context);
 
         return context;
     }

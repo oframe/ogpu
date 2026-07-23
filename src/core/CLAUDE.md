@@ -49,6 +49,22 @@ recovery skips), so this drives `_onDeviceLost` with a non-destroyed reason to
 exercise re-acquire + restore. Expect a `[webgpu] device restored` log and a
 still-running loop.
 
+## Teardown & error surfaces
+
+`renderer.destroy()` is the SPA teardown: stops the RAF loop, disconnects the
+resize observer and `visibilitychange` listener, destroys the per-draw buffer
+and depth textures (including parked extra-canvas ones), unconfigures every
+context it touched, and destroys the device (reason `'destroyed'`, which
+recovery deliberately skips). The renderer is dead afterwards — make a new one.
+App-owned GPU resources remain the app's to destroy, same boundary as
+device-loss recovery.
+
+`renderer.addErrorHandler(cb)` surfaces `uncapturederror` as `(error, event)`;
+`event.preventDefault()` silences the browser's own console report. Constructor
+preconditions (missing gpu/code/pipeline/geometry) THROW — no more
+console.error-and-return half-built objects — and shader build failures rethrow
+with the pipeline/shader label attached.
+
 ## Multiple canvases — `setContext`
 
 `renderer.setContext(canvas)` points the **next** `render()` at another canvas;
@@ -113,7 +129,10 @@ reflection, not by location. Any shader bound through a Mesh must declare a
 `Uniforms` struct containing the subset it uses with exact names
 (`projectionMatrix`, `viewMatrix`, `modelMatrix`, `modelViewMatrix`, `objectMatrix`,
 `normalMatrix`, `cameraPosition`, `cameraQuaternion`, `resolution`, `time`).
-A misnamed field is silently skipped — no validation error, just a stale value.
+A misnamed field is silently skipped — no validation error, just a stale value
+(likely typos of standard names warn once at Mesh construction; `u`-prefixed
+custom names like `uTime` are exempt). A shader with no `uniforms` var at all
+is fine: the mesh gets an inert stub and group 0 binds without a dynamic offset.
 
 `normalMatrix` is a Mat3 adjugate of `worldMatrix` (not the inverse-transpose
 of modelView) — correct for non-uniform scale, but only valid in world space.
@@ -270,8 +289,8 @@ right usage flags; `update()` recreates the texture if usage changes.
 ## RenderTarget — depth texture quirk
 
 `depthTexture` is a raw `GPUTexture` (not a `Texture` wrapper) created by
-`createDepthTexture`. `onResize` recreates it but does NOT destroy the old one —
-if you resize frequently, call the old one's `.destroy()` yourself or leak.
+`createDepthTexture`, which destroys the old one on recreate — resize is
+leak-free.
 Passing `target` to `Renderer.render` without a `depthTexture` on it means no
 depth testing at all. (Fullscreen `blit` passes don't go through
 `Renderer.render` — they record a color-only pass with `depthStencil: false`

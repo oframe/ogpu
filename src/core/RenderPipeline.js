@@ -28,15 +28,8 @@ export class RenderPipeline {
             constants = {},
         } = {}
     ) {
-        if (!gpu) {
-            console.error('no webgpu context provided');
-            return;
-        }
-
-        if (!code) {
-            console.error('no shader code provided');
-            return;
-        }
+        if (!gpu) throw new Error(`[render-pipeline ${label}] no webgpu context (gpu) provided`);
+        if (!code) throw new Error(`[render-pipeline ${label}] no shader code provided`);
 
         this.label = label;
         this.gpu = gpu;
@@ -56,7 +49,11 @@ export class RenderPipeline {
         // GPU pipeline from fresh WGSL without re-running the example.
         this._buildOpts = { targets, topology, blending, sampleCount, constants };
 
-        this.build(code);
+        try {
+            this.build(code);
+        } catch (e) {
+            throw new Error(`[render-pipeline ${label}] shader build failed: ${e.message}`, { cause: e });
+        }
 
         this._unregister = registerShader(this);
     }

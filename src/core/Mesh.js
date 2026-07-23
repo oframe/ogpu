@@ -4,6 +4,24 @@ import { makeStructuredView } from 'webgpu-utils';
 
 const _res = /* @__PURE__ */ new Vec2();
 
+// the per-frame uniforms draw() writes by name — see the near-miss check below
+const STANDARD_UNIFORMS = ['projectionMatrix', 'viewMatrix', 'modelMatrix', 'modelViewMatrix', 'objectMatrix', 'normalMatrix', 'cameraPosition', 'cameraQuaternion', 'resolution', 'time'];
+
+// stub for shaders that declare no `uniforms` var (vertex-pulled/hardcoded
+// geometry) — draw() still reads .views/.set/.arrayBuffer
+const NO_UNIFORMS = { views: {}, arrayBuffer: new ArrayBuffer(0), set() {} };
+
+function editDistance(a, b) {
+    const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+    for (let j = 0; j <= b.length; j++) d[0][j] = j;
+    for (let i = 1; i <= a.length; i++) {
+        for (let j = 1; j <= b.length; j++) {
+            d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        }
+    }
+    return d[a.length][b.length];
+}
+
 // Renderable node: owns a structured uniform view + bind groups, binds a pipeline +
 // geometry, and issues the draw call (writes the standard per-frame uniforms). The
 // uniform buffer itself is NOT mesh-owned — every draw allocates a fresh slice of
@@ -18,10 +36,9 @@ export class Mesh extends Transform {
     constructor(gpu, { label = 'basic mesh', pipeline, geometry, bindGroups, manualRender = false, renderOrder = 0, frustumCulled = true } = {}) {
         super();
 
-        if (!gpu) {
-            console.error('no webgpu context found');
-            return;
-        }
+        if (!gpu) throw new Error(`[mesh ${label}] no webgpu context (gpu) provided`);
+        if (!pipeline) throw new Error(`[mesh ${label}] no pipeline provided`);
+        if (!geometry) throw new Error(`[mesh ${label}] no geometry provided`);
 
         this.label = label;
         this.gpu = gpu;
@@ -29,11 +46,6 @@ export class Mesh extends Transform {
         this.manualRender = manualRender;
         this.renderOrder = renderOrder;
         this.frustumCulled = frustumCulled;
-
-        if (!geometry) {
-            console.error('no geometry provided');
-            return;
-        }
 
         this.pipeline = pipeline;
         // Mesh owns the geometry. the pipeline only carries the vertex *layout*
@@ -46,9 +58,18 @@ export class Mesh extends Transform {
 
         // Each mesh owns a structured uniform view, built from the pipeline's
         // reflected uniforms struct. bind groups are supplied by the caller (array
-        // or factory).
-        this.uniforms = makeStructuredView(pipeline.defs.uniforms.uniforms);
+        // or factory). Shaders without a `uniforms` var get the inert stub.
+        this.uniforms = pipeline.defs.uniforms?.uniforms ? makeStructuredView(pipeline.defs.uniforms.uniforms) : NO_UNIFORMS;
         this.structSize = this.uniforms.arrayBuffer.byteLength;
+
+        // A misnamed standard uniform is silently skipped at draw time — flag
+        // likely typos once, at construction. u-prefixed names (uTime) are a
+        // deliberate custom-uniform convention, not near-misses.
+        for (const name of Object.keys(this.uniforms.views)) {
+            if (STANDARD_UNIFORMS.includes(name) || /^u[A-Z]/.test(name)) continue;
+            const near = STANDARD_UNIFORMS.find((s) => (s.length >= 8 || name.toLowerCase() === s.toLowerCase()) && editDistance(name.toLowerCase(), s.toLowerCase()) <= 2);
+            if (near) console.warn(`[mesh ${label}] uniform '${name}' looks like a misspelling of standard uniform '${near}' — it will never be auto-written`);
+        }
         // slice descriptor for group(0) binding(0): the shared buffer, struct-sized,
         // re-based per draw via dynamic offset
         this.uniformResource = {
@@ -79,7 +100,8 @@ export class Mesh extends Transform {
         // length is unchanged, else update the slice size and warn (bind groups
         // still reference the old size and must be recreated).
         if (this._defs !== this.pipeline.defs) {
-            const next = makeStructuredView(this.pipeline.defs.uniforms.uniforms);
+            const nextDef = this.pipeline.defs.uniforms?.uniforms;
+            const next = nextDef ? makeStructuredView(nextDef) : NO_UNIFORMS;
             if (this.uniforms.arrayBuffer.byteLength === next.arrayBuffer.byteLength) {
                 new Uint8Array(next.arrayBuffer).set(new Uint8Array(this.uniforms.arrayBuffer));
             } else {

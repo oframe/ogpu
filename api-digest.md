@@ -28,6 +28,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - findKernel(key)
   - bindGroupLayout(kernelOrKey, groupIndex = 0)
   - dispatch(encoder, { pass = null, kernel, bindGroup, bindGroupIndex = 0, dispatchCount, workgroupBu…)
+  - destroy()
 
 ### src/core/GPUEnums.js
 - const `TextureFormat`, `VertexFormat`, `AlphaMode`, `BlendFactor`, `BlendOperation`, `CompareFunction`, `StencilOperation`, `PrimitiveTopology`, `FrontFace`, `CullMode`, `IndexFormat`, `VertexStepMode`, `LoadOp`, `StoreOp`, `AddressMode`, `FilterMode`, `MipmapFilterMode`, `TextureDimension`, `TextureViewDimension`, `TextureAspect`, `BufferBindingType`, `SamplerBindingType`, `TextureSampleType`, `StorageTextureAccess`, `AutoLayoutMode`, `CanvasToneMappingMode`, `QueryType`, `PowerPreference`, `BufferMapState`, `DeviceLostReason`, `ErrorFilter`, `CompilationMessageType`, `PipelineErrorReason`, `FeatureName`
@@ -83,9 +84,11 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - remove(f)
   - addDeviceLostHandler(cb)
   - addDeviceRestoredHandler(cb)
+  - addErrorHandler(cb)
   - addBootProgressHandler(cb)
   - addBootCompleteHandler(cb)
   - forceDeviceLoss()
+  - destroy()
   - setClearColor({ r = 0, g = 0, b = 0, a = this.transparent ? 0 : 1 } = {})
   - trackCompile(promise)
   - updateClock(time = 0)

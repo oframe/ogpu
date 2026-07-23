@@ -207,6 +207,7 @@ export class GLTFLoader {
                 this.skinnedMeshes.push({
                     skinned: true,
                     skin: skinIndex,
+                    material: primitive.material, // index into json.materials (getSkinnedMesh resolves it)
                     skinAttributes: {
                         position,
                         normal,
@@ -311,6 +312,7 @@ export class GLTFLoader {
         if (skinned) {
             m.skinned = true;
             m.skin = skinIndex;
+            m.material = primitive.material; // index into json.materials (getSkinnedMesh resolves it)
             // skinned positions come from the Skin compute pass, not the
             // bind-pose attribute — CPU bounds would be stale, so never cull
             m.frustumCulled = false;

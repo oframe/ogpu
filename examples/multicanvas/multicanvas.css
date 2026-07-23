@@ -1,26 +1,18 @@
-/* CSS owns the layout: the grid sizes every cell, and MultiCanvas.js only copies
-   each laid-out box into its canvas backing store (ResizeObserver). */
+/* CSS owns the layout: the wrapping flex row sizes every cell, and
+   MultiCanvas.js only copies each laid-out box into its canvas backing store
+   (ResizeObserver). */
 
 .mc-grid {
     position: fixed;
     inset: 0;
     overflow-y: auto;
-    display: grid;
-    /* one column on a phone — a half-width cell frames nothing; 2×2 from tablet up */
-    grid-template-columns: 1fr;
-    /* % of this fixed container, not vh — iOS sizes vh off the URL-bar-hidden
-       viewport, so vh rows overflow the box you can actually see and the cells
-       land offset from it. */
-    grid-auto-rows: 50%;
-    gap: 1px;
+    display: flex;
+    flex-wrap: wrap;
     /* the 1px gaps read as the cell borders */
+    gap: 1px;
+    /* stack lines from the top instead of spreading them when they don't fill */
+    align-content: flex-start;
     background: #000;
-}
-
-@media (min-width: 40rem) {
-    .mc-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
 }
 
 /* The second selector outranks #web-gpu-canvas's fixed/fullscreen rule in
@@ -29,10 +21,21 @@
 #web-gpu-canvas.mc-canvas {
     display: block;
     position: static;
-    width: 100%;
-    height: 100%;
-    /* keeps the canvas's intrinsic 300x150 from blowing out its grid track */
+    /* one column on a phone — a half-width cell frames nothing; 2×2 from tablet
+       up. Sized in % of this fixed container, not vh: iOS resolves vh against
+       the URL-bar-hidden viewport, so vh cells overflow the box you can see.
+       The half-pixel pays this cell's share of the 1px gap. */
+    flex: 0 0 100%;
+    height: calc(50% - 0.5px);
+    /* keeps the canvas's intrinsic 300x150 from blowing out its flex basis */
     min-width: 0;
     min-height: 0;
     background: #fff;
+}
+
+@media (min-width: 40rem) {
+    .mc-canvas,
+    #web-gpu-canvas.mc-canvas {
+        flex-basis: calc(50% - 0.5px);
+    }
 }

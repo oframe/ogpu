@@ -93,6 +93,8 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - sortTransparent(a, b)
   - sortUI(a, b)
   - getRenderQueue({ scene, camera, sort = true, frustumCull = true } = {})
+  - setContext(canvas = null)
+  - contextFor(canvas)
   - render({ scene, camera, target = null, loadOp = 'clear', storeOp = 'store', depthLoadOp = 'clear…)
 
 ### src/core/ShaderReload.js
@@ -390,6 +392,12 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - initDisplay()
   - displayBindGroup()
   - bindDisplay()
+
+### examples/multicanvas/MultiCanvas.js
+- **class MultiCanvas**
+  - constructor()
+  - init()
+  - addCell({ label, geometry: makeGeometry, cullMode = 'back' }, canvas)
 
 ### examples/orbitcontrols/OrbitControls.js
 - **class OrbitControls**

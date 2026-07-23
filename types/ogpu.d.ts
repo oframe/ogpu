@@ -819,6 +819,10 @@ export class Renderer {
     updateClock(time?: number): void;
     getRenderQueue(options: { scene: Transform; camera?: Camera; sort?: boolean; frustumCull?: boolean }): Mesh[];
     render(options: RenderOptions): void;
+    /** Bind another canvas for exactly the next render(); null restores now. */
+    setContext(canvas?: HTMLCanvasElement | null): void;
+    /** Configured context for any canvas — its view is a pass `target`. */
+    contextFor(canvas: HTMLCanvasElement): GPUCanvasContext;
 }
 
 // =============================================================================

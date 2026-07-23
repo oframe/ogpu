@@ -520,9 +520,130 @@ export class Renderer {
         return this.renderQueue;
     }
 
-    // Draw scene from camera into `target` (RenderTarget/MRT) or the swapchain.
-    // Pass an external `encoder` to chain into a larger submit — then render does
-    // NOT finish/submit; the caller owns that. updateMatrices:false skips the walk.
+    // Point the NEXT render() at another canvas. The binding lasts exactly one
+    // render() — render() hands the default canvas back on its way out; pass
+    // null to restore immediately. Every extra canvas keeps its own context and
+    // depth texture, made on first use. Set its width/height yourself: the
+    // renderer only observes its own canvas. Per-draw uniforms come from the
+    // shared PerDrawBuffer, so drawing one scene into N canvases per frame
+    // needs no per-canvas buffers. Only Renderer.render follows the binding —
+    // fullscreen VFX passes draw into whatever `gpu` they were built with.
+    setContext(canvas = null) {
+        const target = canvas || this.canvas;
+        if (target === this.gpu.canvas) return;
+
+        // park the live depth texture on the context it was sized for
+        this.gpu.depthTexture = this.depthTexture;
+        this.gpu.depthView = this._depthView;
+
+        const context = this.contextFor(target);
+        this.gpu = context;
+        this.depthTexture = context.depthTexture ?? null;
+        this._depthView = context.depthView ?? null;
+    }
+
+    // The configured, augmented WebGPU context for any canvas — hand a pass
+    // `contextFor(c).getCurrentTexture().createView()` as its `target` to land
+    // output on `c` instead of the default canvas. getContext('webgpu') returns
+    // the same object for a given canvas, so the context doubles as the
+    // per-canvas record — configured once, and again after a device loss (by
+    // then its `device` is the dead one, and its depth texture died with it).
+    contextFor(canvas) {
+        const context = canvas.getContext('webgpu');
+        if (context.device === this.gpu.device) return context;
+
+        context.configure({
+            device: this.gpu.device,
+            format: this.presentationFormat,
+            alphaMode: this.transparent ? AlphaMode.PREMULTIPLIED : AlphaMode.OPAQUE,
+        });
+
+        Object.assign(context, {
+            device: this.gpu.device,
+            renderer: this,
+            presentationFormat: this.presentationFormat,
+            TRIANGLE: this.gpu.TRIANGLE,
+            QUAD: this.gpu.QUAD,
+            depthTexture: null,
+            depthView: null,
+        });
+
+        return context;
+    }
+
+    // Attachments for a RenderTarget/MRT draw: one color attachment per target
+    // texture — with MSAA the multisampled texture is the view and the plain one
+    // is the resolve target. Depth only if the target owns a depth texture.
+    _targetPassDescriptor(target, { loadOp, storeOp, depthLoadOp, depthStoreOp }) {
+        const msaa = target.msaaTextures.length > 0;
+
+        const colorAttachments = [];
+        target.textures.forEach((texture, i) => {
+            if (texture.isDestroyed) return;
+            colorAttachments.push({
+                view: msaa ? target.msaaTextures[i]?.createView?.() : texture?.createView?.(),
+                ...(msaa && { resolveTarget: texture?.createView?.() }),
+                clearValue: texture?.clearValue || (i === 0 ? this.clearColor : { r: 0, g: 0, b: 0, a: 0 }),
+                loadOp,
+                storeOp,
+            });
+        });
+
+        if (!target.depthTexture) return { colorAttachments };
+
+        return {
+            colorAttachments,
+            depthStencilAttachment: {
+                view: target?.depthView?.(),
+                depthClearValue: 1.0,
+                depthLoadOp,
+                depthStoreOp,
+            },
+        };
+    }
+
+    // Attachments for a direct draw into the currently bound canvas, with the
+    // engine-owned depth texture.
+    _canvasPassDescriptor({ loadOp, storeOp, depthLoadOp, depthStoreOp }) {
+        // size against the BOUND canvas, not this.width/height — those track the
+        // default canvas only (see setContext).
+        const { width, height } = this.gpu.canvas;
+        if (this.depth && (!this.depthTexture || this.depthTexture.width !== width || this.depthTexture.height !== height)) {
+            this.createDepthTexture();
+        }
+
+        const renderPassDescriptor = {
+            colorAttachments: [
+                {
+                    view: this?.gpu?.getCurrentTexture()?.createView?.(),
+                    clearValue: this.clearColor,
+                    loadOp,
+                    storeOp,
+                },
+            ],
+        };
+
+        // Without this.depthTexture (depth: false) there's nothing to attach —
+        // an attachment with an undefined view fails validation.
+        if (this.depthTexture) {
+            this._depthView ??= this.depthTexture.createView();
+            renderPassDescriptor.depthStencilAttachment = {
+                view: this._depthView,
+                depthClearValue: 1.0,
+                depthLoadOp,
+                depthStoreOp,
+            };
+        }
+
+        return renderPassDescriptor;
+    }
+
+    // Draw scene from camera into `target` (RenderTarget/MRT) or the canvas bound
+    // by setContext (the default one unless you bound another). Pass an external
+    // `encoder` to chain into a larger submit — then render does NOT
+    // finish/submit; the caller owns that. updateMatrices:false skips the walk.
+    // The try/finally is the setContext contract: a bound canvas lasts exactly
+    // one render, including the early-return paths below.
     render({
         scene,
         camera,
@@ -536,117 +657,52 @@ export class Renderer {
         frustumCull = true,
         updateMatrices = true,
     } = {}) {
-        if (!this.gpu?.device) {
-            console.error('No device found');
-            return;
-        }
+        try {
+            if (!this.gpu?.device) {
+                console.error('No device found');
+                return;
+            }
 
-        if (!this.isReady) return;
+            if (!this.isReady) return;
 
-        if (this.paused) return;
+            if (this.paused) return;
 
-        if (this._debug && !encoder && target === null) timing = true;
+            if (this._debug && !encoder && target === null) timing = true;
 
-        // getResult() only runs on the renderer-owned submit path below, so a
-        // timed pass on an external encoder would leave the helper stuck
-        // waiting and wedge the next timed pass.
-        if (encoder) timing = false;
+            // getResult() only runs on the renderer-owned submit path below, so a
+            // timed pass on an external encoder would leave the helper stuck
+            // waiting and wedge the next timed pass.
+            if (encoder) timing = false;
 
-        if (!this._bootStarted) this._startBoot();
+            if (!this._bootStarted) this._startBoot();
 
-        // Walk + refresh world matrices (each node still dirty-flag gated, and a
-        // node can opt out per-frame via matrixAutoUpdate). Pass
-        // updateMatrices: false to skip the walk entirely for a static scene or
-        // when you've already posed it yourself this frame.
-        if (updateMatrices) {
-            camera?.updateMatrixWorld?.();
-            scene?.updateMatrixWorld?.();
-        }
+            // Walk + refresh world matrices (each node still dirty-flag gated, and
+            // a node can opt out per-frame via matrixAutoUpdate). Pass
+            // updateMatrices: false to skip the walk entirely for a static scene or
+            // when you've already posed it yourself this frame.
+            if (updateMatrices) {
+                camera?.updateMatrixWorld?.();
+                scene?.updateMatrixWorld?.();
+            }
 
-        let renderPassDescriptor;
-        if (target) {
-            let colorAttachments = [];
-            target.textures.forEach((texture, i) => {
-                if (texture.isDestroyed) return;
-                let colorAttachment = {
-                    view: target.msaaTextures.length > 0 ? target.msaaTextures[i]?.createView?.() : texture?.createView?.(),
-                    clearValue: texture?.clearValue || (i === 0 ? this.clearColor : { r: 0, g: 0, b: 0, a: 0 }),
-                    loadOp,
-                    storeOp,
-                };
-                if (target.msaaTextures.length > 0) {
-                    Object.assign(colorAttachment, {
-                        resolveTarget: texture?.createView?.(),
-                    });
-                }
-                colorAttachments.push(colorAttachment);
+            const ops = { loadOp, storeOp, depthLoadOp, depthStoreOp };
+            const renderPassDescriptor = target ? this._targetPassDescriptor(target, ops) : this._canvasPassDescriptor(ops);
+
+            const _encoder = encoder || this.gpu.device.createCommandEncoder({ label: 'renderer-encoder' });
+            const pass = timing ? this.timingHelper.beginRenderPass(_encoder, renderPassDescriptor) : _encoder.beginRenderPass(renderPassDescriptor);
+
+            this.getRenderQueue({ scene, camera, frustumCull });
+
+            const resolution = target ? [target.width, target.height] : [this.gpu.canvas.width, this.gpu.canvas.height];
+            this.renderQueue?.forEach?.((node) => {
+                node.draw({ camera, pass, time: this.time, resolution });
             });
 
-            if (!target.depthTexture) {
-                renderPassDescriptor = {
-                    colorAttachments,
-                };
-            } else {
-                renderPassDescriptor = {
-                    colorAttachments,
-                    depthStencilAttachment: {
-                        view: target?.depthView?.(),
-                        depthClearValue: 1.0,
-                        depthLoadOp,
-                        depthStoreOp,
-                    },
-                };
-            }
-        } else {
-            if (this.depth && (!this.depthTexture || this.depthTexture.width !== this.width || this.depthTexture.height !== this.height)) {
-                this.createDepthTexture();
-            }
+            pass.end();
 
-            renderPassDescriptor = {
-                colorAttachments: [
-                    {
-                        view: this?.gpu?.getCurrentTexture()?.createView?.(),
-                        clearValue: this.clearColor,
-                        loadOp,
-                        storeOp,
-                    },
-                ],
-            };
+            if (encoder) return; // caller owns finish/submit
 
-            // Without this.depthTexture (depth: false) there's nothing to attach —
-            // an attachment with an undefined view fails validation.
-            if (this.depthTexture) {
-                this._depthView ??= this.depthTexture.createView();
-                renderPassDescriptor.depthStencilAttachment = {
-                    view: this._depthView,
-                    depthClearValue: 1.0,
-                    depthLoadOp,
-                    depthStoreOp,
-                };
-            }
-        }
-
-        let _encoder = encoder || this.gpu.device.createCommandEncoder({ label: 'renderer-encoder' });
-        let pass;
-
-        if (timing) {
-            pass = this.timingHelper.beginRenderPass(_encoder, renderPassDescriptor);
-        } else {
-            pass = _encoder.beginRenderPass(renderPassDescriptor);
-        }
-
-        this.getRenderQueue({ scene, camera, frustumCull });
-
-        const resolution = target ? [target.width, target.height] : [this.gpu.canvas.width, this.gpu.canvas.height];
-        this.renderQueue?.forEach?.((node) => {
-            node.draw({ camera, pass, time: this.time, resolution });
-        });
-
-        pass.end();
-
-        if (!encoder) {
-            const commandBuffer = _encoder.finish();
-            this.gpu.device.queue.submit([commandBuffer]);
+            this.gpu.device.queue.submit([_encoder.finish()]);
 
             if (timing) {
                 this.timingHelper
@@ -657,6 +713,8 @@ export class Renderer {
                     })
                     .catch(() => {});
             }
+        } finally {
+            this.setContext(null);
         }
     }
 

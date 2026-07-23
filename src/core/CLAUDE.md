@@ -49,6 +49,37 @@ recovery skips), so this drives `_onDeviceLost` with a non-destroyed reason to
 exercise re-acquire + restore. Expect a `[webgpu] device restored` log and a
 still-running loop.
 
+## Multiple canvases — `setContext`
+
+`renderer.setContext(canvas)` points the **next** `render()` at another canvas;
+`render()` hands the default canvas back on its way out, so a binding lasts
+exactly one render — that's the `try/finally` wrapping `render`'s body, which
+covers its early returns (no device / not ready / paused) too.
+`setContext(null)` restores immediately.
+
+`getContext('webgpu')` returns the same object for a given canvas, so the
+context doubles as the per-canvas record: it's configured on first bind, carries
+its own depth texture (`context.depthTexture`), and `setContext` swaps
+`this.gpu` / `this.depthTexture` in and out of it. Consequences:
+
+- Extra canvases are **not** observed — set `canvas.width/height` yourself.
+  `this.width`/`this.height` and the resize handlers track the default canvas
+  only; the depth texture is sized against `this.gpu.canvas` and remade on
+  mismatch. Cameras are per-canvas too (aspect).
+- Only `Renderer.render` follows the binding. VFX passes and anything else
+  holding a `gpu` reference keep drawing into the canvas they were built with.
+- `renderer.contextFor(canvas)` is the same lazy configure **without** binding —
+  use it when only the final blit needs to move: give a fullscreen pass
+  `contextFor(c).getCurrentTexture().createView()` as its `target` (per frame —
+  a swapchain texture doesn't survive one; the context object does). The pass
+  pipeline's `targets[0].format` must be the canvas format, which every canvas
+  here shares (`presentationFormat`).
+- Meshes/pipelines are shared, no per-canvas uniform buffers needed — each draw
+  takes its own `PerDrawBuffer` slice (see below), so one scene can be drawn
+  into N canvases within a frame.
+- After a device loss an extra context still holds the dead device, so it's
+  reconfigured (and its depth texture remade) on the next bind.
+
 ## Transform — quaternion/rotation two-way proxy
 
 `this.rotation` and `this.quaternion` are kept in sync via `onChange` hooks wired

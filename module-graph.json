@@ -1,9 +1,9 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 134,
-    "edges": 249,
-    "modules": 84,
+    "nodes": 136,
+    "edges": 253,
+    "modules": 86,
     "shaders": 43,
     "external": 7
   },
@@ -45,15 +45,15 @@
       "inDegree": 2
     },
     {
+      "id": "examples/primitives/primitives.wgsl",
+      "inDegree": 2
+    },
+    {
       "id": "examples/sorttransparency/sorttransparency.wgsl",
       "inDegree": 2
     },
     {
       "id": "src/core/Mesh.js",
-      "inDegree": 2
-    },
-    {
-      "id": "src/core/PerDrawBuffer.js",
       "inDegree": 2
     }
   ],
@@ -245,6 +245,18 @@
       "outDegree": 3
     },
     {
+      "id": "examples/multicanvas/multicanvas.css",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "examples/multicanvas/MultiCanvas.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 3
+    },
+    {
       "id": "examples/orbitcontrols/orbit.wgsl",
       "type": "shader",
       "inDegree": 1,
@@ -301,7 +313,7 @@
     {
       "id": "examples/primitives/primitives.wgsl",
       "type": "shader",
-      "inDegree": 1,
+      "inDegree": 2,
       "outDegree": 0
     },
     {
@@ -457,7 +469,7 @@
     {
       "id": "pkg:ogpu",
       "type": "external",
-      "inDegree": 27,
+      "inDegree": 28,
       "outDegree": 0
     },
     {
@@ -650,7 +662,7 @@
       "id": "src/main.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 27
+      "outDegree": 28
     },
     {
       "id": "src/math/Color.js",
@@ -1018,6 +1030,18 @@
     },
     {
       "from": "examples/msaa/MSAA.js",
+      "to": "pkg:ogpu"
+    },
+    {
+      "from": "examples/multicanvas/MultiCanvas.js",
+      "to": "examples/multicanvas/multicanvas.css"
+    },
+    {
+      "from": "examples/multicanvas/MultiCanvas.js",
+      "to": "examples/primitives/primitives.wgsl"
+    },
+    {
+      "from": "examples/multicanvas/MultiCanvas.js",
       "to": "pkg:ogpu"
     },
     {
@@ -1591,6 +1615,10 @@
     {
       "from": "src/main.js",
       "to": "examples/msaa/MSAA.js"
+    },
+    {
+      "from": "src/main.js",
+      "to": "examples/multicanvas/MultiCanvas.js"
     },
     {
       "from": "src/main.js",

@@ -25,6 +25,7 @@ import { SortTransparency } from '@examples/sorttransparency/SortTransparency';
 import { FeedbackTrails } from '@examples/feedback/Feedback';
 import { MSAA } from '@examples/msaa/MSAA';
 import { CubeMapExample } from '@examples/cubemap/CubeMap';
+import { MultiCanvas } from '@examples/multicanvas/MultiCanvas';
 import { Loader } from '@examples/Loader';
 //TODO: Post FX WebGPU way
 
@@ -54,6 +55,7 @@ const views = {
     feedback: () => new FeedbackTrails(),
     msaa: () => new MSAA(),
     cubemap: () => new CubeMapExample(),
+    multicanvas: () => new MultiCanvas(),
     hellowebgpu: () => new HelloWebGPU(),
     triangle: () => new Triangle(),
 };
@@ -107,6 +109,7 @@ function renderLanding() {
         { section: 'Frame Buffer' },
         { view: 'rendertargets', label: 'Render to Texture', folder: 'rendertotexture' },
         { view: 'feedback', label: 'Feedback Trails', folder: 'feedback' },
+        { view: 'multicanvas', label: 'Multiple Canvases', folder: 'multicanvas' },
         { view: 'shadowmapping', label: 'Shadow Maps', folder: 'shadowmapping' },
         { section: 'Loaders' },
         { view: 'gltf', label: 'Load glTF', folder: 'gltf' },

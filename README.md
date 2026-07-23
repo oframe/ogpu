@@ -86,6 +86,33 @@ It takes the `RenderPipeline` wrapper, not the raw GPU pipeline, and reads `pipe
 
 The `feedback` example (`?example=feedback`) chains three passes per frame: the scene renders into an offscreen target, a feedback blit blends that over a decayed copy of the previous frame into an accumulation texture, and a present blit puts the result on the swapchain. The two accumulation textures ping-pong — each frame the sampled "previous" and the written target swap — so the pass never reads and writes the same texture.
 
+## Multiple canvases
+
+One device, one frame loop, any number of canvases. `renderer.setContext(canvas)` points the **next** `render()` at another canvas and `render()` hands the default one back on its way out, so a binding lasts exactly one render:
+
+```js
+for (const view of views) {
+    renderer.setContext(view.canvas);
+    renderer.render({ scene, camera: view.camera });
+}
+renderer.render({ scene, camera }); // back on the default canvas
+```
+
+Each extra canvas is configured on first bind and keeps its own depth texture; meshes, pipelines and the scene are shared, since every draw takes its own slice of the renderer's `PerDrawBuffer`. Extra canvases aren't observed — set `canvas.width/height` yourself, and give each one its own camera aspect.
+
+The `multicanvas` example (`?src=multicanvas`) puts eight primitives on eight canvases in a scrollable 2×2 CSS grid — one `ResizeObserver` drives every backing store off its laid-out box, an `IntersectionObserver` skips cells scrolled out of view, and all eight cells record into a single command encoder, so the grid costs one submit per frame.
+
+Only `Renderer.render` follows the binding. When just the final blit of a VFX chain should move, use `renderer.contextFor(canvas)` — the same lazy configure without binding — and hand the pass its view as `target`:
+
+```js
+composite.render({
+    base: sceneRT,
+    bloom: blur.outputView,
+    target: renderer.contextFor(outCanvas).getCurrentTexture().createView(),
+    encoder,
+});
+```
+
 ## PBR shading & IBL
 
 `src/modules/pbr/` is a shader-only library (no JS, imported with `?raw`). The core piece, `pbr.wgsl`, is a glTF-style metallic-roughness shader lit entirely by IBL. It declares the standard `vs`/`fs` + `uniforms` so it drops into a `RenderPipeline`; material factors live in a `Material` block and maps follow the `t<Name>` convention (`tMap`, `tMetallicRoughness`, `tNormal`, `tOcclusion`, `tEmissive`, `tOpacity`). Normal mapping uses vertex tangents when present, else a screen-space derived frame.

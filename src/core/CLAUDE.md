@@ -66,14 +66,16 @@ its own depth texture (`context.depthTexture`), and `setContext` swaps
   `this.width`/`this.height` and the resize handlers track the default canvas
   only; the depth texture is sized against `this.gpu.canvas` and remade on
   mismatch. Cameras are per-canvas too (aspect).
-- Only `Renderer.render` follows the binding. VFX passes and anything else
-  holding a `gpu` reference keep drawing into the canvas they were built with.
+- Only `Renderer.render` follows the binding — `target: null` there means the
+  **bound** canvas. Nothing else does: a `blit` draws into the `targetView` it
+  was handed, and anything holding a `gpu` reference keeps drawing into the
+  canvas it was built with.
 - `renderer.contextFor(canvas)` is the same lazy configure **without** binding —
-  use it when only the final blit needs to move: give a fullscreen pass
-  `contextFor(c).getCurrentTexture().createView()` as its `target` (per frame —
-  a swapchain texture doesn't survive one; the context object does). The pass
-  pipeline's `targets[0].format` must be the canvas format, which every canvas
-  here shares (`presentationFormat`).
+  use it when only the final blit needs to move: hand `blit` a
+  `contextFor(c).getCurrentTexture().createView()` as its `targetView` (per
+  frame — a swapchain texture doesn't survive one; the context object does).
+  The pass pipeline's `targets[0].format` must be the canvas format, which
+  every canvas here shares (`presentationFormat`).
 - Meshes/pipelines are shared, no per-canvas uniform buffers needed — each draw
   takes its own `PerDrawBuffer` slice (see below), so one scene can be drawn
   into N canvases within a frame.

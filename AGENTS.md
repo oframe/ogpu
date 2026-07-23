@@ -92,7 +92,7 @@ Each source directory carries its own `CLAUDE.md` with that area's footguns — 
 
 Two contracts hold across every file — internalize these; per-file traps are in the nested CLAUDE.md files:
 
-- **Pass the `gpu` object, never the raw `device`.** `Renderer.init` augments the canvas context with `.device`/`.presentationFormat`/`.renderer`; that augmented object (`renderer.gpu`) is what every class takes and stores. It's async — `await renderer.ready` before any GPU work (it also bootstraps `window.ktx`).
+- **Pass the `gpu` object, never the raw `device`.** `Renderer.init` augments the canvas context with `.device`/`.presentationFormat`/`.renderer`; that augmented object (`renderer.gpu`) is what every class takes and stores. It's async — `await renderer.ready` before any GPU work (it also bootstraps `window.ktx`). With several canvases each gets the same augmentation via `Renderer.contextFor`, and `renderer.gpu` is whichever canvas is bound for the current `render()` — see `src/core/CLAUDE.md`.
 - **Standard uniforms are written by name.** `Mesh.draw` writes the per-frame uniforms (`projectionMatrix`, `viewMatrix`, `modelMatrix`, `modelViewMatrix`, `objectMatrix`, `normalMatrix`, `cameraPosition`, `cameraQuaternion`, `resolution`, `time`) into a per-draw slice of the renderer-owned `PerDrawBuffer` (the mesh's structured view is built from the pipeline's reflected `uniforms` struct) via webgpu-utils reflection, matched by struct field name — group(0) binds with a dynamic offset, so one mesh can draw in several passes of a single submit. Any shader bound through a Mesh declares a `Uniforms` struct with the subset it uses; a misnamed field is **silently skipped**, no error. (Per-file details in `src/core/CLAUDE.md`.)
 
 Scene graph, frustum culling, hot-reload (`ShaderReload` globs `src/**/*.wgsl` and rebuilds matching pipelines on edit), and the per-frame queue all live in `src/core/` — read its CLAUDE.md before touching render flow.
@@ -130,7 +130,7 @@ Aliases work for `?raw` shader imports too (`import s from '@modules/pbr/pbr.wgs
 1. Example's `update` (or `renderer.add(cb)`) calls `renderer.render({scene, camera, target?})`.
 2. `Renderer.render` updates camera/scene world matrices, walks the scene via `Transform.traverse`, splits nodes into opaque/transparent/UI buckets, sorts each, and concatenates into `this.renderQueue`.
 3. For each node, `node.draw({camera, pass, time})` writes uniforms and issues the draw call.
-4. If `target` is passed, render-pass attachments come from that `RenderTarget`'s textures (and MSAA resolve targets if present); otherwise it draws to the swapchain + the renderer's own depth texture.
+4. If `target` is passed, render-pass attachments come from that `RenderTarget`'s textures (and MSAA resolve targets if present); otherwise into the swapchain of the canvas bound by `setContext` — the default one unless you bound another for this render — plus the renderer's own depth texture, sized against that canvas (see `src/core/CLAUDE.md`).
 
 `Renderer.render` accepts an external `encoder` to chain multiple passes in one submit; if omitted, it creates and submits its own command buffer.
 

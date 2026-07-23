@@ -84,6 +84,8 @@ blit(encoder, { pipeline, geometry: gpu.TRIANGLE, targetView, bindGroup, clear: 
 
 It takes the `RenderPipeline` wrapper, not the raw GPU pipeline, and reads `pipeline.hasDynamicUniform` to decide whether group(0) needs the per-draw dynamic offset — so a pass whose shader binds only a sampler + texture doesn't need a `Uniforms` struct at all.
 
+`targetView` is explicit and a blit lands wherever it points, so `renderer.setContext` (below) never reaches one — to blit onto another canvas take the view from `renderer.contextFor(canvas)`.
+
 The `feedback` example (`?example=feedback`) chains three passes per frame: the scene renders into an offscreen target, a feedback blit blends that over a decayed copy of the previous frame into an accumulation texture, and a present blit puts the result on the swapchain. The two accumulation textures ping-pong — each frame the sampled "previous" and the written target swap — so the pass never reads and writes the same texture.
 
 ## Multiple canvases
@@ -100,16 +102,16 @@ renderer.render({ scene, camera }); // back on the default canvas
 
 Each extra canvas is configured on first bind and keeps its own depth texture; meshes, pipelines and the scene are shared, since every draw takes its own slice of the renderer's `PerDrawBuffer`. Extra canvases aren't observed — set `canvas.width/height` yourself, and give each one its own camera aspect.
 
-The `multicanvas` example (`?src=multicanvas`) puts eight primitives on eight canvases in a scrollable 2×2 CSS grid — one `ResizeObserver` drives every backing store off its laid-out box, an `IntersectionObserver` skips cells scrolled out of view, and all eight cells record into a single command encoder, so the grid costs one submit per frame.
+The `multicanvas` example (`?example=multicanvas`) puts eight primitives on eight canvases in a scrollable 2×2 CSS grid — one `ResizeObserver` drives every backing store off its laid-out box, an `IntersectionObserver` skips cells scrolled out of view, and all eight cells record into a single command encoder, so the grid costs one submit per frame.
 
-Only `Renderer.render` follows the binding. When just the final blit of a VFX chain should move, use `renderer.contextFor(canvas)` — the same lazy configure without binding — and hand the pass its view as `target`:
+Only `Renderer.render` follows the binding — a `blit` draws into the `targetView` it was handed, from whatever context you hold. When just the final pass of a chain should move, use `renderer.contextFor(canvas)` — the same lazy configure without binding — and take its view per frame (a swapchain texture doesn't survive one; the context object does):
 
 ```js
-composite.render({
-    base: sceneRT,
-    bloom: blur.outputView,
-    target: renderer.contextFor(outCanvas).getCurrentTexture().createView(),
-    encoder,
+blit(encoder, {
+    pipeline: composite,
+    geometry: gpu.TRIANGLE,
+    bindGroup,
+    targetView: renderer.contextFor(outCanvas).getCurrentTexture().createView(),
 });
 ```
 

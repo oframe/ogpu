@@ -15,8 +15,8 @@ Multi-canvas rendering — one device and one frame loop driving any number of c
   reconfigures it on the next bind. Extra canvases are **not** observed: set
   `canvas.width/height` yourself (the renderer only watches its own).
 - **`Renderer.contextFor(canvas)`** — the same lazy configure **without** binding.
-  Hand a fullscreen pass `contextFor(c).getCurrentTexture().createView()` as its
-  `target` to land composited output on another canvas; the pass pipeline's
+  Hand `blit` a `contextFor(c).getCurrentTexture().createView()` as its
+  `targetView` to land composited output on another canvas; the pass pipeline's
   `targets[0].format` must be the canvas format, which every canvas here shares.
 
 - **`?src=multicanvas` example** — eight primitives (box, sphere, torus,

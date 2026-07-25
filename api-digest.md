@@ -96,8 +96,8 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - sortTransparent(a, b)
   - sortUI(a, b)
   - getRenderQueue({ scene, camera, sort = true, frustumCull = true } = {})
-  - setContext(canvas = null)
-  - contextFor(canvas)
+  - setContext(canvas = null, options)
+  - contextFor(canvas, { transparent, format } = {})
   - render({ scene, camera, target = null, loadOp = 'clear', storeOp = 'store', depthLoadOp = 'clear…)
 
 ### src/core/ShaderReload.js

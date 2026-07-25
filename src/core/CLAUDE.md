@@ -90,8 +90,17 @@ its own depth texture (`context.depthTexture`), and `setContext` swaps
   use it when only the final blit needs to move: hand `blit` a
   `contextFor(c).getCurrentTexture().createView()` as its `targetView` (per
   frame — a swapchain texture doesn't survive one; the context object does).
-  The pass pipeline's `targets[0].format` must be the canvas format, which
-  every canvas here shares (`presentationFormat`).
+  The pass pipeline's `targets[0].format` must be the canvas format — every
+  canvas defaults to the shared `presentationFormat`.
+- Both `setContext(canvas, options)` and `contextFor(canvas, options)` take
+  per-canvas `{transparent, format}` — an opaque main canvas + a transparent
+  overlay no longer needs two renderers. Omitted options stick to whatever the
+  canvas was last configured with (device-loss reconfigure preserves them);
+  first configure falls back to the renderer defaults. A custom `format`
+  means pipelines drawn into that canvas must be built with
+  `targets: [{format}]` (or with that canvas's context as their `gpu`) — the
+  engine default targets `presentationFormat` and will fail attachment
+  validation against a differently-formatted canvas.
 - Meshes/pipelines are shared, no per-canvas uniform buffers needed — each draw
   takes its own `PerDrawBuffer` slice (see below), so one scene can be drawn
   into N canvases within a frame.

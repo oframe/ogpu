@@ -202,13 +202,15 @@ export class Renderer {
         this.gpu.renderer = this;
 
         this.presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+        const alphaMode = this.transparent ? AlphaMode.PREMULTIPLIED : AlphaMode.OPAQUE;
         this.gpu.configure({
             device,
             format: this.presentationFormat,
-            alphaMode: this.transparent ? AlphaMode.PREMULTIPLIED : AlphaMode.OPAQUE,
+            alphaMode,
         });
 
         this.gpu.presentationFormat = this.presentationFormat;
+        this.gpu.alphaMode = alphaMode;
 
         // Shared fullscreen geometries for blit / fullscreen passes. TRIANGLE is
         // the default (oversized single triangle, seamless, cheapest); QUAD is for
@@ -599,7 +601,8 @@ export class Renderer {
     // shared PerDrawBuffer, so drawing one scene into N canvases per frame
     // needs no per-canvas buffers. Only Renderer.render follows the binding —
     // fullscreen VFX passes draw into whatever `gpu` they were built with.
-    setContext(canvas = null) {
+    // `options` ({transparent, format}) configures THIS canvas — see contextFor.
+    setContext(canvas = null, options) {
         // pre-ready or destroyed: nothing bound yet, nothing to restore
         if (!this.gpu) return;
         const target = canvas || this.canvas;
@@ -609,7 +612,7 @@ export class Renderer {
         this.gpu.depthTexture = this.depthTexture;
         this.gpu.depthView = this._depthView;
 
-        const context = this.contextFor(target);
+        const context = this.contextFor(target, options);
         this.gpu = context;
         this.depthTexture = context.depthTexture ?? null;
         this._depthView = context.depthView ?? null;
@@ -621,24 +624,42 @@ export class Renderer {
     // the same object for a given canvas, so the context doubles as the
     // per-canvas record — configured once, and again after a device loss (by
     // then its `device` is the dead one, and its depth texture died with it).
-    contextFor(canvas) {
+    //
+    // `options` configures THIS canvas independently of the renderer defaults:
+    //   transparent — premultiplied vs opaque compositing for this canvas
+    //   format      — swapchain format; pipelines drawn into it must target it
+    //                 (`targets: [{format}]`), the engine default targets
+    //                 `presentationFormat`
+    // Omitted options keep whatever the canvas was last configured with (so a
+    // device-loss reconfigure preserves per-canvas choices), falling back to
+    // the renderer-level `transparent`/preferred-format defaults.
+    contextFor(canvas, { transparent, format } = {}) {
         const context = canvas.getContext('webgpu');
-        if (context.device === this.gpu.device) return context;
+
+        const _format = format ?? context.presentationFormat ?? this.presentationFormat;
+        const _alphaMode =
+            transparent === undefined ? (context.alphaMode ?? (this.transparent ? AlphaMode.PREMULTIPLIED : AlphaMode.OPAQUE)) : transparent ? AlphaMode.PREMULTIPLIED : AlphaMode.OPAQUE;
+
+        const deviceStale = context.device !== this.gpu.device;
+        if (!deviceStale && context.presentationFormat === _format && context.alphaMode === _alphaMode) return context;
 
         context.configure({
             device: this.gpu.device,
-            format: this.presentationFormat,
-            alphaMode: this.transparent ? AlphaMode.PREMULTIPLIED : AlphaMode.OPAQUE,
+            format: _format,
+            alphaMode: _alphaMode,
         });
 
         Object.assign(context, {
             device: this.gpu.device,
             renderer: this,
-            presentationFormat: this.presentationFormat,
+            presentationFormat: _format,
+            alphaMode: _alphaMode,
             TRIANGLE: this.gpu.TRIANGLE,
             QUAD: this.gpu.QUAD,
-            depthTexture: null,
-            depthView: null,
+            // depth died with a lost device; a same-device format/alpha
+            // reconfigure keeps it (depth format is independent of color)
+            depthTexture: deviceStale ? null : (context.depthTexture ?? null),
+            depthView: deviceStale ? null : (context.depthView ?? null),
         });
 
         this._contexts.add(context);

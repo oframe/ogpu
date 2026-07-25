@@ -957,6 +957,15 @@ export interface UpdateArgs {
     deltaTime: number;
 }
 
+/** Per-canvas swapchain config for setContext/contextFor. Omitted fields keep
+ *  the canvas's last configuration (renderer defaults on first configure). */
+export interface CanvasContextOptions {
+    /** Premultiplied (true) vs opaque (false) compositing for this canvas. */
+    transparent?: boolean;
+    /** Swapchain format — pipelines drawn into this canvas must target it. */
+    format?: GPUTextureFormat;
+}
+
 export class Renderer {
     constructor(options?: RendererOptions);
     canvas: HTMLCanvasElement;
@@ -1022,9 +1031,9 @@ export class Renderer {
     getRenderQueue(options: { scene: Transform; camera?: Camera; sort?: boolean; frustumCull?: boolean }): Mesh[];
     render(options: RenderOptions): void;
     /** Bind another canvas for exactly the next render(); null restores now. */
-    setContext(canvas?: HTMLCanvasElement | null): void;
+    setContext(canvas?: HTMLCanvasElement | null, options?: CanvasContextOptions): void;
     /** Configured, augmented context for any canvas — its view is a pass `target`. */
-    contextFor(canvas: HTMLCanvasElement): GPU;
+    contextFor(canvas: HTMLCanvasElement, options?: CanvasContextOptions): GPU;
 }
 
 // =============================================================================

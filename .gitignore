@@ -138,3 +138,6 @@ public/assets/splats/hornedlizard.spz
 # webgpu-spec-lookup: downloaded + preprocessed spec cache (regenerated daily)
 .claude/skills/webgpu-spec-lookup/webgpu-spec.txt
 .claude/skills/webgpu-spec-lookup/__pycache__/
+
+# deferred-work specs (local only)
+todo/

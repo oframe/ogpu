@@ -8,12 +8,8 @@ This file provides guidance to coding agents (Claude Code, OpenAI Codex, Cursor,
 
 ## Commands
 
-- `npm install` — install deps
-- `npm run dev` — start Vite dev server (default http://localhost:5173)
-- `npm run build` — production build
-- `npm run preview` — serve built output
-- `npm run lint` / `npm run lint:fix` — ESLint (flat config, `eslint.config.js`)
-- `npm run format` / `npm run format:check` — Prettier (config under the `"prettier"` key in `package.json`)
+Standard scripts (`dev`, `build`, `preview`, `lint`, `format`) are in `package.json`. The one worth documenting:
+
 - `npm run validate:shaders` — validate every `**/*.wgsl` in the repo (`src/` and `examples/` both) with `naga` (the wgpu WGSL compiler). Install via `brew install naga-cli` (or `cargo install naga-cli`) — **not** `brew install naga`, which is an unrelated Snake game that conflicts on the same binary name; script exits 2 if absent. Use this to check shader edits without a browser. Single file: `node scripts/validate-shaders.mjs <file>`.
 
 No tests or typechecker configured. ESLint + Prettier are set up (format-on-save in the repo). No TypeScript, though hand-written ambient declarations live in `types/ogpu.d.ts` for anyone consuming/migrating to TS.
@@ -114,14 +110,7 @@ Conventions enforced by reflection (`webgpu-utils`):
 
 ### Import aliases
 
-`vite.config.js` defines path aliases (mirrored in `jsconfig.json` for editor resolution). Use these for cross-directory imports instead of `../../`:
-
-- `@core/*` → `src/core/*`
-- `@math/*` → `src/math/*`
-- `@modules/*` → `src/modules/*`
-- `@utils/*` → `src/utils/*`
-- `@examples/*` → `examples/*`
-- `@/*` → `src/*`
+`vite.config.js` defines path aliases (mirrored in `jsconfig.json` for editor resolution). Use these for cross-directory imports instead of `../../`.
 
 Aliases work for `?raw` shader imports too (`import s from '@modules/pbr/pbr.wgsl?raw'`). Keep same-directory imports relative (`./cube.wgsl?raw`).
 

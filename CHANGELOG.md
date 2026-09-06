@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.6.0
+
+A cheaper BRDF integration LUT, an analytic env-BRDF alternative to sampling it,
+and a leaner agent-guidance set.
+
+### Added
+
+- **`Material.useBrdfApprox`** (`1` = on) in `pbr.wgsl` — swaps the `tBrdf` LUT
+  sample for Karis' analytic environment-BRDF fit from "Physically Based Shading
+  on Mobile", trading one texture fetch for a few ALU ops (worth it on tile-based
+  GPUs; slightly off at grazing angles). It's a runtime uniform, not an override
+  constant, so it toggles without a pipeline rebuild — the LUT still has to be
+  bound either way. Wired to a `brdf-approx` checkbox in the `?src=pbrshader`
+  example.
+
+### Changed
+
+- **The split-sum BRDF LUT is stored as `rg16float`**, not `rgba16float` — the
+  shader only ever wrote and read two channels, so this halves the texture for
+  identical output. `rg16float` as a storage binding is gated behind the
+  `texture-formats-tier1` feature, so `createBrdfLUT` feature-detects it and falls
+  back to `rgba16float` (patching the format into the compute source) on adapters
+  without it. `pbr.wgsl` reads `.xy` either way.
+- **`AGENTS.md` and the nested `CLAUDE.md` files were rightsized** for the Claude
+  5 generation's context rules: procedural scaffolding and file-system-derivable
+  material dropped, cross-file duplication collapsed to a single owner, tokens
+  kept on the non-obvious gotchas. `AGENTS.md` went from 139 lines to 73 with no
+  loss of engine-specific guidance.
+
 ## 0.5.0
 
 Multi-canvas rendering — one device and one frame loop driving any number of canvases.

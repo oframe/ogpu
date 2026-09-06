@@ -1,139 +1,73 @@
 # AGENTS.md
 
-This file provides guidance to coding agents (Claude Code, OpenAI Codex, Cursor, Gemini CLI, …) when working with code in this repository. It is the shared source of truth. Codex and Cursor Agent mode read it natively; the other tools bridge to it so nothing is duplicated:
+Shared agent guidance for this repo. `CLAUDE.md` / `GEMINI.md` / `.cursor/rules/main.mdc` are one-line imports of this file — edit here only.
 
-- `CLAUDE.md` — one-line `@AGENTS.md` import (Claude Code).
-- `GEMINI.md` — one-line `@AGENTS.md` import (Gemini CLI).
-- `.cursor/rules/main.mdc` — always-applied rule referencing `@AGENTS.md` (Cursor Chat/Composer).
+Hand-rolled WebGPU engine. Vanilla JS, Vite, no framework, no TypeScript (ambient decls in `types/ogpu.d.ts` for TS consumers). No tests, no typechecker. ESLint + Prettier, format-on-save.
 
-## Commands
+## Where things are
 
-Standard scripts (`dev`, `build`, `preview`, `lint`, `format`) are in `package.json`. The one worth documenting:
+- `api-digest.md` — generated public-surface index (every exported class, its method signatures, barrel re-exports). Read it for any signature or constructor option instead of opening the file.
+- `module-graph.json` — generated import graph; `hubs` lists the highest-in-degree modules. Trace `edges` instead of grepping for importers.
+- Both regenerate with `npm run repomap`. A pre-commit hook runs `repomap:check` and blocks stale copies — if a commit is blocked, `git add api-digest.md module-graph.json` and recommit.
 
-- `npm run validate:shaders` — validate every `**/*.wgsl` in the repo (`src/` and `examples/` both) with `naga` (the wgpu WGSL compiler). Install via `brew install naga-cli` (or `cargo install naga-cli`) — **not** `brew install naga`, which is an unrelated Snake game that conflicts on the same binary name; script exits 2 if absent. Use this to check shader edits without a browser. Single file: `node scripts/validate-shaders.mjs <file>`.
+This file is the _why_; api-digest is the _what_. Keep method lists out of here.
 
-No tests or typechecker configured. ESLint + Prettier are set up (format-on-save in the repo). No TypeScript, though hand-written ambient declarations live in `types/ogpu.d.ts` for anyone consuming/migrating to TS.
+Each source directory has its own `CLAUDE.md` with that area's footguns, auto-loaded when you read files there:
+`src/core/` (Renderer, Transform, Camera, Mesh, RenderPipeline, Geometry, ComputeShader, Texture, RenderTarget, PerDrawBuffer, `primitives/`, `skin/`, ShaderReload) · `src/math/` (`Float32Array`-subclass wrappers over `wgpu-matrix`) · `src/modules/` (Orbit, Raycast, GUI, Animation, GLTFLoader, CubeMap, VideoTexture, `pbr/`) · `src/utils/IBLUtils/`.
+`src/utils/` is standalone helpers; `examples/` is runnable demos at the repo root.
+
+`examples/` covers shadows, skinning, PBR/IBL, render targets, compute particles, glTF. Anything overlapping those extends the existing path rather than starting a new one.
+
+## Two cross-cutting contracts
+
+- **Pass the `gpu` object, never the raw `device`.** `Renderer.init` augments the canvas context with `.device`/`.presentationFormat`/`.renderer`; that object (`renderer.gpu`) is what every class takes and stores. It's async — `await renderer.ready` before any GPU work (it also bootstraps `window.ktx`).
+- **Standard uniforms are written by name.** `Mesh.draw` matches `projectionMatrix`, `viewMatrix`, `modelMatrix`, `modelViewMatrix`, `objectMatrix`, `normalMatrix`, `cameraPosition`, `cameraQuaternion`, `resolution`, `time` against the shader's reflected `Uniforms` struct. A misnamed field is **silently skipped** — no error, stale value. Details in `src/core/CLAUDE.md`.
+
+`Renderer.render` takes an optional external `encoder` to chain passes into one submit, and `target` selects a `RenderTarget`'s attachments over the bound canvas swapchain.
 
 ## Coding conventions
 
-- **Labels are kebab-case.** Every `label:` string (WebGPU resource debug labels and GUI/tweakpane display text) is lowercase, hyphen-separated; interpolations preserved, e.g. `` `${this.label}-bone-buffer` ``.
-- **WGSL `let` vs `var`.** In generated shaders use `let` for values that never change and `var` only where the binding is reassigned — don't default everything to `var`.
-- **WGSL short type aliases.** Use the short alias form, not the verbose generic: `vec3f` not `vec3<f32>`, `vec2u`/`vec4i` not `vec2<u32>`/`vec4<i32>`, `mat4x4f` not `mat4x4<f32>` (and the `h` suffix for `f16`). Texture/atomic/array/ptr types keep their generic form — they have no alias.
-- **WGSL vertex entry parameter is named `in`.** The vertex stage takes its input struct as `in`, not `v` — `fn vs(in: Vertex) -> VertexOutput` (mirrors `fn fs(in: VertexOutput)`). Reference attributes as `in.position`, `in.uv`, etc.
-- **Comments are short, terse, and earn their place.** Write one only when it adds signal the code can't (a why, a gotcha, a non-obvious invariant); skip narration. Don't restate what belongs in a CLAUDE.md.
-- **No `ponytail:` (or other agent-mode) prefixes in committed comments.** Keep the comment's content if it earns its place per the rule above — just strip the `ponytail:`/agent prefix. Generated code carries no trace of the tool that wrote it.
-- **WebGPU / webgpu-utils → use the lookup skills.** Any question or change touching the WebGPU platform uses `webgpu-spec-lookup`; anything touching the `webgpu-utils` library uses `webgpu-utils-lookup`. Don't answer from memory.
+- **Labels are kebab-case.** Every `label:` string (WebGPU debug labels, GUI display text) is lowercase-hyphenated; interpolations preserved, e.g. `` `${this.label}-bone-buffer` ``.
+- **WGSL `let` vs `var`.** `let` for values that never change, `var` only where reassigned.
+- **WGSL short type aliases.** `vec3f` not `vec3<f32>`, `mat4x4f` not `mat4x4<f32>` (`h` suffix for f16). Texture/atomic/array/ptr keep their generic form.
+- **WGSL vertex entry parameter is named `in`** — `fn vs(in: Vertex) -> VertexOutput`, mirroring `fs`.
+- **Comments earn their place.** Only when they add a why, a gotcha, or a non-obvious invariant. No `ponytail:`/agent prefixes in committed comments — keep the content, strip the prefix.
+- **Use the lookup skills, don't answer from memory.** WebGPU platform questions → `webgpu-spec-lookup`. `webgpu-utils` library questions → `webgpu-utils-lookup`.
 
-## Navigation aids (for agents)
+## Shaders
 
-Two generated, checked-in artifacts at the repo root let you navigate without opening every file. Both are static — regenerate after the relevant change.
+WGSL lives next to its importer, loaded via `?raw`. Cross-example shaders live in `src/modules/pbr/`. Aliases work in `?raw` imports (`@modules/pbr/pbr.wgsl?raw`); keep same-directory imports relative.
 
-- **`api-digest.md`** — terse public-surface index: every exported class with its public method signatures, exported functions/consts, and barrel re-exports. **This is the canonical _what_ — read it for any signature, constructor option, or method name instead of opening the file or repeating the API here.** Regenerate with `node scripts/build-api-digest.mjs`.
-- **`module-graph.json`** — static import graph: nodes = source files / `?raw` shaders / external packages, edges = imports, each node carries `inDegree`/`outDegree`. The `hubs` array lists the highest-in-degree modules — the structural cores worth reading first (`Geometry`, `BufferUtils`, `math`, `RenderPipeline`, `Transform`…). Trace `edges` to find every importer/importee of a file instead of grepping. Regenerate with `node scripts/build-module-graph.mjs`.
+Conventions enforced by `webgpu-utils` reflection:
 
-This file is the _why_ (rationale, gotchas, conventions); api-digest is the _what_ (signatures); module-graph is the _who-imports-what_. When they overlap, signatures live in api-digest — keep this file free of method lists.
+- Render uniform block must be named `uniforms` (lowercase), typed as a struct. `RenderPipeline` reads `this.defs.uniforms.uniforms` directly.
+- Entry points: vertex `vs`, fragment `fs`, hardcoded in `RenderPipeline`. Compute entry points can be anything — each becomes a kernel keyed by its name.
+- Texture uniforms take a `t<Name>` prefix (`tMap`, `tNormal`, `tBrdf`). Samplers are not textures — descriptive names (`iblSampler`).
 
-Both are kept honest by a **drift gate**: `npm run repomap` regenerates both; `npm run repomap:check` regenerates and fails if either differs from the committed copy. A tracked pre-commit hook (`.githooks/pre-commit`, wired via `core.hooksPath` by the `prepare` script on `npm install`) runs the check and blocks any commit that would land a stale digest/graph — so they can be trusted as current. If a commit is blocked, `git add api-digest.md module-graph.json` and recommit.
+`npm run validate:shaders` checks every `**/*.wgsl` with `naga`, no browser needed (single file: `node scripts/validate-shaders.mjs <file>`). Install with `brew install naga-cli` — **not** `brew install naga`, an unrelated Snake game that takes the same binary name.
+
+## Optional features are not guaranteed
+
+`Renderer.initDevice` feature-detects its `wantedFeatures` wishlist and drops (with a warn) anything the adapter lacks, so the engine boots anywhere. Guard any path that needs one on `device.features.has(...)` — `TimingHelper` gates on `'timestamp-query'`, `ComputeShader` timing is opt-in via `timing: true`. Texture-compression families are platform-split (`astc`/`etc2` ≈ mobile/Apple, `bc` ≈ desktop).
 
 ## Running examples
 
 `src/main.js` handles two query strings — don't confuse them:
 
-- **`?example=<key>`** — the user-facing URL. Renders the gallery (sidebar of links + preview iframe) with that example selected; the iframe loads `./?src=<key>` internally. This is what you link to and what `history.replaceState` writes as you click through. With no `example=`, the gallery opens on a random one.
-- **`?src=<key>`** — boots that example standalone on the page's own canvas, no gallery chrome. This is what the iframe (and cmd/ctrl-click) uses.
+- **`?example=<key>`** — user-facing gallery (sidebar + preview iframe); the iframe loads `./?src=<key>` internally. This is what you link to.
+- **`?src=<key>`** — boots that example standalone on the page's own canvas, no gallery chrome.
 
-Example keys live in the `views` map; the gallery rows live in the `links` array below it. Read those two rather than trusting a copy here.
+Keys live in the `views` map, gallery rows in the `links` array below it. New example: class under `examples/<name>/`, import it in `src/main.js`, add both entries.
 
-To add a new example: drop a class under `examples/<name>/`, import it in `src/main.js`, add a `views` entry, and add a `links` entry so it shows in the gallery.
+## Assets and external deps
 
-WebGPU requires a recent Chromium-based browser. See "Browser floor" below for the (currently very high) feature requirements.
+- `public/assets/` — KTX cubemaps, PBR textures, JSON rigs/animations. Plain `fetch('./assets/...')`.
+- `public/libktx_read.js` + `.wasm` — Khronos KTX reader, loaded as a global `<script>` in `index.html`; `initDevice` stashes it on `window.ktx`, ready once `renderer.ready` resolves.
+- `wgpu-matrix` — functions mutate the out param (last arg) and return it.
+- `webgpu-utils` — reflection, buffer/attribute creation, primitive generators.
+- `parse-exr` — EXR loading inside `@utils/IBLUtils`.
+- `@utils/wgslOverrides` (`applyOverrideConstants`) — Safari lacks pipeline-overridable constants, so this bakes `override` decls into module-scope `const` literals before compile, resolving default expressions to numeric literals so webgpu-utils' parser doesn't choke.
 
-## Before building a feature: scan examples first
+Recurring trap across areas: destroying/recreating a `Texture` invalidates its views, so any bind group holding them is stale — rebuild against `pipeline.bindGroupLayout(i)`.
 
-Any build request that overlaps an existing capability (shadows, skinning, PBR/IBL, render targets, compute particles, glTF loading, …) starts with a scan of `examples/` — **not** a from-scratch implementation. Steps:
-
-1. Read `api-digest.md` and `module-graph.json` to map the public surface and importers, then open the relevant `examples/<name>/` and the `src/` it leans on.
-2. Decide whether what's there carries enough context to do the task:
-    - **Enough** → build on the existing primitive/pattern; don't reinvent it.
-    - **Partial** → extend the existing path; note the gap explicitly before coding.
-    - **Missing** → only then write new core code, following the cross-cutting contracts above.
-3. If the work adds/changes public surface or imports, regenerate the navigation aids so they don't drift: `npm run repomap` (or `node scripts/build-api-digest.mjs` + `node scripts/build-module-graph.mjs`), and commit the updated `api-digest.md` / `module-graph.json`. The pre-commit drift gate blocks stale copies.
-
-Example: a "add shadows" prompt first checks whether any example already does depth-pass / render-target shadow work before introducing a new shadow path.
-
-## Browser floor
-
-`Renderer.initDevice` (`src/core/Renderer.js`) keeps a `wantedFeatures` wishlist and **feature-detects** it: each entry is kept only if `adapter.features.has(...)`, and the filtered result is what's passed to `requestDevice`. Anything the adapter lacks is dropped (and logged via `console.warn`) instead of failing the device request. This means the engine boots on any WebGPU-capable adapter; capable machines (e.g. Chrome Canary with everything enabled) still get the full set unchanged.
-
-Consequences for code you add:
-
-- **Don't assume an optional feature is present.** If a code path needs one, guard on `device.features.has(...)` (e.g. `TimingHelper` gates all timestamp work on `'timestamp-query'`; `ComputeShader` timing is opt-in via `timing: true`). Texture-compression formats (`astc`/`etc2` ≈ mobile/Apple, `bc` ≈ desktop) are platform-split — never assume a given family loads.
-- The wishlist still reflects the engine's _ideal_ target; trimming it to your real needs is a fork decision, but no longer required to boot.
-
-## Architecture
-
-Hand-rolled WebGPU engine. Vanilla JS, Vite build, no framework, no TypeScript.
-
-Each source directory carries its own `CLAUDE.md` with that area's footguns — Claude Code auto-loads it when you read/edit files there, so the _why_ arrives next to the code. This root file holds only the **cross-cutting** model + conventions; per-area gotchas live in the nested files; per-symbol signatures live in `api-digest.md`. Don't restate a directory's internals here.
-
-### Directory map
-
-- `src/core/` — engine primitives: Renderer, Transform, Camera, Mesh, RenderPipeline, Geometry, ComputeShader, Texture, RenderTarget, PerDrawBuffer, GPUEnums, `primitives/`, `skin/`, ShaderReload. → **`src/core/CLAUDE.md`**
-- `src/math/` — chainable three.js-style wrappers over `wgpu-matrix` (Vec2–4, Quat, Mat3/4, Euler, Color), each a `Float32Array` subclass; alias `@math`. → **`src/math/CLAUDE.md`**
-- `src/modules/` — optional higher-level pieces: Orbit, Raycast, GUI, Animation, GLTFLoader, CubeMap, VideoTexture, `pbr/` (shader-only IBL library); alias `@modules`. → **`src/modules/CLAUDE.md`**.
-- `src/utils/` — standalone helpers; alias `@utils` (see "Assets and external deps").
-- `examples/` — runnable demos (repo root, outside `src/`), switched by `?src=` in `src/main.js` (see "Running examples").
-
-### Cross-cutting model
-
-Two contracts hold across every file — internalize these; per-file traps are in the nested CLAUDE.md files:
-
-- **Pass the `gpu` object, never the raw `device`.** `Renderer.init` augments the canvas context with `.device`/`.presentationFormat`/`.renderer`; that augmented object (`renderer.gpu`) is what every class takes and stores. It's async — `await renderer.ready` before any GPU work (it also bootstraps `window.ktx`). With several canvases each gets the same augmentation via `Renderer.contextFor`, and `renderer.gpu` is whichever canvas is bound for the current `render()` — see `src/core/CLAUDE.md`.
-- **Standard uniforms are written by name.** `Mesh.draw` writes the per-frame uniforms (`projectionMatrix`, `viewMatrix`, `modelMatrix`, `modelViewMatrix`, `objectMatrix`, `normalMatrix`, `cameraPosition`, `cameraQuaternion`, `resolution`, `time`) into a per-draw slice of the renderer-owned `PerDrawBuffer` (the mesh's structured view is built from the pipeline's reflected `uniforms` struct) via webgpu-utils reflection, matched by struct field name — group(0) binds with a dynamic offset, so one mesh can draw in several passes of a single submit. Any shader bound through a Mesh declares a `Uniforms` struct with the subset it uses; a misnamed field is **silently skipped**, no error. (Per-file details in `src/core/CLAUDE.md`.)
-
-Scene graph, frustum culling, hot-reload (`ShaderReload` globs `src/**/*.wgsl` and rebuilds matching pipelines on edit), and the per-frame queue all live in `src/core/` — read its CLAUDE.md before touching render flow.
-
-### Shaders
-
-WGSL usually lives next to the JS that imports it and is loaded via Vite's `?raw` suffix (shaders shared across examples/modules instead live in `src/modules/pbr/` — see Modules above — and are imported via the `@modules/pbr/*` alias):
-
-```js
-import myShader from './my.wgsl?raw';
-```
-
-Conventions enforced by reflection (`webgpu-utils`):
-
-- The render uniform block must be named `uniforms` (lowercase) and typed as a struct (commonly `Uniforms`). `RenderPipeline` does `this.defs.uniforms.uniforms` directly.
-- Vertex entry point is `vs`, fragment is `fs`. Hardcoded in `RenderPipeline`.
-- Compute entry points can be anything — every entry point in the module becomes a kernel keyed by its name.
-- Texture uniforms are named with a `t<Name>` prefix (e.g. `tMap`, `tNormal`, `tSpecular`, `tBrdf`). Samplers are not textures and keep descriptive names (`iblSampler`, `materialSampler`).
-
-### Import aliases
-
-`vite.config.js` defines path aliases (mirrored in `jsconfig.json` for editor resolution). Use these for cross-directory imports instead of `../../`.
-
-Aliases work for `?raw` shader imports too (`import s from '@modules/pbr/pbr.wgsl?raw'`). Keep same-directory imports relative (`./cube.wgsl?raw`).
-
-### Data flow per frame
-
-1. Example's `update` (or `renderer.add(cb)`) calls `renderer.render({scene, camera, target?})`.
-2. `Renderer.render` updates camera/scene world matrices, walks the scene via `Transform.traverse`, splits nodes into opaque/transparent/UI buckets, sorts each, and concatenates into `this.renderQueue`.
-3. For each node, `node.draw({camera, pass, time})` writes uniforms and issues the draw call.
-4. If `target` is passed, render-pass attachments come from that `RenderTarget`'s textures (and MSAA resolve targets if present); otherwise into the swapchain of the canvas bound by `setContext` — the default one unless you bound another for this render — plus the renderer's own depth texture, sized against that canvas (see `src/core/CLAUDE.md`).
-
-`Renderer.render` accepts an external `encoder` to chain multiple passes in one submit; if omitted, it creates and submits its own command buffer.
-
-### Assets and external deps
-
-- `public/assets/` — KTX cubemaps, PBR textures, JSON rigs/animations for skinning, etc. Referenced via plain `fetch('./assets/...')`.
-- `public/libktx_read.js` + `libktx_read.wasm` — Khronos KTX reader, loaded as a global `<script>` in `index.html`. `Renderer.initDevice` calls `window.createKtxReadModule(...)` and stashes the result on `window.ktx`. Anything that consumes KTX assumes `window.ktx` is ready after `renderer.ready` resolves.
-- `wgpu-matrix` — all matrix/vector math. Functions mutate the out param (last arg) and return it.
-- `webgpu-utils` — shader reflection, buffer/attribute creation, primitive generators (`primitives.createCubeVertices()` etc).
-- `parse-exr` — used by `src/utils/IBLUtils/IBLUtils.js` to load EXR environment maps; `IBLUtils` also builds IBL cubemaps (GGX prefilter + octahedral/equirect unpack, shaders co-located in `src/utils/IBLUtils/`) — `loadIBLCubeMap(gpu, {...})` is the entry point; its result carries `mipLevels`, which `pbr.wgsl` consumers feed back as the `roughnessLevels` override constant.
-
-`src/utils/` holds standalone helpers reached via the `@utils/*` alias (signatures in api-digest): `BufferUtils`, `RenderUtils` (the `blit` fullscreen-pass helper — draws `gpu.TRIANGLE`/`gpu.QUAD` through a `RenderPipeline` wrapper into a color-only pass), `IBLUtils`, `ktxutils`, `Mat3Utils`/`Mat4Utils`/`EulerUtils`, `TimingHelper`, `JSONLoader`, `miscutils`/`utils`. The one worth knowing the _why_ of: `wgslOverrides` (`applyOverrideConstants`) — Safari lacks pipeline-overridable constants, so this bakes `override` decls into module-scope `const` literals before compile, resolving default expressions that reference earlier overrides/consts to numeric literals so webgpu-utils' parser doesn't choke.
-
-### Notes when adding code
-
-- The cross-cutting traps (`gpu` object, uniforms-by-name) are above; the rest live in the per-directory CLAUDE.md files. The recurring one: destroying/recreating a `Texture` (e.g. on resize) invalidates its views, so any bind group holding them is stale — rebuild it against `pipeline.bindGroupLayout(i)` (see `src/core/CLAUDE.md`).
-- Remaining gap: no first-class image/KTX texture _loader_. Storage-buffer helpers (`@utils/BufferUtils`), JSON (`@utils/JSONLoader`), glTF (`GLTFLoader.js`), and IBL cubemaps (`@utils/IBLUtils`) are all implemented.
+Known gap: no first-class image/KTX texture _loader_.

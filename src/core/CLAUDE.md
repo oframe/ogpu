@@ -109,11 +109,9 @@ its own depth texture (`context.depthTexture`), and `setContext` swaps
 
 ## Transform — quaternion/rotation two-way proxy
 
-`this.rotation` and `this.quaternion` are kept in sync via `onChange` hooks wired
-in the constructor. **Never replace the quaternion with a new instance**
-(`node.quaternion = new Quat(...)`). That orphans the hook — `rotation` stops
-updating and anything downstream that reads it breaks silently. Mutate in place:
-`node.quaternion.set(...)` or `node.quaternion.copy(other)`.
+`this.rotation` and `this.quaternion` are kept in sync via the `onChange` hooks
+wired in the constructor — never replace either with a new instance, mutate in
+place (`src/math/CLAUDE.md` has the full contract).
 
 `decompose()` writes `matrix` back to position/quaternion/scale via the raw
 wgpu-matrix decompose, which bypasses the `Quat` setter. It manually fires
@@ -232,12 +230,6 @@ on the next `draw`, then rebuilds its structured view — preserving values when
 struct byte length is unchanged, else updating `uniformResource.size` to the new
 byte length and warning that bind groups must be recreated (no buffer to
 recreate — it's a slice of the shared `PerDrawBuffer`).
-
-`gui.uniform(target, key)` takes any object exposing `.uniforms` + `.gpu` (a
-`Mesh`, or any pass owning its own uniform buffer) — pass the mesh/pass, not the
-pipeline. `.uniformBuffer` is optional: passes that own a private buffer get it
-written immediately; a `Mesh` has none, so the value lands in `.uniforms` and
-uploads at its next `draw`.
 
 Entry points are hardcoded: vertex = `vs`, fragment = `fs`. The vertex stage
 is always emitted; the **fragment stage is emitted only if `defs.entryPoints.fs`

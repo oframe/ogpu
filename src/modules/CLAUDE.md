@@ -83,6 +83,11 @@ must match the IBL build's mip count: `loadIBLCubeMap` returns `mipLevels`, so c
 pass `constants: { roughnessLevels: ibl.mipLevels }` to the `RenderPipeline`/`GLTFLoader`.
 Leave it unset only if you still build the legacy 6-level cube.
 
+`Material.useBrdfApprox` (1 = on) swaps the `tBrdf` LUT sample for Karis' analytic
+env-BRDF fit ("Physically Based Shading on Mobile") — one less texture fetch, slightly
+off at grazing angles. Runtime uniform, not an override, so it toggles without a pipeline
+rebuild; the LUT still has to be bound either way.
+
 ## CubeMap.js
 
 Not a stub — functional. Takes 6 face sources in WebGPU/D3D cube order (+X -X +Y -Y +Z -Z).

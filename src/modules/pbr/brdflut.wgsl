@@ -2,7 +2,7 @@ enable f16;
 
 const PI = 3.14159265358979323846;
 
-@binding(0) @group(0) var brdflutOutput: texture_storage_2d<rgba16float, write>;
+@binding(0) @group(0) var brdflutOutput: texture_storage_2d<rg16float, write>;
 
 fn RadicalInverse_VdC(bits: u32) -> f32 {
     var b = bits;

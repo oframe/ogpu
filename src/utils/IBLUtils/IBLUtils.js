@@ -102,14 +102,19 @@ export async function loadSphericalHarmonics(url) {
 
 // Split-sum BRDF integration LUT (rg = scale/bias). One compute dispatch, returns the texture.
 export function createBrdfLUT(gpu, { size = 512, label = 'brdflut' } = {}) {
+    // rg16float storage binding needs texture-formats-tier1; fall back to the
+    // 4-channel format where the adapter lacks it (shader stores vec4 either way).
+    const tier1 = gpu.device.features.has('texture-formats-tier1');
+    const format = tier1 ? TextureFormat.RG16FLOAT : TextureFormat.RGBA16FLOAT;
     const texture = gpu.device.createTexture({
         size: [size, size],
-        format: TextureFormat.RGBA16FLOAT,
+        format,
         usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC,
         label: `${label}-texture`,
     });
 
-    const compute = new ComputeShader(gpu, { label: `${label}-compute`, code: brdflut });
+    const code = tier1 ? brdflut : brdflut.replace('rg16float', 'rgba16float');
+    const compute = new ComputeShader(gpu, { label: `${label}-compute`, code });
     const kernel = compute.findKernel('main');
     const bindGroup = gpu.device.createBindGroup({
         label: `${label}-bind-group`,

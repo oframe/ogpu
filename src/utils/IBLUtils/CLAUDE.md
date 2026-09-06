@@ -4,6 +4,11 @@
 compute shaders it owns, co-located because nothing else imports them: `ggx.wgsl` (GGX
 specular prefilter), `unpackequirect.wgsl` / `unpackoct.wgsl` (env-map → cube unpack).
 Import them relative (`./ggx.wgsl?raw`); the sibling utils are one level up (`../BufferUtils`).
+`createBrdfLUT` writes `rg16float` — a storage format gated behind the
+`texture-formats-tier1` feature, so it feature-detects and falls back to `rgba16float`
+(patching the format into the shader source) on adapters without it. `pbr.wgsl` reads
+`.xy` either way.
+
 General-purpose pbr shaders (`pbr.wgsl`, `brdflut.wgsl`, `display.wgsl`) stay in
 `@modules/pbr/`. Exported through the `ogpu` barrel, not the `@utils` alias.
 

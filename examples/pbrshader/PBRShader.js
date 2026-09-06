@@ -71,6 +71,7 @@ export class PBRShader {
             occlusionStrength: 1.0,
             baseColor: { r: 1, g: 1, b: 1 },
             useGeometricNormal: false,
+            useBrdfApprox: false,
         };
 
         this.iblSampler = this.gpu.device.createSampler({
@@ -212,6 +213,7 @@ export class PBRShader {
             hasNormalMap: 1,
             hasTangents: geometry.hasTangents ? 1 : 0,
             useGeometricNormal: 0,
+            useBrdfApprox: this.params.useBrdfApprox ? 1 : 0,
         });
         const materialBuffer = createUniformBuffer(this.gpu, {
             label: `car-material-${this.carMeshes.length}`,
@@ -385,6 +387,7 @@ export class PBRShader {
                     occlusionStrength: this.params.occlusionStrength,
                     baseColorFactor: [this.params.baseColor.r, this.params.baseColor.g, this.params.baseColor.b, 1.0],
                     useGeometricNormal: this.params.useGeometricNormal ? 1 : 0,
+                    useBrdfApprox: this.params.useBrdfApprox ? 1 : 0,
                 });
                 this.gpu.device.queue.writeBuffer(mesh.material.buffer, 0, mesh.material.view.arrayBuffer);
             }
@@ -417,6 +420,8 @@ export class PBRShader {
         this.pane.addBinding(this.params, 'baseColor', { label: 'albedo', color: { type: 'float' } }).on('change', apply);
 
         this.pane.addBinding(this.params, 'useGeometricNormal', { label: 'geo-normals' }).on('change', apply);
+
+        this.pane.addBinding(this.params, 'useBrdfApprox', { label: 'brdf-approx' }).on('change', apply);
 
         this.pane.addBinding(this, 'showProbes', { label: 'ibl-probes' }).on('change', (ev) => {
             this.probes.visible = ev.value;

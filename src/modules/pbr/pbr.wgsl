@@ -27,6 +27,7 @@ struct Material {
   hasNormalMap : f32, // 0 = use geometric normal, 1 = sample tNormal
   hasTangents : f32, // 1 = vertex tangents present -> build TBN from them, 0 = screen-space derived
   useGeometricNormal : f32, // 1 = ignore the normal map entirely (last-resort geometric normal)
+  useBrdfApprox : f32, // 1 = analytic env-BRDF fit instead of the tBrdf LUT sample
 }
 
 struct SHConstants {
@@ -96,6 +97,17 @@ fn filmic(x : vec3f) -> vec3f {
 
 fn specularF(f0 : vec3f, roughness : f32, vDotH : f32) -> vec3f {
   return f0 + (max(vec3f(1.0 - roughness), f0) - f0) * pow(1.0 - vDotH, 5.0);
+}
+
+// Karis, "Physically Based Shading on Mobile" - analytic fit to the split-sum
+// environment BRDF, so mobile can skip the LUT texture fetch entirely.
+// https://www.unrealengine.com/blog/physically-based-shading-on-mobile
+fn envBRDFApprox(roughness : f32, nDotV : f32) -> vec2f {
+  let c0 = vec4f(-1.0, -0.0275, -0.572, 0.022);
+  let c1 = vec4f(1.0, 0.0425, 1.04, -0.04);
+  let r = roughness * c0 + c1;
+  let a004 = min(r.x * r.x, exp2(-9.28 * nDotV)) * r.x + r.y;
+  return vec2f(-1.04, 1.04) * a004 + r.zw;
 }
 
 fn getIBLSpecular(specularColor : vec3f, r : vec3f, roughness : f32, brdf : vec2f) -> vec3f {
@@ -192,7 +204,12 @@ fn fs(in : VertexOutput) -> @location(0) vec4f {
   let f = specularF(f0, roughness, nDotV);
   let kD = (1.0 - f) * (1.0 - metallic);
 
-  let brdf = textureSample(tBrdf, iblSampler, vec2f(nDotV, roughness)).xy;
+  var brdf : vec2f;
+  if (material.useBrdfApprox > 0.5) {
+    brdf = envBRDFApprox(roughness, nDotV);
+  } else {
+    brdf = textureSample(tBrdf, iblSampler, vec2f(nDotV, roughness)).xy;
+  }
   let viewReflect = reflect(-v, normal);
 
   let shDiffuse = max(evaluateSH(normal, shConstants.coefficients), vec3f(0.0, 0.0, 0.0));

@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.6.1
+
+Skill and agent-guidance fixes: the scaffolding skills emit code that matches the
+per-draw uniform model again, and agent docs no longer contradict the repo.
+
+### Fixed
+
+- **Scaffolded apps failed `createBindGroup`** — the `scaffold-app` template (and
+  the wiring snippets in `scaffold-shader`, `pbr-shading` and `shadow-mapping`)
+  still bound the mesh's group-0 uniform as `{ buffer: uniformBuffer }`, a
+  pre-`PerDrawBuffer` shape. The `bindGroups` factory receives a
+  `{buffer, offset, size}` slice, so wrapping it again nested an object where a
+  `GPUBuffer` belongs. All of them now bind `uniformResource` verbatim, and the
+  stale `mesh.uniformBuffer` references are gone.
+- **`scaffold-app` described the wrong `src/main.js`** — it now adds a `views` map
+  entry and an `@examples/` import instead of a `switch (view)` case and a
+  `./examples/` import.
+
+### Changed
+
+- **Agent docs corrected where the repo contradicted them:** gallery rows live in
+  `items` (not `links`); KTX loading is not a gap (`KTXTexture` exists);
+  `ComputeShader` only allocates its timestamp query set when `timestamp-query` is
+  present; hot reload covers every `*.wgsl?raw` import, not just `src/`; the
+  removed `pbrprev.wgsl` is no longer mentioned; the BRDF LUT is called out as the
+  `rg16float` exception to the `rgba16float` IBL textures; "used to / no longer"
+  history phrasing dropped in favour of current facts.
+- **Skill templates follow the repo conventions** — vertex entry parameter named
+  `in`, kebab-case labels.
+- **Dependency bumps** — `postcss` 8.5.25, `js-yaml` 4.3.1, plus
+  `brace-expansion` and `nanoid` patched for advisories.
+
 ## 0.6.0
 
 A cheaper BRDF integration LUT, an analytic env-BRDF alternative to sampling it,

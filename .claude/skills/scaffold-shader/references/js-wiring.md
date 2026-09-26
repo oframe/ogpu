@@ -11,11 +11,12 @@ import myShader from './my.wgsl?raw';
 
 The ownership split to keep straight: `RenderPipeline` is **pure compiled
 state** — it owns the shader module, reflected `defs`, and the vertex layout,
-nothing else. It can be shared across many meshes. Each `Mesh` owns its own
-uniform buffer (`mesh.uniforms` / `mesh.uniformBuffer`, built from the
-pipeline's reflected `Uniforms` struct) and its bind groups. So `Mesh` REQUIRES
-a `bindGroups` argument — a `GPUBindGroup[]` or a factory
-`(uniformBuffer) => GPUBindGroup[]` that receives the mesh's own buffer to bind
+nothing else. It can be shared across many meshes. Each `Mesh` owns its
+structured uniform view (`mesh.uniforms`, built from the pipeline's reflected
+`Uniforms` struct) and its bind groups, but no uniform buffer: `mesh.uniformResource`
+is a `{buffer, offset, size}` slice of the renderer's shared per-draw buffer. So
+`Mesh` REQUIRES a `bindGroups` argument — a `GPUBindGroup[]` or a factory
+`(uniformResource) => GPUBindGroup[]` that receives that slice to bind verbatim
 at group(0)/binding(0). Build groups against `pipeline.bindGroupLayout(i)`.
 
 ## No texture (short path)
@@ -24,20 +25,20 @@ at group(0)/binding(0). Build groups against `pipeline.bindGroupLayout(i)`.
 const geometry = new Box(gpu);
 
 const pipeline = new RenderPipeline(gpu, {
-    label: 'my shader',
+    label: 'my-shader',
     code: myShader,
     vertexBuffers: geometry.bufferLayouts,
     cullMode: 'back',
 });
 
 const mesh = new Mesh(gpu, {
-    label: 'my mesh',
+    label: 'my-mesh',
     pipeline,
     geometry,
-    bindGroups: (uniformBuffer) => [
+    bindGroups: (uniformResource) => [
         gpu.device.createBindGroup({
             layout: pipeline.bindGroupLayout(0),
-            entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+            entries: [{ binding: 0, resource: uniformResource }],
         }),
     ],
 });
@@ -61,7 +62,7 @@ via reflection on `pipeline.defs`:
 const geometry = new Box(gpu);
 
 const pipeline = new RenderPipeline(gpu, {
-  label: 'my shader',
+  label: 'my-shader',
   code: myShader,
   vertexBuffers: geometry.bufferLayouts,
   cullMode: 'back',
@@ -71,14 +72,14 @@ const pipeline = new RenderPipeline(gpu, {
 const texture = /* GPUTexture */;
 
 const mesh = new Mesh(gpu, {
-  label: 'my mesh',
+  label: 'my-mesh',
   pipeline,
   geometry,
-  bindGroups: (uniformBuffer) => [
+  bindGroups: (uniformResource) => [
     gpu.device.createBindGroup({
       layout: pipeline.bindGroupLayout(0),
       entries: [
-        { binding: 0, resource: { buffer: uniformBuffer } },
+        { binding: 0, resource: uniformResource },
         {
           binding: pipeline.defs.samplers.mySampler.binding,
           resource: gpu.device.createSampler(),
@@ -98,5 +99,5 @@ mesh.setParent(scene);
 ```
 
 After a texture resize/recreate the old views are stale — rebuild the affected
-group against `pipeline.bindGroupLayout(0)` (use `mesh.uniformBuffer` for
+group against `pipeline.bindGroupLayout(0)` (use `mesh.uniformResource` for
 binding 0) and assign it back to `mesh.bindGroups[0]`.

@@ -33,8 +33,8 @@ an existing file (do them precisely with Edit).
     force).
 
 3. Wire `src/main.js` — three insertions, matching the surrounding style:
-    - an `import { <Name> } from './examples/<name>/<Name>';` with the others;
-    - a `case '<name>': new <Name>(); break;` in the `switch (view)`;
+    - an `import { <Name> } from '@examples/<name>/<Name>';` with the others;
+    - a `<name>: () => new <Name>(),` entry in the `views` map;
     - a `{ view: '<name>', label: '<Label>', folder: '<name>' },` entry in the
       `items` array inside `renderLanding()`, under the most fitting
       `{ section: '...' }` header, so it shows on the gallery landing page.
@@ -52,8 +52,8 @@ examples/<name>/cube.wgsl` (runs `naga`). The generated cube always
 - `Camera` + `Orbit`, a `Transform` scene root.
 - Vanilla mesh: `Box` geometry → `RenderPipeline` (pure compiled state, serves
   layouts only) → `Mesh`, parented to the scene. `Mesh` REQUIRES `bindGroups`:
-  the template passes a factory `(uniformBuffer) => [...]` that builds group(0)
-  against `pipeline.bindGroupLayout(0)` and binds the mesh's own uniform buffer
+  the template passes a factory `(uniformResource) => [...]` that builds group(0)
+  against `pipeline.bindGroupLayout(0)` and binds that per-draw slice verbatim
   at binding 0.
 - Drives the loop via `this.gpu.renderer.add(this.update)` — OGPU owns the
   rAF tick and calls back with `{ time, deltaTime }`. The cube spins in

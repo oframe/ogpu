@@ -213,19 +213,19 @@ and the `ogpu` barrel respectively.)
 
 `RenderPipeline` exposes the layout via `pipeline.bindGroupLayout(group)` and the
 reflected defs via `pipeline.defs` — it does NOT own a uniform buffer or a
-`createBindGroup` helper, so build the bind group with the device. The per-draw
-uniform buffer is owned by the `Mesh` and handed to the `bindGroups` callback:
+`createBindGroup` helper, so build the bind group with the device. The `Mesh`
+hands its per-draw uniform slice (`{buffer, offset, size}`) to the `bindGroups` callback:
 
 ```js
 const mesh = new Mesh(this.gpu, {
     label: 'pbr-mesh',
     pipeline,
     geometry,
-    bindGroups: (uniformBuffer) => [
+    bindGroups: (uniformResource) => [
         this.gpu.device.createBindGroup({
             layout: pipeline.bindGroupLayout(0),
             entries: [
-                { binding: 0, resource: { buffer: uniformBuffer } }, // per-frame Uniforms (Mesh.draw)
+                { binding: 0, resource: uniformResource }, // per-frame Uniforms (Mesh.draw)
                 { binding: 1, resource: ibl.specView }, // tSpecular (cube)
                 { binding: 2, resource: { buffer: ibl.shBuffer } }, // SHConstants
                 { binding: 3, resource: ibl.lutTexture.createView() }, // tBrdf

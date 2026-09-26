@@ -61,8 +61,7 @@ device-loss recovery.
 
 `renderer.addErrorHandler(cb)` surfaces `uncapturederror` as `(error, event)`;
 `event.preventDefault()` silences the browser's own console report. Constructor
-preconditions (missing gpu/code/pipeline/geometry) THROW — no more
-console.error-and-return half-built objects — and shader build failures rethrow
+preconditions (missing gpu/code/pipeline/geometry) THROW, and shader build failures rethrow
 with the pipeline/shader label attached.
 
 ## Multiple canvases — `setContext`
@@ -93,8 +92,8 @@ its own depth texture (`context.depthTexture`), and `setContext` swaps
   The pass pipeline's `targets[0].format` must be the canvas format — every
   canvas defaults to the shared `presentationFormat`.
 - Both `setContext(canvas, options)` and `contextFor(canvas, options)` take
-  per-canvas `{transparent, format}` — an opaque main canvas + a transparent
-  overlay no longer needs two renderers. Omitted options stick to whatever the
+  per-canvas `{transparent, format}`, so one renderer can drive an opaque main
+  canvas + a transparent overlay. Omitted options stick to whatever the
   canvas was last configured with (device-loss reconfigure preserves them);
   first configure falls back to the renderer defaults. A custom `format`
   means pipelines drawn into that canvas must be built with
@@ -171,8 +170,7 @@ you must pass `{data, stride}` explicitly.
 
 `RenderPipeline` is **pure compiled state** — `.pipeline`, `.defs`, `.vertexBuffers`
 (the vertex layout it was built from), `.module`. It owns NO uniform buffer and NO bind groups, so one pipeline can be
-shared across many meshes. (It used to carry `uniforms`/`uniformBuffer`/
-`createBindGroup`/`updateBindgroup` — all removed.) It serves bind group layouts
+shared across many meshes. It serves bind group layouts
 to callers via `pipeline.bindGroupLayout(i)` (mirrors `ComputeShader.bindGroupLayout`)
 — don't reach into `pipeline.pipeline.getBindGroupLayout(i)`; the getter returns
 the explicit, hot-reload-stable BGL it built.
@@ -197,8 +195,8 @@ frame — that's what lets one mesh draw into multiple chained passes safely.
 Overflowing the buffer (`perDrawSize`, default 1 MiB, set via the `Renderer`
 constructor) logs a console error instead of growing it — growing would
 invalidate every already-bound group(0). Device recovery recreates `perDraw`
-alongside the depth texture in `_restore`; app-owned bind groups still rebuild
-in `deviceRestoredHandler`s as before.
+alongside the depth texture in `_restore`; app-owned bind groups rebuild in
+`deviceRestoredHandler`s.
 
 **Texture resize:** destroying/recreating a `Texture` invalidates its
 `GPUTextureView`s, so any bind group holding them is stale. Rebuild the affected
@@ -257,8 +255,7 @@ values get swapped. Don't cache `kernels[name]` — re-read it at dispatch time.
 
 `ComputeShader` is **pure compiled state** like `RenderPipeline` — it owns the
 kernels + layouts, never bind groups. The caller builds its own bind group with
-`device.createBindGroup` and passes it to `dispatch({ bindGroup })`. (It used to
-own `createBindGroup`/`updateBindgroup`/`bindGroups` — all removed.) Get the
+`device.createBindGroup` and passes it to `dispatch({ bindGroup })`. Get the
 layout via `computeShader.bindGroupLayout(kernelOrKey, groupIndex)` — accepts the
 kernel object (uses its `.label`) or the entry-point name string.
 
@@ -272,9 +269,10 @@ binding): the persisted layout is keyed by entry-point name and won't track it �
 that needs a hard reload, and the caller must rebuild its bind group.
 
 `dispatch` creates and ends its own compute pass unless you pass an external
-`pass`. Pass `timing: true` to add timestamp writes — the query set allocates
-unconditionally but the queries only land if `timestamp-query` is in
-`device.features` (it's feature-detected in Renderer, not guaranteed).
+`pass`. The timestamp query set is only allocated when `device.features.has('timestamp-query')`
+— creating one without the feature throws per spec (Renderer feature-detects it,
+not guaranteed). Pass `timing: true` to add timestamp writes; it silently no-ops
+without the feature, and only times passes `dispatch` creates itself.
 
 ## Texture — async vs sync construction
 

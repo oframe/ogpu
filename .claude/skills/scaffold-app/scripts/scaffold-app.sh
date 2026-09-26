@@ -59,11 +59,11 @@ struct VertexOutput {
 }
 
 @vertex
-fn vs(v : Vertex) -> VertexOutput {
+fn vs(in : Vertex) -> VertexOutput {
   var out : VertexOutput;
-  out.position = uniforms.projectionMatrix * uniforms.modelViewMatrix * vec4f(v.position, 1.0);
-  out.vNormal = uniforms.normalMatrix * v.normal;
-  out.vUv = v.uv;
+  out.position = uniforms.projectionMatrix * uniforms.modelViewMatrix * vec4f(in.position, 1.0);
+  out.vNormal = uniforms.normalMatrix * in.normal;
+  out.vUv = in.uv;
   return out;
 }
 
@@ -112,15 +112,15 @@ export class $CLASS {
         });
 
         // Caller owns bind groups (pipelines serve layouts only). The factory
-        // receives this mesh's own uniform buffer to bind at group(0)/binding(0).
+        // receives this mesh's per-draw slice ({buffer, offset, size}) for group(0)/binding(0).
         this.cube = new Mesh(this.gpu, {
             label: '$DIR-cube',
             pipeline,
             geometry,
-            bindGroups: (uniformBuffer) => [
+            bindGroups: (uniformResource) => [
                 this.gpu.device.createBindGroup({
                     layout: pipeline.bindGroupLayout(0),
-                    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+                    entries: [{ binding: 0, resource: uniformResource }],
                 }),
             ],
         });

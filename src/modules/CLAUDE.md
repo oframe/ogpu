@@ -23,7 +23,7 @@ AABB when both exist.
 `gui.uniform(target, key)` maintains a local proxy object and calls
 `target.uniforms.set({[key]: value})` on every Tweakpane change. `target` is any
 object owning `.uniforms` + `.gpu` — a `Mesh`, or any pass owning its own
-uniform buffer — NOT a `RenderPipeline` (pipelines no longer own uniforms).
+uniform buffer — NOT a `RenderPipeline` (pipelines own no uniforms).
 `.uniformBuffer` is optional: passes owning a private buffer get it written
 immediately; Meshes have none (their struct uploads into the per-draw buffer on
 the next draw). Scalar uniforms (length-1 typed-array view) are unwrapped to a
@@ -72,8 +72,7 @@ pass, not the bind-pose attribute, so bounding sphere tests would be wrong.
 ## pbr/
 
 Shaders only — no JS. Import via `?raw`. Entry points: `pbr.wgsl` (material shading),
-`brdflut.wgsl` (BRDF LUT compute), `display.wgsl` (fullscreen present). `pbrprev.wgsl` is
-legacy. Consumed by `examples/gltf/` and `examples/pbrshader/`. The IBL-build shaders
+`brdflut.wgsl` (BRDF LUT compute), `display.wgsl` (fullscreen present). Consumed by `examples/gltf/` and `examples/pbrshader/`. The IBL-build shaders
 (GGX prefilter, equirect/oct unpack) live next to their only consumer in
 `@utils/IBLUtils/` — see that dir's CLAUDE.md.
 

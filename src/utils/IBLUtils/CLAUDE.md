@@ -37,10 +37,10 @@ General-purpose pbr shaders (`pbr.wgsl`, `brdflut.wgsl`, `display.wgsl`) stay in
 - **Source cube is transient.** It exists only as the integration input; `prefilterCube`
   calls `sourceCube.destroy()` right after submitting the GGX pass (commands already
   enqueued, so the device keeps it alive until the GPU finishes). The returned IBL result
-  no longer carries `sourceCube` — only the prefiltered `texture`/`view`, `mipLevels`,
-  `faceSize`.
+  carries only the prefiltered `texture`/`view`, `mipLevels`, `faceSize`.
 - **Mip count is a contract with the shader.** `loadIBLCubeMap` returns `mipLevels`;
   `pbr.wgsl` consumers must feed it back as the `roughnessLevels` override constant or the
   roughness→lod mapping is wrong (see `src/modules/CLAUDE.md` pbr/).
-- All IBL textures are `rgba16float`; the storage shaders declare
-  `texture_storage_2d<rgba16float, write>`. Change one, change both.
+- The IBL cube textures are `rgba16float`; the three storage shaders here declare
+  `texture_storage_2d<rgba16float, write>`. Change one, change both. (The BRDF LUT
+  is the exception — see above.)

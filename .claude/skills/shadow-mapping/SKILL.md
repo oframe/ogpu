@@ -75,8 +75,8 @@ shadowDepthTextureSize`. Vertex computes `vShadowCoord` (NDC→UV, **flip y**).
    `renderer.render({ scene: casterMesh, camera: lightCamera, target: shadowBuffer })`
    then `renderer.render({ scene, camera })`.
 9. **Verify:** `npm run validate:shaders` (folded WGSL) and `npm run build`.
-   Examples live outside `src/`, so if you add files the repomap drift gate
-   (`npm run repomap`) needs regenerating before commit.
+   The repomap also indexes `examples/`, so if you add files run
+   `npm run repomap` before commit or the drift gate blocks it.
 
 ## Things that break silently
 

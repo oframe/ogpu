@@ -59,7 +59,7 @@ same — `references/js-wiring.md` has the full copy-paste blocks.
 5. Create the bind group with the device — `RenderPipeline` exposes
    `pipeline.bindGroupLayout(group)` and `pipeline.defs`, but owns no uniform
    buffer or `createBindGroup` helper. With stock `pbr.wgsl` the layout is
-   fixed: 0 per-frame `Uniforms` (the Mesh's buffer), 1 specular cube view, 2
+   fixed: 0 per-frame `Uniforms` (the Mesh's `uniformResource` slice), 1 specular cube view, 2
    SH buffer, 3 BRDF LUT view, 4 `iblSampler` (linear, mipmap linear, clamp), 5
    `tMap`, 6 `tMetallicRoughness`, 7 `tNormal`, 8 `tOcclusion`, 9 `tEmissive`,
    10 `materialSampler` (linear, repeat), 11 `tOpacity`, 12 `Material` buffer.

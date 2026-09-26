@@ -27,7 +27,7 @@ wrong and the pipeline silently shades garbage or fails construction:
   `normalMatrix` (mat3x3f), `cameraPosition` (vec3f), `cameraQuaternion` (vec4f),
   `resolution` (vec2f), `time` (f32). Declare only the subset the shader uses,
   spelled exactly. Custom uniforms (e.g. `uScale`, `uAlpha`) go after them and
-  are set via `mesh.uniforms.set({...})` — the `Mesh` owns the uniform buffer,
+  are set via `mesh.uniforms.set({...})` — the `Mesh` owns the uniform values,
   not the pipeline.
 - Vertex attribute `@location` is assigned by declaration ORDER in the
   geometry's `data` object, not by name. Standard primitives (`@core/primitives`
@@ -82,7 +82,7 @@ geometry, bindGroups })` → `mesh.setParent(scene)`. The `Mesh` REQUIRES a
    `bindGroups` factory (pipeline serves layouts only — see
    `references/js-wiring.md`). Custom uniforms set with `mesh.uniforms.set({...})`
    (Mesh.draw uploads each frame).
-7. Hot reload works automatically — every `src/**/*.wgsl` is an HMR boundary, so
+7. Hot reload works automatically — every `*.wgsl?raw` import is an HMR boundary, so
    editing the new file reloads the pipeline live (`ShaderReload`).
 
 ## References

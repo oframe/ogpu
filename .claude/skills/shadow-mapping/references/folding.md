@@ -19,9 +19,9 @@ struct Vertex { @location(0) position : vec3f }
 struct VertexOutput { @builtin(position) position : vec4f }
 
 @vertex
-fn vs(v : Vertex) -> VertexOutput {
+fn vs(in : Vertex) -> VertexOutput {
   var out : VertexOutput;
-  out.position = uniforms.projectionMatrix * uniforms.modelViewMatrix * vec4f(v.position, 1.0);
+  out.position = uniforms.projectionMatrix * uniforms.modelViewMatrix * vec4f(in.position, 1.0);
   return out;
 }
 ```
@@ -203,11 +203,11 @@ this.shadowMesh = new Mesh(this.gpu, {
     label: 'shadow-caster',
     pipeline: casterPipeline,
     geometry,
-    bindGroups: (uniformBuffer) => [
+    bindGroups: (uniformResource) => [
         this.gpu.device.createBindGroup({
             layout: casterPipeline.bindGroupLayout(0),
             entries: [
-                { binding: 0, resource: { buffer: uniformBuffer } },
+                { binding: 0, resource: uniformResource },
                 // skinned only: { binding: 1, resource: { buffer: skin.skinnedPositionBuffer } },
             ],
         }),

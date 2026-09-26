@@ -57,7 +57,7 @@ Conventions enforced by `webgpu-utils` reflection:
 - **`?example=<key>`** — user-facing gallery (sidebar + preview iframe); the iframe loads `./?src=<key>` internally. This is what you link to.
 - **`?src=<key>`** — boots that example standalone on the page's own canvas, no gallery chrome.
 
-Keys live in the `views` map, gallery rows in the `links` array below it. New example: class under `examples/<name>/`, import it in `src/main.js`, add both entries.
+Keys live in the `views` map, gallery rows in the `items` array inside `renderLanding()`. New example: class under `examples/<name>/`, import it in `src/main.js`, add both entries.
 
 ## Assets and external deps
 
@@ -70,4 +70,4 @@ Keys live in the `views` map, gallery rows in the `links` array below it. New ex
 
 Recurring trap across areas: destroying/recreating a `Texture` invalidates its views, so any bind group holding them is stale — rebuild against `pipeline.bindGroupLayout(i)`.
 
-Known gap: no first-class image/KTX texture _loader_.
+Loaders exist for images (`Texture` with `src`), KTX (`@modules/KTXTexture`), JSON (`@utils/JSONLoader`), glTF (`GLTFLoader.js`) and IBL cubemaps (`@utils/IBLUtils`) — check these before writing a new one.

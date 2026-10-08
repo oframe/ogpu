@@ -14,6 +14,10 @@ export class Transform {
 
         this.matrixAutoUpdate = true;
         this.worldMatrixNeedsUpdate = false;
+        // last composed position/quaternion/scale — updateMatrix skips the compose
+        // (and the world multiply it would trigger) when unchanged. NaN seeds
+        // guarantee the first compose.
+        this._trs = new Float32Array(10).fill(NaN);
 
         this.position = new Vec3(0, 0, 0);
         this.quaternion = new Quat(0, 0, 0, 1);
@@ -31,6 +35,8 @@ export class Transform {
     setParent(parent, notifyParent = true) {
         if (this.parent && parent !== this.parent) this.parent.removeChild(this, false);
         this.parent = parent;
+        // unchanged TRS no longer re-dirties the world matrix — a new parent must
+        this.worldMatrixNeedsUpdate = true;
         if (notifyParent && parent) parent.addChild(this, false);
     }
 
@@ -58,8 +64,25 @@ export class Transform {
         }
     }
 
+    // Recompose only when TRS changed. A direct write to `matrix` on an
+    // auto-updating node therefore persists until TRS next changes.
     updateMatrix() {
-        this.matrix.compose(this.position, this.quaternion, this.scale);
+        const p = this.position;
+        const q = this.quaternion;
+        const s = this.scale;
+        const c = this._trs;
+        if (c[0] === p[0] && c[1] === p[1] && c[2] === p[2] && c[3] === q[0] && c[4] === q[1] && c[5] === q[2] && c[6] === q[3] && c[7] === s[0] && c[8] === s[1] && c[9] === s[2]) return;
+        c[0] = p[0];
+        c[1] = p[1];
+        c[2] = p[2];
+        c[3] = q[0];
+        c[4] = q[1];
+        c[5] = q[2];
+        c[6] = q[3];
+        c[7] = s[0];
+        c[8] = s[1];
+        c[9] = s[2];
+        this.matrix.compose(p, q, s);
         this.worldMatrixNeedsUpdate = true;
     }
 

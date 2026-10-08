@@ -370,6 +370,7 @@ export class Transform {
     addChild(child: Transform, notifyChild?: boolean): void;
     removeChild(child: Transform, notifyChild?: boolean): void;
     updateMatrixWorld(force?: boolean): void;
+    /** Recomposes `matrix` (and dirties the world matrix) only when position/quaternion/scale changed since the last call. */
     updateMatrix(): void;
     /** Depth-first walk; return `true` from the callback to skip children. */
     traverse(callback: (node: Transform) => boolean | void): void;
@@ -422,7 +423,7 @@ export class Camera extends Transform {
 
     perspective(opts?: Pick<CameraOptions, 'near' | 'far' | 'fov' | 'aspect'>): this;
     orthographic(opts?: CameraOptions): this;
-    updateMatrixWorld(): this;
+    updateMatrixWorld(force?: boolean): this;
     updateProjectionMatrix(): this;
     lookAt(target: ArrayLike<number>): this;
     /** Project a 3D point to clip space (mutates `v`). */

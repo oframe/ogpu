@@ -44,8 +44,10 @@ export class Camera extends Transform {
         return this;
     }
 
-    updateMatrixWorld() {
-        super.updateMatrixWorld();
+    // forward `force` — with Transform's TRS cache, a camera parented to a
+    // moving node only refreshes its world matrix when the parent forces it
+    updateMatrixWorld(force) {
+        super.updateMatrixWorld(force);
         this.viewMatrix.copy(this.worldMatrix).invert();
         this.worldMatrix.getTranslation(this.worldPosition);
         // assumes an unscaled camera — setFromRotationMatrix ignores scale skew

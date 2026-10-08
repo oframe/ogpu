@@ -756,8 +756,8 @@ export class Renderer {
 
             if (!this._bootStarted) this._startBoot();
 
-            // Walk + refresh world matrices (each node still dirty-flag gated, and
-            // a node can opt out per-frame via matrixAutoUpdate). Pass
+            // Walk + refresh world matrices (a node recomposes only when its TRS changed, and
+            // can opt out per-frame via matrixAutoUpdate). Pass
             // updateMatrices: false to skip the walk entirely for a static scene or
             // when you've already posed it yourself this frame.
             if (updateMatrices) {

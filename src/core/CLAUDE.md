@@ -117,6 +117,18 @@ wgpu-matrix decompose, which bypasses the `Quat` setter. It manually fires
 `quaternion.onChange()` afterwards — if you decompose by any other means, do
 the same or `rotation` will drift.
 
+**Dirty tracking.** `updateMatrix()` caches the last composed TRS (`_trs`) and
+skips the compose — and with it the world multiply — when position, quaternion
+and scale are unchanged (values are compared, so writes through the typed arrays
+are seen too); a node's world matrix is then rebuilt only when it's dirty or a
+moving ancestor passes `force`. Consequences: a direct write to `node.matrix` on
+an auto-updating node persists until TRS next changes; a node with
+`matrixAutoUpdate = false` whose `matrix` you rewrite needs
+`worldMatrixNeedsUpdate = true` (or a forcing ancestor); `setParent` marks the
+world dirty; and any `updateMatrixWorld` override must forward `force` (Camera
+does). `render({ updateMatrices: false })` skips the camera's update too, not
+just the scene's.
+
 ## Camera — frustum extraction
 
 `updateFrustum()` uses Gribb-Hartmann plane extraction adjusted for WebGPU's

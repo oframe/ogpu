@@ -9,7 +9,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - constructor({ near = 0.1, far = 100, fov = 45, aspect = 1, left, right, bottom, top, zoom = 1 } = {})
   - perspective({ near = this.near, far = this.far, fov = this.fov, aspect = this.aspect } = {})
   - orthographic({ near = this.near, far = this.far, left = this.left ?? -1, right = this.right ?? 1, bott…)
-  - updateMatrixWorld()
+  - updateMatrixWorld(force)
   - updateProjectionMatrix()
   - lookAt(target)
   - project(v)

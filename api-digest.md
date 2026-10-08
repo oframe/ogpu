@@ -264,6 +264,30 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - createView()
   - destroy()
 
+### src/modules/gsplat/GaussianSplat.js
+- **class GaussianSplat** extends Mesh
+  - constructor(gpu, { data, code = defaultShaderCode, sortMethod = 'radix', sortMode = 'gpu', workgroupS…)
+  - setWorkgroupSize(size)
+  - destroy()
+  - sort(camera, { encoder = null } = {})
+  - sortSliced(camera, dirty = true, { encoder = null } = {})
+
+### src/modules/gsplat/SplatLoader.js
+- fn `loadSplat(src, { type } = {})`
+
+### src/modules/gsplat/loaders/ply.js
+- fn `decodePly(buffer)`
+
+### src/modules/gsplat/loaders/sog.js
+- fn `decodeSog(buffer, opts = {})`
+- fn `decodeSogUnbundled(metaUrl)`
+
+### src/modules/gsplat/loaders/splat.js
+- fn `decodeSplat(buffer)`
+
+### src/modules/gsplat/loaders/spz.js
+- fn `decodeSpz(buffer)`
+
 ## utils
 
 ### src/utils/BufferUtils.js
@@ -499,6 +523,8 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { CubeMap } from './modules/CubeMap.js'
 - re-export { VideoTexture } from './modules/VideoTexture.js'
 - re-export { KTXTexture } from './modules/KTXTexture.js'
+- re-export { GaussianSplat } from './modules/gsplat/GaussianSplat.js'
+- re-export { loadSplat } from './modules/gsplat/SplatLoader.js'
 - re-export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js'
 - re-export { blit } from './utils/RenderUtils.js'
 - re-export { loadJSON, loadJSONAll } from './utils/JSONLoader.js'

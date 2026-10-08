@@ -20,6 +20,8 @@ export { GLTFLoader } from './modules/GLTFLoader.js';
 export { CubeMap } from './modules/CubeMap.js';
 export { VideoTexture } from './modules/VideoTexture.js';
 export { KTXTexture } from './modules/KTXTexture.js';
+export { GaussianSplat } from './modules/gsplat/GaussianSplat.js';
+export { loadSplat } from './modules/gsplat/SplatLoader.js';
 
 // --- utils ---
 export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js';

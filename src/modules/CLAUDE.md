@@ -1,6 +1,7 @@
 # src/modules — standalone modules
 
 Signatures live in repo-root `api-digest.md`. This file is gotchas only.
+`gsplat/` has its own CLAUDE.md — don't look here for it.
 
 ---
 

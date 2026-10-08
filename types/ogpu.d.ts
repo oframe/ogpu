@@ -1388,6 +1388,56 @@ export class KTXTexture extends Texture {
     src: string;
 }
 
+// --- @modules/gsplat (Gaussian splat renderer + loaders) ----------------------
+export type SplatFormat = 'ply' | 'splat' | 'spz' | 'sog';
+
+/** Loader output; every array is `count × 4` floats. */
+export interface SplatData {
+    count: number;
+    /** `[x, y, z, 0]` world space. */
+    positions: Float32Array;
+    /** `[r, g, b, a]` gamma-space colour, straight (not premultiplied) opacity. */
+    colors: Float32Array;
+    /** `[x, y, z, w]` unit quaternion. */
+    rotations: Float32Array;
+    /** `[sx, sy, sz, 0]` linear world-space std devs. */
+    scales: Float32Array;
+    /** Higher-order SH is parsed but dropped. */
+    sh: null;
+}
+
+/** `.ply`, `.splat`, `.spz` (v1–3) and `.sog` (bundled, or an unbundled `meta.json` URL). */
+export function loadSplat(src: string | ArrayBuffer, options?: { type?: SplatFormat }): Promise<SplatData>;
+
+export interface GaussianSplatOptions {
+    data: SplatData;
+    /** Override render WGSL; keep the bindings of `gsplat.wgsl`. */
+    code?: string;
+    sortMethod?: 'radix' | 'bitonic';
+    sortMode?: 'gpu' | 'cpu' | 'sliced';
+    /** 64 / 128 / 256; baked as an override constant. */
+    workgroupSize?: number;
+    label?: string;
+}
+
+export class GaussianSplat extends Mesh {
+    constructor(gpu: GPU, options: GaussianSplatOptions);
+    sortMethod: 'radix' | 'bitonic';
+    sortMode: 'gpu' | 'cpu' | 'sliced';
+    /** Radix passes per frame in `'sliced'` mode (8 per full sort). */
+    slicePasses: number;
+    /** EMA-smoothed sort ms: GPU timestamps, or worker wall time in `'cpu'` mode. */
+    sortTime: number;
+    /** Call every frame BEFORE `renderer.render`. With `encoder`, records only (no submit, no timing). */
+    sort(camera: Camera, options?: { encoder?: GPUCommandEncoder | null }): void;
+    /** `'sliced'` mode: call every frame instead of `sort`; `dirty` = the order went stale. */
+    sortSliced(camera: Camera, dirty?: boolean, options?: { encoder?: GPUCommandEncoder | null }): void;
+    /** Rebuilds the sort pipelines and their bind groups. */
+    setWorkgroupSize(size: number): void;
+    /** Frees GPU buffers, terminates the sort worker, unregisters the sort shaders. */
+    destroy(): void;
+}
+
 // =============================================================================
 // Utils (@utils/*)
 // =============================================================================
@@ -1601,6 +1651,12 @@ declare module '@modules/VideoTexture' {
 }
 declare module '@modules/KTXTexture' {
     export { KTXTexture, KTXTextureOptions };
+}
+declare module '@modules/gsplat/GaussianSplat' {
+    export { GaussianSplat, GaussianSplatOptions };
+}
+declare module '@modules/gsplat/SplatLoader' {
+    export { loadSplat, SplatData, SplatFormat };
 }
 declare module '@utils/BufferUtils' {
     export { createStorageBuffer, createUniformBuffer, createBuffer, CreateBufferOptions };

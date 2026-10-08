@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.7.0
+
+Gaussian splatting, and a cheaper per-draw uniform path brought over from dgpu.
+
+### Added
+
+- **`GaussianSplat` + `loadSplat`** (`@modules/gsplat`, exported from `ogpu`) — EWA
+  splat rendering with a depth sort that runs as a GPU radix or bitonic sort, a CPU
+  counting sort in a worker, or a radix sort time-sliced across frames. Loads `.ply`,
+  `.splat`, `.spz` (v1–3) and `.sog`. `destroy()` releases everything it owns. No
+  example ships yet.
+- **`Quat.setFromUnitVectors(from, to)`** — shortest-arc rotation, antiparallel-safe.
+- **`blit({ depthView })`** — optional depth attachment for fullscreen pipelines that
+  write `frag_depth`.
+
+### Changed
+
+- **One uniform upload per `render()`** — meshes copy their uniforms into a CPU mirror
+  of the per-draw buffer, and `Renderer.render` uploads them in a single `writeBuffer`
+  after the pass instead of one per mesh. A `mesh.draw()` issued outside `render()`
+  must call `renderer.perDraw.flush()` before submitting; `update()` warns once if it
+  finds unflushed slices.
+- **Derived matrices only when declared** — `modelViewMatrix`, `normalMatrix` and
+  `objectMatrix` (a full inverse) are computed only for shaders whose `Uniforms` struct
+  reads them.
+- **`ComputeShader.dispatch` is synchronous** — it never awaited anything; being
+  `async` only turned throws into unhandled rejections.
+
+### Fixed
+
+- **Per-draw overflow no longer breaks the pass** — a draw that doesn't fit is now
+  skipped (and reported once per frame). It used to bind an offset past the end of the
+  buffer, which invalidates the whole render pass.
+- **Opaque/transparent/UI sort** — the final tie-break compared a node `id` that doesn't
+  exist; removed. Ties keep scene-traversal order.
+- **`createBrdfLUT` fallback** — the `rgba16float` patch now replaces the exact
+  storage-texture token instead of the first `rg16float` anywhere in the source.
+- **`validate:shaders`** rejects Homebrew's unrelated `naga` (a Snake game) and falls
+  back to `~/.cargo/bin/naga`.
+
 ## 0.6.1
 
 Skill and agent-guidance fixes: the scaffolding skills emit code that matches the

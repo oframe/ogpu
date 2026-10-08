@@ -64,13 +64,7 @@ export class Skin {
 
         const boneMatrixBufferSize = this.rig.bones.length * 16 * 4;
 
-        this.invBoneMatrixBuffer = createStorageBuffer(this.gpu, {
-            label: `${this.label}-bind-pose-buffer`,
-            size: boneMatrixBufferSize,
-        });
-
         const bindPose = this.rig.bindPose;
-        const bindPoseData = new Float32Array(this.rig.bones.length * 16);
         for (let i = 0; i < this.rig.bones.length; i++) {
             const bone = new Transform();
 
@@ -93,22 +87,23 @@ export class Skin {
 
         this.root.updateMatrixWorld(true);
 
+        // CPU bind inverses; updateBones premultiplies them into the uploaded matrices.
         if (this.rig.inverseBindMatrices) {
             // Authoritative bind-inverse matrices from the glTF file.
             // These are precomputed by the exporter and include all ancestor
             // transforms (armature scale/rotation, etc.) exactly as intended.
-            this.gpu.device.queue.writeBuffer(this.invBoneMatrixBuffer, 0, this.rig.inverseBindMatrices);
+            this.inverseBindMatrices = this.bones.map((_, i) => new Mat4().fromArray(this.rig.inverseBindMatrices, i * 16));
         } else {
             // FK-derived bind-inverse for hand-built rigs without glTF source.
             const rootInverse = new Mat4().copy(this.root.worldMatrix).invert();
-            this.bones.forEach((bone, i) => {
+            this.bones.forEach((bone) => {
                 bone.bindInverseMatrix = new Mat4().copy(rootInverse).multiply(bone.worldMatrix).invert();
-                bindPoseData.set(bone.bindInverseMatrix, i * 16);
             });
-            this.gpu.device.queue.writeBuffer(this.invBoneMatrixBuffer, 0, bindPoseData);
+            this.inverseBindMatrices = this.bones.map((bone) => bone.bindInverseMatrix);
         }
 
         this.boneMatrixData = new Float32Array(this.rig.bones.length * 16);
+        this.poseDirty = true; // skinned buffers don't match boneMatrixData yet
 
         this.boneMatrixBuffer = createStorageBuffer(this.gpu, {
             label: `${this.label}-bone-buffer`,
@@ -163,7 +158,6 @@ export class Skin {
                 { binding: 2, resource: { buffer: this.weightBuffer } },
                 { binding: 3, resource: { buffer: this.boneIndexBuffer } },
 
-                { binding: 4, resource: { buffer: this.invBoneMatrixBuffer } },
                 { binding: 5, resource: { buffer: this.boneMatrixBuffer } },
 
                 { binding: 6, resource: { buffer: this.skinnedPositionBuffer } },
@@ -193,38 +187,54 @@ export class Skin {
         });
     }
 
-    // recompute world matrices from the current bone pose and upload them to the
-    // bone matrix buffer. Caller is responsible for having posed the bones first
-    // (applyAnimations, or driving an Animation directly).
+    // recompute world matrices from the current bone pose and upload the skin
+    // matrices (pose * bind inverse) to the bone matrix buffer. Caller is
+    // responsible for having posed the bones first (applyAnimations, or driving
+    // an Animation directly). Skips the upload and returns false when the
+    // matrices are bit-identical to the last upload.
     updateBones() {
         this.root.updateMatrixWorld(true);
         // Same root-relative space as the bind matrices (see initBones). This
         // cancels root.worldMatrix — which includes the root's scene-graph
         // ancestors (the mesh transform) — so it never doubles into the skin.
         _rootInverse.copy(this.root.worldMatrix).invert();
+        const data = this.boneMatrixData;
+        let changed = false;
         this.bones.forEach((bone, i) => {
-            // current root-relative pose; skin.wgsl multiplies by the bind inverse
-            this.tmpMatrix.copy(_rootInverse).multiply(bone.worldMatrix);
-            this.boneMatrixData.set(this.tmpMatrix, i * 16);
+            this.tmpMatrix.copy(_rootInverse).multiply(bone.worldMatrix).multiply(this.inverseBindMatrices[i]);
+            const o = i * 16;
+            for (let k = 0; k < 16; k++) {
+                const v = this.tmpMatrix[k];
+                if (data[o + k] !== v) {
+                    data[o + k] = v;
+                    changed = true;
+                }
+            }
         });
-        this.gpu.device.queue.writeBuffer(this.boneMatrixBuffer, 0, this.boneMatrixData);
+        if (!changed) return false;
+        this.gpu.device.queue.writeBuffer(this.boneMatrixBuffer, 0, data);
+        this.poseDirty = true;
+        return true;
     }
 
     // Full per-frame skin: blend animations -> push bone matrices -> dispatch the
     // skinning compute. The two halves are public for callers that pose manually.
-    update(dt = 0) {
+    // The dispatch is skipped while the uploaded matrices are unchanged since the
+    // last one. Pass `encoder` to record into the caller's command buffer.
+    update(dt = 0, encoder = null) {
         this.applyAnimations();
         this.updateBones();
+        if (!this.poseDirty) return;
+        this.poseDirty = false;
 
-        const encoder = this.gpu.device.createCommandEncoder({ label: 'skinning-encoder' });
+        const enc = encoder ?? this.gpu.device.createCommandEncoder({ label: 'skinning-encoder' });
 
-        this.skinner.dispatch(encoder, {
+        this.skinner.dispatch(enc, {
             kernel: this.skinner.findKernel('skin'),
             bindGroup: this.skinningBindGroup,
             dispatchCount: [Math.ceil(this.threadCount / 64), 1, 1],
         });
 
-        const commandBuffer = encoder.finish();
-        this.gpu.device.queue.submit([commandBuffer]);
+        if (!encoder) this.gpu.device.queue.submit([enc.finish()]);
     }
 }

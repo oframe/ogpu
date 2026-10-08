@@ -54,10 +54,10 @@ Passing `code`/`iblEntries` with `dataOnly` is silently ignored.
 
 Rig shape: bone order == `skin.joints` order, so JOINTS_0 indices map straight to bone
 indices. glTF `inverseBindMatrices` **are read and used** when the skin declares them —
-`../core/skin/Skin` writes them straight into `invBoneMatrixBuffer` as authoritative
-bind-inverse. FK-derivation from the bind pose is only the fallback for hand-built rigs
-that ship no `inverseBindMatrices`. The two sources are NOT interchangeable — don't assume
-FK.
+`../core/skin/Skin` keeps them on the CPU (`skin.inverseBindMatrices`) as the
+authoritative bind-inverse and premultiplies them into `boneMatrixBuffer`.
+FK-derivation from the bind pose is only the fallback for hand-built rigs that ship no
+`inverseBindMatrices`. The two sources are NOT interchangeable — don't assume FK.
 
 `skeletonAncestors` captures non-joint ancestor nodes above the root joint (Blender
 armature objects, Mixamo's "Neo_Reference"). These are wired as animatable transforms

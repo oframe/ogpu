@@ -3,7 +3,7 @@
 @group(0) @binding(2) var<storage, read> weightBuffer : array<f32>;
 @group(0) @binding(3) var<storage, read> boneIndexBuffer : array<u32>;
 
-@group(0) @binding(4) var<storage, read> invBoneMatrixBuffer : array<mat4x4f>;
+// skin matrices: root-relative pose * bind inverse, premultiplied on the CPU
 @group(0) @binding(5) var<storage, read> boneMatrixBuffer : array<mat4x4f>;
 
 @group(0) @binding(6) var<storage, read_write> positionOutBuffer : array<f32>;
@@ -40,18 +40,10 @@ fn getBoneIndices(index: u32) -> vec4u {
 }
 
 fn getMatrix(indices: vec4u, weights: vec4f) -> mat4x4f {
-    
-    let boneMatrixA = boneMatrixBuffer[indices.x] * invBoneMatrixBuffer[indices.x];
-    let boneMatrixB = boneMatrixBuffer[indices.y] * invBoneMatrixBuffer[indices.y];
-    let boneMatrixC = boneMatrixBuffer[indices.z] * invBoneMatrixBuffer[indices.z];
-    let boneMatrixD = boneMatrixBuffer[indices.w] * invBoneMatrixBuffer[indices.w];
-
-    return 
-    boneMatrixA * weights.x + 
-    boneMatrixB * weights.y + 
-    boneMatrixC * weights.z + 
-    boneMatrixD * weights.w;
-    
+    return boneMatrixBuffer[indices.x] * weights.x +
+        boneMatrixBuffer[indices.y] * weights.y +
+        boneMatrixBuffer[indices.z] * weights.z +
+        boneMatrixBuffer[indices.w] * weights.w;
 }
 
 @compute @workgroup_size(64, 1, 1) fn skin(

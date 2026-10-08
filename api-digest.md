@@ -201,7 +201,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - getAnimation(label)
   - applyAnimations()
   - updateBones()
-  - update(dt = 0)
+  - update(dt = 0, encoder = null)
 
 ## modules
 

@@ -328,10 +328,17 @@ yourself first, or call `update()` which does the full sequence. `updateBones()`
 can be called alone (no dispatch) to drive a bake loop without running the
 skinning compute every frame.
 
-The skinning compute (skin.wgsl) multiplies bone matrices by the inverse bind pose
-stored in `invBoneMatrixBuffer`. For glTF rigs this comes from `inverseBindMatrices`
-in the file; for hand-built rigs it's FK-derived from the bind pose. These are NOT
-interchangeable — don't mix sources.
+`boneMatrixBuffer` holds final skin matrices: `updateBones()` premultiplies the
+root-relative pose by the CPU bind inverse (`skin.inverseBindMatrices`) so skin.wgsl
+is a plain weighted sum, no mat4×mat4 per vertex. For glTF rigs the bind inverse comes
+from `inverseBindMatrices` in the file; for hand-built rigs it's FK-derived from the
+bind pose. These are NOT interchangeable — don't mix sources.
+
+`updateBones()` skips the upload (returns false) when the matrices are bit-identical to
+the last upload; `update(dt, encoder?)` dispatches only if an upload happened since its
+last dispatch, so a paused pose costs nothing. With `encoder` it records into the
+caller's command buffer and doesn't submit. Anything else writing `skinnedPositionBuffer`
+breaks that skip.
 
 Skeleton ancestor nodes (`skeletonAncestors`) are rebuilt as live `Transform`s so
 root-motion baked onto an armature ancestor (common in Mixamo) animates correctly.

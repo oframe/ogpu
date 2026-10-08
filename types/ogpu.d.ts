@@ -915,8 +915,12 @@ export class Skin {
     /** Skinned output storage buffers consumed by the render pipeline. */
     skinnedPositionBuffer: GPUBuffer;
     skinnedNormalBuffer: GPUBuffer;
+    /** Final skin matrices (root-relative pose × bind inverse), uploaded by updateBones. */
     boneMatrixBuffer: GPUBuffer;
-    invBoneMatrixBuffer: GPUBuffer;
+    /** Per-bone bind inverse: glTF inverseBindMatrices, else FK-derived from the bind pose. */
+    inverseBindMatrices: Mat4[];
+    /** True after an upload the skinning dispatch hasn't consumed yet. */
+    poseDirty: boolean;
     skinner: ComputeShader;
     skinningBindGroup: GPUBindGroup;
 
@@ -927,10 +931,10 @@ export class Skin {
     getAnimation(label: string): Animation | undefined;
     /** Blend all registered animations into the bone pose. */
     applyAnimations(): void;
-    /** Push current bone world matrices to the bone matrix buffer. */
-    updateBones(): void;
-    /** applyAnimations() + updateBones() + skinning dispatch (own submit). */
-    update(dt?: number): void;
+    /** Upload root-relative pose × bind inverse to the bone matrix buffer; false (no upload) when unchanged. */
+    updateBones(): boolean;
+    /** applyAnimations() + updateBones() + skinning dispatch — only when the pose changed. With `encoder`, records only (no submit). */
+    update(dt?: number, encoder?: GPUCommandEncoder | null): void;
 }
 
 // =============================================================================

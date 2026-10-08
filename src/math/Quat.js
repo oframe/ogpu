@@ -98,6 +98,13 @@ export class Quat extends Float32Array {
         return this;
     }
 
+    // shortest-arc rotation between two unit vectors (antiparallel-safe)
+    setFromUnitVectors(from, to) {
+        quat.rotationTo(from, to, this);
+        this.onChange();
+        return this;
+    }
+
     multiply(q) {
         quat.mul(this, q, this);
         this.onChange();

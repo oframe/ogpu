@@ -51,6 +51,8 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - **class PerDrawBuffer**
   - constructor(gpu, { label = 'per-draw-uniforms', size = 1 << 20 } = {})
   - alloc(byteLength)
+  - write(bytes)
+  - flush()
   - reset()
 
 ### src/core/RenderPipeline.js
@@ -289,7 +291,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - fn `decompose(srcMat, dstRotation, dstTranslation, dstScale)`
 
 ### src/utils/RenderUtils.js
-- fn `blit(encoder, { pipeline, geometry, targetView, bindGroup, clear = true, label } = {})`
+- fn `blit(encoder, { pipeline, geometry, targetView, depthView, bindGroup, clear = true, label } = …)`
 
 ### src/utils/TimingHelper.js
 - **class TimingHelper**
@@ -583,6 +585,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - setFromEuler(x, y, z, order = 'xyz')
   - setFromAxisAngle(axis, angle)
   - setFromRotationMatrix(m)
+  - setFromUnitVectors(from, to)
   - multiply(q)
   - premultiply(q)
   - rotateX(angle)

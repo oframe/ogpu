@@ -507,37 +507,21 @@ export class Renderer {
         this.time += this.deltaTime;
     }
 
+    // Array.prototype.sort is stable, so ties keep scene-traversal order.
     sortOpaque(a, b) {
-        if (a.renderOrder !== b.renderOrder) {
-            return a.renderOrder - b.renderOrder;
-        } else if (a.pipeline.id !== b.pipeline.id) {
-            return a.pipeline.id - b.pipeline.id;
-        } else if (a.zDepth !== b.zDepth) {
-            return a.zDepth - b.zDepth;
-        } else {
-            return b.id - a.id;
-        }
+        if (a.renderOrder !== b.renderOrder) return a.renderOrder - b.renderOrder;
+        if (a.pipeline.id !== b.pipeline.id) return a.pipeline.id - b.pipeline.id;
+        return a.zDepth - b.zDepth;
     }
 
     sortTransparent(a, b) {
-        if (a.renderOrder !== b.renderOrder) {
-            return a.renderOrder - b.renderOrder;
-        }
-        if (a.zDepth !== b.zDepth) {
-            return b.zDepth - a.zDepth;
-        } else {
-            return b.id - a.id;
-        }
+        if (a.renderOrder !== b.renderOrder) return a.renderOrder - b.renderOrder;
+        return b.zDepth - a.zDepth;
     }
 
     sortUI(a, b) {
-        if (a.renderOrder !== b.renderOrder) {
-            return a.renderOrder - b.renderOrder;
-        } else if (a.pipeline.id !== b.pipeline.id) {
-            return a.pipeline.id - b.pipeline.id;
-        } else {
-            return b.id - a.id;
-        }
+        if (a.renderOrder !== b.renderOrder) return a.renderOrder - b.renderOrder;
+        return a.pipeline.id - b.pipeline.id;
     }
 
     // Build the frame draw list: skip invisible/manual/non-drawable, frustum-cull,
@@ -796,6 +780,10 @@ export class Renderer {
 
             pass.end();
 
+            // one upload for every slice this render() allocated — queued before
+            // whichever submit carries the pass (ours below, or the caller's)
+            this.perDraw.flush();
+
             if (encoder) return; // caller owns finish/submit
 
             this.gpu.device.queue.submit([_encoder.finish()]);
@@ -829,6 +817,13 @@ export class Renderer {
 
         // One reset per rendered frame — allocations accumulate across every
         // render() call within the frame (multi-pass chains), that's the point.
+        // Unflushed slices mean a Mesh drew outside render(): its uniforms
+        // never reached the GPU.
+        const pd = this.perDraw;
+        if (pd && Math.min(pd.pointer, pd.size) > pd.flushed && !this._unflushedWarned) {
+            this._unflushedWarned = true;
+            console.warn('[renderer] mesh.draw() outside render() — call renderer.perDraw.flush() before submitting');
+        }
         this.perDraw?.reset();
 
         this.updateClock(time);

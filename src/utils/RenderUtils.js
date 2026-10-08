@@ -3,7 +3,9 @@
 // raw .pipeline: blit reads .hasDynamicUniform to decide whether group(0)/binding(0)
 // takes the per-draw dynamic offset ([0]) or none — passes with no uniform skip it.
 // clearValue is inert — the geometry covers every pixel — so it's not exposed.
-export function blit(encoder, { pipeline, geometry, targetView, bindGroup, clear = true, label } = {}) {
+// depthView is for pipelines whose fragment writes frag_depth (the spec requires
+// a depth attachment for that); omit it for plain colour blits.
+export function blit(encoder, { pipeline, geometry, targetView, depthView, bindGroup, clear = true, label } = {}) {
     const pass = encoder.beginRenderPass({
         label,
         colorAttachments: [
@@ -14,6 +16,14 @@ export function blit(encoder, { pipeline, geometry, targetView, bindGroup, clear
                 storeOp: 'store',
             },
         ],
+        ...(depthView && {
+            depthStencilAttachment: {
+                view: depthView,
+                depthClearValue: 1,
+                depthLoadOp: clear ? 'clear' : 'load',
+                depthStoreOp: 'store',
+            },
+        }),
     });
     pass.setPipeline(pipeline.pipeline);
     pass.setBindGroup(0, bindGroup, pipeline.hasDynamicUniform ? [0] : []);

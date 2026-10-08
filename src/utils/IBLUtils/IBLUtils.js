@@ -113,7 +113,7 @@ export function createBrdfLUT(gpu, { size = 512, label = 'brdflut' } = {}) {
         label: `${label}-texture`,
     });
 
-    const code = tier1 ? brdflut : brdflut.replace('rg16float', 'rgba16float');
+    const code = tier1 ? brdflut : brdflut.replace('<rg16float, write>', '<rgba16float, write>');
     const compute = new ComputeShader(gpu, { label: `${label}-compute`, code });
     const kernel = compute.findKernel('main');
     const bindGroup = gpu.device.createBindGroup({

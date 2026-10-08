@@ -11,6 +11,7 @@
 
 import { spawnSync } from 'node:child_process';
 import { readdirSync, statSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join, relative } from 'node:path';
 
 // Scope is the parent of this script's directory — so in a monorepo, dropping this
@@ -20,9 +21,14 @@ const ROOT = new URL('..', import.meta.url).pathname;
 // about not descending into generated/vendored dirs, which can be huge (target/).
 const SKIP = new Set(['node_modules', '.git', 'dist', 'build', 'out', 'target', '.next', 'coverage', 'vendor']);
 
-function hasNaga() {
-    const r = spawnSync('naga', ['--version'], { encoding: 'utf8' });
-    return !r.error && r.status === 0;
+// PATH first, then cargo's default install location
+const NAGA = ['naga', join(homedir(), '.cargo/bin/naga')].find(isNaga);
+
+function isNaga(bin) {
+    const r = spawnSync(bin, ['--version'], { encoding: 'utf8', timeout: 5000 });
+    // ANSI escapes in the output = Homebrew's `naga` Snake game, not naga-cli
+    // eslint-disable-next-line no-control-regex
+    return !r.error && r.status === 0 && !/\x1b\[/.test((r.stdout || '') + (r.stderr || ''));
 }
 
 function walk(dir) {
@@ -36,7 +42,7 @@ function walk(dir) {
     return out;
 }
 
-if (!hasNaga()) {
+if (!NAGA) {
     console.error('naga not found. Install it for WGSL validation:');
     console.error('  brew install naga-cli  # macOS / Linux (Homebrew) — NOT `naga`, that is a Snake game');
     console.error('  cargo install naga-cli # any platform with Rust');
@@ -47,7 +53,7 @@ const files = process.argv.slice(2).length ? process.argv.slice(2) : walk(ROOT).
 
 let failed = 0;
 for (const file of files) {
-    const r = spawnSync('naga', [file], { encoding: 'utf8' });
+    const r = spawnSync(NAGA, [file], { encoding: 'utf8' });
     const rel = relative(ROOT, file);
     if (r.status === 0) {
         console.log(`ok   ${rel}`);

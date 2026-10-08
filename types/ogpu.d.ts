@@ -224,6 +224,8 @@ export class Quat extends Float32Array {
     setFromEuler(x: number, y: number, z: number, order?: string): this;
     setFromAxisAngle(axis: ArrayLike<number>, angle: number): this;
     setFromRotationMatrix(m: ArrayLike<number>): this;
+    /** Shortest-arc rotation between two unit vectors (antiparallel-safe). */
+    setFromUnitVectors(from: ArrayLike<number>, to: ArrayLike<number>): this;
     multiply(q: ArrayLike<number>): this;
     premultiply(q: ArrayLike<number>): this;
     rotateX(angle: number): this;
@@ -620,10 +622,18 @@ export class PerDrawBuffer {
     /** minUniformBufferOffsetAlignment of the device. */
     align: number;
     buffer: GPUBuffer;
+    /** CPU copy of `buffer`; draws write here, `flush` uploads. */
+    mirror: Uint8Array;
     pointer: number;
+    /** Bytes already uploaded this frame; `[flushed, pointer)` is pending. */
+    flushed: number;
 
     /** Next aligned slice; caller writes its uniforms at the returned offset. */
     alloc(byteLength: number): number;
+    /** alloc + copy into the mirror. Returns the dynamic offset, or -1 when the slice doesn't fit (skip the draw). */
+    write(bytes: Uint8Array): number;
+    /** Upload every slice since the last flush in one writeBuffer. Renderer.render calls it; a draw outside render() must too. */
+    flush(): void;
     /** Rewind the pointer — Renderer calls this once per rendered frame. */
     reset(): void;
 }
@@ -746,7 +756,7 @@ export class ComputeShader {
      * index. Accepts the kernel object (uses its label) or the entry-point name.
      */
     bindGroupLayout(kernelOrKey: GPUComputePipeline | string, groupIndex?: number): GPUBindGroupLayout;
-    dispatch(encoder: GPUCommandEncoder, options: DispatchOptions): Promise<void>;
+    dispatch(encoder: GPUCommandEncoder, options: DispatchOptions): void;
     /** Releases timestamp-query resources and drops out of the hot-reload registry. */
     destroy(): void;
     getTiming(): Promise<void>;
@@ -1407,6 +1417,8 @@ export function blit(
         pipeline: RenderPipeline;
         geometry: Geometry;
         targetView: GPUTextureView;
+        /** Depth attachment, for pipelines whose fragment writes frag_depth. */
+        depthView?: GPUTextureView;
         bindGroup: GPUBindGroup;
         clear?: boolean;
         label?: string;

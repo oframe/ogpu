@@ -156,7 +156,7 @@ export class ComputeShader {
         return this._bindGroupLayouts[key]?.[groupIndex] ?? this.kernels[key].getBindGroupLayout(groupIndex);
     }
 
-    async dispatch(encoder, { pass = null, kernel, bindGroup, bindGroupIndex = 0, dispatchCount, workgroupBuffer = null, timing = false } = {}) {
+    dispatch(encoder, { pass = null, kernel, bindGroup, bindGroupIndex = 0, dispatchCount, workgroupBuffer = null, timing = false } = {}) {
         if (!encoder) {
             console.error('no encoder found');
             return;

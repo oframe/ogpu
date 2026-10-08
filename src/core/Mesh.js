@@ -3,6 +3,7 @@ import { Mat3, Mat4, Vec2 } from '@math';
 import { makeStructuredView } from 'webgpu-utils';
 
 const _res = /* @__PURE__ */ new Vec2();
+const _offsets = [0]; // reused dynamic-offset list for group(0)
 
 // the per-frame uniforms draw() writes by name — see the near-miss check below
 const STANDARD_UNIFORMS = ['projectionMatrix', 'viewMatrix', 'modelMatrix', 'modelViewMatrix', 'objectMatrix', 'normalMatrix', 'cameraPosition', 'cameraQuaternion', 'resolution', 'time'];
@@ -61,6 +62,8 @@ export class Mesh extends Transform {
         // or factory). Shaders without a `uniforms` var get the inert stub.
         this.uniforms = pipeline.defs.uniforms?.uniforms ? makeStructuredView(pipeline.defs.uniforms.uniforms) : NO_UNIFORMS;
         this.structSize = this.uniforms.arrayBuffer.byteLength;
+        // byte view handed to perDraw.write each draw — cached, not rebuilt per draw
+        this._bytes = new Uint8Array(this.uniforms.arrayBuffer);
 
         // A misnamed standard uniform is silently skipped at draw time — flag
         // likely typos once, at construction. u-prefixed names (uTime) are a
@@ -110,6 +113,7 @@ export class Mesh extends Transform {
                 console.warn(`[hot] ${this.label}: uniform layout changed — bind groups must be recreated`);
             }
             this.uniforms = next;
+            this._bytes = new Uint8Array(next.arrayBuffer);
             this._defs = this.pipeline.defs;
         }
 
@@ -119,39 +123,45 @@ export class Mesh extends Transform {
         // silently discarded writes to a missing target).
         const views = this.uniforms.views;
 
+        // Derived matrices are computed only when the shader declares them —
+        // so mesh.modelViewMatrix / normalMatrix / objectMatrix are stale for
+        // shaders that don't read them.
         if (camera) {
             views.projectionMatrix?.set(camera.projectionMatrix);
             views.cameraPosition?.set(camera.worldPosition);
             views.viewMatrix?.set(camera.viewMatrix);
 
-            this.modelViewMatrix.copy(camera.viewMatrix).multiply(this.worldMatrix);
-            views.modelViewMatrix?.set(this.modelViewMatrix);
-
-            this.normalMatrix.fromNormalMatrix(this.worldMatrix);
-            views.normalMatrix?.set(this.normalMatrix);
+            if (views.modelViewMatrix) {
+                this.modelViewMatrix.copy(camera.viewMatrix).multiply(this.worldMatrix);
+                views.modelViewMatrix.set(this.modelViewMatrix);
+            }
+            if (views.normalMatrix) {
+                this.normalMatrix.fromNormalMatrix(this.worldMatrix);
+                views.normalMatrix.set(this.normalMatrix);
+            }
             views.cameraQuaternion?.set(camera.worldQuaternion ?? camera.quaternion);
         }
 
         views.modelMatrix?.set(this.worldMatrix);
-        this.objectMatrix.copy(this.worldMatrix).invert();
-        views.objectMatrix?.set(this.objectMatrix);
+        if (views.objectMatrix) {
+            this.objectMatrix.copy(this.worldMatrix).invert();
+            views.objectMatrix.set(this.objectMatrix);
+        }
 
         this.beforeRenderCallbacks.forEach((cb) => cb && cb({ mesh: this, camera }));
 
-        this.uniforms.set({
-            resolution: _res.set(resolution?.[0] ?? this.gpu.canvas.width, resolution?.[1] ?? this.gpu.canvas.height),
-            time: time,
-        });
+        // scalar views are length-1 typed arrays — same as uniforms.set({ time }),
+        // minus the per-draw object literal
+        views.resolution?.set(_res.set(resolution?.[0] ?? this.gpu.canvas.width, resolution?.[1] ?? this.gpu.canvas.height));
+        if (views.time) views.time[0] = time;
 
         // a shader that never reads its uniforms has no binding(0) in the reflected
-        // layout — no slice to alloc, and group 0 must bind without a dynamic offset
+        // layout — no slice to alloc, and group 0 must bind without a dynamic offset.
+        // The slice lands in the CPU mirror; Renderer.render uploads the frame's
+        // slices in one writeBuffer after the pass.
         const dynamic = this.pipeline.hasDynamicUniform;
-        const perDraw = this.gpu.renderer.perDraw;
-        let offset = 0;
-        if (dynamic) {
-            offset = perDraw.alloc(this.uniforms.arrayBuffer.byteLength);
-            this.gpu.device.queue.writeBuffer(perDraw.buffer, offset, this.uniforms.arrayBuffer);
-        }
+        const offset = dynamic ? this.gpu.renderer.perDraw.write(this._bytes) : 0;
+        if (offset < 0) return; // per-draw buffer full: drop this draw, keep the pass valid
 
         // No redundant-bind dedup — external pass.setPipeline calls on a
         // shared pass desync an expando cache; upgrade path is a renderer-owned per-pass cache
@@ -160,7 +170,8 @@ export class Mesh extends Transform {
 
         this.bindGroups.forEach((bindGroup, i) => {
             if (i === 0 && dynamic) {
-                pass.setBindGroup(0, bindGroup, [offset]);
+                _offsets[0] = offset;
+                pass.setBindGroup(0, bindGroup, _offsets);
             } else {
                 pass.setBindGroup(i, bindGroup);
             }

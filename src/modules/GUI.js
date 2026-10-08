@@ -7,7 +7,7 @@ import { Pane } from 'tweakpane';
  * engine-aware helpers:
  *
  *   gui.add(obj, 'key', opts)            // bind a single property, returns the binding
- *   gui.uniform(pipeline, 'uScale', opts) // bind a shader uniform; writes + uploads on change
+ *   gui.uniform(mesh, 'uScale', opts)     // bind a Mesh/pass uniform; written through on change
  *   gui.button('Label', () => {...})      // action button
  *   gui.folder('Title')                   // returns a sub-GUI scoped to a folder
  *   gui.monitor(obj, 'key', opts)         // read-only readout (e.g. fps)

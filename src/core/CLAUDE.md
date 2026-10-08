@@ -185,16 +185,29 @@ so group(0) binds it verbatim at binding 0. Build groups against
 `pipeline.bindGroupLayout(i)`, one per group index. Set custom uniforms via
 `mesh.uniforms.set({...})` (NOT `pipeline.uniforms`).
 
-Every `draw()` allocates a fresh slice from `perDraw` (`perDraw.alloc(byteLength)`),
-writes this mesh's uniforms there, and binds group(0) with a dynamic offset
+Every `draw()` copies this mesh's uniforms into a fresh slice of `perDraw`'s CPU
+mirror (`perDraw.write(bytes)`) and binds group(0) with a dynamic offset
 (`pass.setBindGroup(0, bindGroup, [offset])`) — `RenderPipeline.build` marks the
-group(0)/binding(0) buffer entry `hasDynamicOffset: true` for this reason. The
-buffer's `pointer` resets once per rendered frame (`Renderer.update`, after the
-paused early-return) and accumulates across every `render()` call within that
-frame — that's what lets one mesh draw into multiple chained passes safely.
+group(0)/binding(0) buffer entry `hasDynamicOffset: true` for this reason.
+`Renderer.render` uploads every slice it allocated in ONE `writeBuffer`
+(`perDraw.flush()`, right after `pass.end()` and before the external-encoder
+early return), so the write is queued ahead of whichever submit carries the pass.
+**A `mesh.draw()` issued outside `render()` must call `renderer.perDraw.flush()`
+before its submit** — otherwise its uniforms never reach the GPU (`update()` warns
+once when it finds unflushed slices). The buffer's `pointer` resets once per
+rendered frame (`Renderer.update`, after the paused early-return) and accumulates
+across every `render()` call within that frame — that's what lets one mesh draw
+into multiple chained passes safely.
+
+`draw()` computes `modelViewMatrix`, `normalMatrix` and `objectMatrix` (a full
+inverse) only when the shader's `Uniforms` struct declares them — the public
+`mesh.modelViewMatrix`/`normalMatrix`/`objectMatrix` fields are stale for
+shaders that don't.
 Overflowing the buffer (`perDrawSize`, default 1 MiB, set via the `Renderer`
-constructor) logs a console error instead of growing it — growing would
-invalidate every already-bound group(0). Device recovery recreates `perDraw`
+constructor) logs a console error once per frame and **skips every draw that
+doesn't fit** (`perDraw.write` returns -1) — binding an offset past the end would
+invalidate the whole pass. It doesn't grow: growing would invalidate every
+already-bound group(0). Device recovery recreates `perDraw`
 alongside the depth texture in `_restore`; app-owned bind groups rebuild in
 `deviceRestoredHandler`s.
 

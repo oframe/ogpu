@@ -12,6 +12,14 @@ Zero-copy GPU uploads too — just hand the instance to `device.queue.writeBuffe
 Don't `new Float32Array(vec3)` — that copies. Don't spread into a plain array
 before passing to wgpu-matrix — that loses the out-arg identity.
 
+**`slice()`/`map()`/`filter()` do not give you a shorter array.** TypedArray
+species-constructs the result, and every constructor here takes no length and
+fixes its own (`Mat4` is always 16, `Vec3` always 3). `mat.slice(0, 3)` comes
+back 16 long with the first 3 elements copied and the rest whatever the
+constructor left — feed that to `makeStructuredView().set()` for a `vec3f` field
+and it throws `RangeError: offset is out of bounds`. Read the components by
+index (`[m[0], m[1], m[2]]`) or use `Mat4.getAxis(axis, out)`.
+
 ## Mutating methods return `this`
 
 All chainable methods mutate in place and return `this`. `clone()` is the only

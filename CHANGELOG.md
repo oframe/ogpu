@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.8.0
+
+Less per-frame work: skinning and transforms now redo only what changed, ported from dgpu.
+
+### Changed
+
+- **Skinning premultiplies bind inverses on the CPU** — `Skin.updateBones()` uploads final skin
+  matrices (root-relative pose × bind inverse), so `skin.wgsl` is a plain weighted sum instead of
+  four mat4 × mat4 per vertex. Bind inverses live on the CPU as `skin.inverseBindMatrices` (glTF
+  `inverseBindMatrices` when the rig ships them, else FK-derived). Output is identical to float
+  noise (max 3e-7 relative across every vertex of both example rigs).
+- **Idle skins skip the GPU** — `updateBones()` returns `false` and skips the upload when the
+  matrices are unchanged, and `update()` dispatches only after an upload.
+  `update(dt, encoder)` records into a caller's encoder when one is passed.
+- **Transforms recompose only when TRS changes** — `Transform.updateMatrix` caches position,
+  quaternion and scale, so static subtrees no longer recompute their world matrices every frame.
+  `Camera.updateMatrixWorld(force)` forwards `force`.
+
+### Breaking
+
+- `skin.invBoneMatrixBuffer` and binding 4 of the skinning bind group are removed;
+  `Skin.updateBones()` returns a boolean.
+- A direct write to `node.matrix` on an auto-updating node now persists until its TRS next
+  changes. A `matrixAutoUpdate = false` node whose `matrix` is rewritten must set
+  `worldMatrixNeedsUpdate = true`.
+
 ## 0.7.0
 
 Gaussian splatting, and a cheaper per-draw uniform path brought over from dgpu.

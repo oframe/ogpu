@@ -1,5 +1,83 @@
 # Changelog
 
+## 0.16.0
+
+Breaking. Bind groups come from a new `BindGroupLayout` engine object, `UniformBuffer` backs
+every uniform struct, and the BufferUtils helpers fill from `data`.
+
+### Added
+
+- **`BindGroupLayout`** (`@core/BindGroupLayout`, also from `ogpu`): the raw layout at `.layout`,
+  plus `entries`, `names` (WGSL name → binding), `declared`, `label` and
+  `createBindGroup(resources, { label })`. Resources by WGSL name: an undeclared name throws, a
+  declared name outside this layout is dropped, so one resource object can feed every kernel's
+  layout. Interned per device: the raw layout by shape, the object by shape + group + names +
+  declared, so kernels reading the same bindings share one object and its bind groups, and a hot
+  reload that keeps the shape keeps bind groups valid (compute layouts now also follow a reload
+  that changes the shape).
+  A ComputeShader with an explicit `layout` wraps that pipeline's layout, not interned.
+- **`data` on `createStorageBuffer` / `createBuffer`**: an ArrayBuffer or typed array copied in at
+  creation (`mappedAtCreation`); `size` defaults to its byte length rounded up to 4, and an
+  explicit smaller `size` throws.
+
+### Changed
+
+- Every engine-layout `device.createBindGroup` (Skin, the BRDF LUT, GLTFLoader's material
+  group, GaussianSplat's sorts, the examples) builds by name. GLTFLoader's `iblEntries` option
+  keeps its binding-number form and is named internally. GaussianSplat's sort bind groups come
+  from shared resource objects, one per sort and per radix pass.
+- Compute, fullscreen and IBL uniform structs (Particles, InstancingPicking, Feedback,
+  RenderToTexture, ComputeFrustumCulling, GaussianSplat's SortUniforms, the IBL unpack/prefilter
+  passes) are `UniformBuffer`s; create-then-`writeBuffer` pairs use `data`.
+- `types/ogpu.d.ts`, AGENTS.md, README, the CLAUDE.md files and the pbr-shading, scaffold-app
+  (incl. its generator), scaffold-shader, shadow-mapping and webgpu-utils-lookup skills follow.
+
+### Migration
+
+- `shader.createBindGroup(group, resources)` (0.14.0) is removed, with no alias:
+  `shader.bindGroupLayout(group).createBindGroup(resources)`.
+- `shader.bindGroupLayout(i)`, `renderPipeline.bindGroupLayout(i)` and
+  `computeShader.bindGroupLayout(kernel, group)` return a `BindGroupLayout`, not a
+  `GPUBindGroupLayout`. `RenderPipeline.bindGroupLayout` and `ComputeShader.bindGroupLayout` are
+  public on `main`: code passing their result to `device.createBindGroup({ layout })` passes
+  `.layout` instead, or better, moves to `layout.createBindGroup({ name: resource })`. They now
+  throw where they used to return something else: `shader.bindGroupLayout(1)` (was the engine
+  layout), a Shader group with nothing declared (was the empty layout) and a RenderPipeline group
+  past the last one (was `undefined`).
+- `computeShader.bindGroupLayout(kernel, group)` requires both arguments: a kernel (entry-point)
+  name string and a group number. The kernel object, a missing group (it defaulted to 0) and a bare
+  number all throw: `bindGroupLayout(kernel)` → `bindGroupLayout('kernelName', 0)`.
+- `createUniformBuffer` is deprecated (it warns once and forwards to `createBuffer` with UNIFORM
+  usage). A uniform struct goes on `new UniformBuffer(gpu, defs.uniforms.<name>, values)` with
+  `set()` (or `ub.views.x = …` then `ub.upload()`); structless bytes go in
+  `createBuffer(gpu, { usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, data })`.
+- `createBindGroup` throws where WebGPU used to fail later: on a binding of the layout left out
+  (or `undefined` / `null`), listing what the layout needs. GLTFLoader likewise throws on an
+  `iblEntries` binding pbr.wgsl doesn't declare in group(0), or one the material owns (5–12).
+
+### Measured
+
+Production builds against 0.15.0 (bcf8208), headless Chromium on Metal (M1 Pro):
+
+- Every view screenshot-matches 0.15.0 within an A/A envelope of two 0.15.0 reshoots; no new
+  console or GPU errors (`ktx` keeps its existing BC-copy validation warnings).
+- GaussianSplat (no view): bitonic, radix, sliced and workgroup-128 GPU sorts of a seeded
+  5000-splat cloud give bit-identical index orders.
+- `layout.createBindGroup` costs 1.03 µs against 1.18 µs for 0.15.0's `shader.createBindGroup`
+  (raw `device.createBindGroup` 0.88 µs); a two-binding fullscreen group 0.73 µs against 0.62 µs
+  raw. Shader / ComputeShader / RenderPipeline construction within ±5 µs.
+- Interleaved A/A/B (5 runs) on particles, computefrustumculling, feedback, instancingpicking,
+  msdftext, rendertargets, skinninggltf and highmeshcount: CPU, wall and GPU medians within the
+  A/A spread, except highmeshcount's 10k-mesh moving GPU-only batch (+8.4 % against +3.9 % A/A,
+  a path this release doesn't touch). No view builds bind groups per frame.
+
+### Known issues
+
+- `GUI.uniform` still accepts the older `{ uniforms, uniformBuffer, gpu }` target next to a
+  `UniformBuffer`; nothing in the repo uses it.
+- IBL unpack/prefilter keep raw `layout: 'auto'` compute pipelines and raw bind groups (their
+  uniforms are `UniformBuffer`s).
+
 ## 0.15.0
 
 MSDF text, ported from dgpu 0.15.0.

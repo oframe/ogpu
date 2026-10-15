@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.14.0
+
+`Shader.bindGroup` is renamed `createBindGroup`. It allocates a new `GPUBindGroup` on every
+call; the getter-like name next to `bindGroupLayout(i)` invited per-frame calls.
+
+### Changed
+
+- **`shader.bindGroup(group, resources, { label })` →
+  `shader.createBindGroup(group, resources, { label })`**, mirroring `device.createBindGroup`
+  and the repo's `create*` naming. Signature and behaviour are unchanged; there is no alias.
+  Examples, `GLTFLoader`, `GaussianSplat`, `types/ogpu.d.ts`, the docs and the skills (incl.
+  the `scaffold-app` generator) are updated.
+
+Migration: replace `shader.bindGroup(` with `shader.createBindGroup(` (Shader instances only;
+`dispatch({ bindGroup })`, `blit({ bindGroup })` and `mesh.bindGroups` keep their names).
+
 ## 0.13.0
 
 webgpu-utils and wgpu-matrix come back, under the current API. Shader + state meshes, the engine

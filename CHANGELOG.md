@@ -1,5 +1,111 @@
 # Changelog
 
+## 0.9.0
+
+Meshes hold a Shader, a plain `state` object and bind groups; the renderer derives their
+pipelines, engine uniforms live in one fixed group(1), and webgpu-utils is gone. Ported from
+dgpu 0.8.0. Breaking.
+
+### Added
+
+- **`Shader`** (`@core/Shader`, exported from `ogpu`) — a shader module plus its reflected
+  interface: the `uniforms` struct, `bindGroupLayout(i)` and a pipeline layout with the engine
+  layout at slot 1. It knows no geometry, target or blend state.
+  `shader.bindGroup(group, { uniforms, tMap: view, … })` binds by WGSL name: undeclared names
+  throw, declared-but-unused ones are dropped, group 1 is refused. Hot reload rebuilds it in
+  place and bumps `version`.
+- **`UniformBuffer`** (`@core/UniformBuffer`, exported) — a struct view plus its GPUBuffer, built
+  from any reflected struct (`new UniformBuffer(gpu, shader.uniforms, values)`). `set()` uploads
+  immediately. `gui.uniform(ub, 'uScale', …)` binds it.
+- **Engine block** (`src/core/engine.wgsl`), appended after the user code of every Mesh shader
+  (line numbers and `enable` directives stay put): `@group(1) camera` (projectionMatrix,
+  viewMatrix, cameraPosition, time, cameraQuaternion, resolution; 176 B, one slice per pass)
+  and `@group(1) object` (modelMatrix, modelViewMatrix, normalMatrix, objectMatrix; 240 B, one
+  slice per draw). Both are dynamic offsets into the PerDrawBuffer through one renderer-owned
+  bind group, rebuilt on device restore. Field names are declarations now, so a typo is a
+  compile error and the misspelling warning is gone. With no camera the matrices are identity.
+- **`PipelineCache`** (`renderer.pipelines`, exported) — GPURenderPipelines derived from
+  (shader + version, `state`, `geometry.layoutKey`, the pass's colour/depth formats + sample
+  count), memoized per mesh and pass kind, with kebab-case labels. A pipeline that can't be
+  built, or a shader input the geometry doesn't provide, is reported once naming the mesh and
+  the shader, and that mesh's draws are skipped. **`renderer.compile({ scene, target })`**
+  pre-builds with `createRenderPipelineAsync`.
+- **`Transform.worldVersion`** — bumped whenever the world matrix is recomputed; a Mesh caches
+  `normalMatrix` / `objectMatrix` against it.
+- **Internal reflection** (`src/core/reflect`) on `wgsl_reflect` 1.6.0 (pinned): `reflect(code)`,
+  `StructView` / `makeStructuredView` (same `views` / `set` / `arrayBuffer` shape as before, all
+  exported from `ogpu`) and per-entry-point layout derivation. Parity-checked against
+  webgpu-utils over every `.wgsl` in the repo.
+- **`@core/primitives/vertices.js`**, **`@utils/mipmap.js`** (`generateMipmap(gpu, texture)`,
+  `numMipLevels`) and **`@utils/textureFromSource.js`** — ports of the webgpu-utils pieces ogpu
+  used, byte-identical output, MIT attribution kept. Geometry builds its own vertex/index
+  buffers.
+- **`validate:shaders`** understands `// validate-prepend: <file>` (Mesh shaders name
+  `src/core/engine.wgsl`), hoisting `enable` / `requires` / `diagnostic` above the prepended code.
+
+### Changed
+
+- **`new Mesh({ label, geometry, shader, state, bindGroups, renderOrder, frustumCulled,
+manualRender })`** — no `gpu`, no `pipeline`, no per-mesh GPU objects. `geometry`, `shader`,
+  `state` and `bindGroups` are all swappable (bind groups belong to their shader);
+  `bindGroups[1]` must be empty, and empty slots get the renderer's shared empty group.
+- **`state`** — a plain object, frozen on assignment (its `blending` too); replace it, don't
+  mutate it. `transparent`, `depthWrite`, `depthTest`, `depthCompare`, `depthBias`,
+  `depthBiasSlopeScale`, `depthBiasClamp`, `cullMode`, `frontFace`, `topology`, `blending`,
+  `writeMask`. Defaults match the old RenderPipeline; an explicit `undefined` keeps the default.
+- **`RenderPipeline`** is for fullscreen passes and other non-Mesh draws only: no engine block,
+  a fully reflected layout, nothing dynamic. `blit` binds group(0) without the dummy `[0]`
+  offset.
+- **Shaders** — the ten standard fields leave every `Uniforms` struct; shaders read `camera.*`
+  and `object.*`. computefrustumculling's field shader, the one that used `@group(1)` for its own
+  storage buffers, moved them to `@group(2)`.
+- **`pbr.wgsl`** has no `uniforms` block any more, so its group(0) starts at binding 1 — drop the
+  binding-0 entry from hand-built bind groups.
+- **`GLTFLoader`** builds one Shader (`loader.shader`; `loader.pipelines` is gone) and a
+  UniformBuffer per material; its `targets` / `sampleCount` options are gone (formats come from
+  the pass). `getSkinnedMesh` binds group(0) by WGSL name.
+- **`GaussianSplat`** extends the new Mesh and keeps `uCount` in its own UniformBuffer.
+- **Per-draw upload** — every draw takes one 256 B object slice plus one 256 B camera slice per
+  pass. hellowebgpu: 512 → 341 B per draw (1536 → 1024 B per frame). highmeshcount, whose
+  old struct already padded to 256 B: unchanged at 256 B per drawn mesh.
+- **`render()` CPU time** (highmeshcount, Apple M1 Pro, headless Chromium, best of 7 runs × 3 page loads): static
+  scene 0.59 → 0.51 ms at 1000 meshes (~600 drawn) and 11.4 → 7.8 ms at 10000 (~5750 drawn);
+  every mesh moving every frame 10.9 → 8.6 ms at 10000, but 0.62 → 0.68 ms at 1000. Likely
+  cause (not profiled): a moved mesh now always computes the `objectMatrix` inverse, which
+  0.7–0.8 skipped when the shader didn't declare it (highmeshcount's didn't).
+
+### Removed
+
+- **`webgpu-utils`** (dependency, imports, docs, the `webgpu-utils-lookup` skill).
+- `mesh.uniforms`, `mesh.uniformResource`, `mesh.structSize`, `mesh.modelViewMatrix`,
+  `mesh.pipeline`, bind-group factory functions, `RenderPipeline.hasDynamicUniform`.
+
+### Migration
+
+1. WGSL: delete `projectionMatrix`, `viewMatrix`, `modelMatrix`, `modelViewMatrix`,
+   `objectMatrix`, `normalMatrix`, `cameraPosition`, `cameraQuaternion`, `resolution` and `time`
+   from your `Uniforms` struct (delete the struct and its binding if nothing is left) and read
+   `camera.<field>` / `object.<field>` instead. Add
+   `// validate-prepend: <path>/src/core/engine.wgsl` for `validate:shaders`. Move any own
+   `@group(1)` bindings to group 2.
+2. JS: `new RenderPipeline(gpu, { code, vertexBuffers, targets, sampleCount, cullMode, … })` +
+   `new Mesh(gpu, { pipeline, geometry, bindGroups: (uniformResource) => […] })` becomes
+   `const shader = new Shader(gpu, { code, constants })`,
+   `const uniforms = new UniformBuffer(gpu, shader.uniforms, { … })`,
+   `new Mesh({ geometry, shader, state: { cullMode, … }, bindGroups: [shader.bindGroup(0, { uniforms, … })] })`.
+   Drop `targets` / `sampleCount` / `vertexBuffers` / depth formats.
+3. `mesh.uniforms.set(…)` → `uniforms.set(…)`; `gui.uniform(mesh, …)` → `gui.uniform(uniforms, …)`.
+   A mesh drawn several times in one submit with different values needs one UniformBuffer +
+   bind group per view.
+4. A pass that draws a mesh with another shader (shadow casters): a second Mesh sharing the
+   geometry, or swap `mesh.shader` and `mesh.bindGroups` together.
+5. Fullscreen / direct draws on a RenderPipeline: `pass.setBindGroup(0, group)` with no offsets.
+6. `import { makeStructuredView } from 'webgpu-utils'` → `from 'ogpu'`; `primitives` →
+   `@core/primitives/vertices.js`; `generateMipmap(device, tex)` → `generateMipmap(gpu, tex)`
+   from `@utils/mipmap.js`.
+7. After a device loss, rebuild your Shaders (and their bind groups) in a
+   `deviceRestoredHandlers` callback; the renderer rebuilds its engine group and pipeline cache.
+
 ## 0.8.0
 
 Less per-frame work: skinning and transforms now redo only what changed, ported from dgpu.

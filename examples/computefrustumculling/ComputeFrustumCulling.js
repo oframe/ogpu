@@ -92,11 +92,8 @@ export class ComputeFrustumCulling {
             spheres[i * 4 + 3] = localRadius * tmp.matrix.getMaxScaleOnAxis();
         }
 
-        this.modelBuffer = createStorageBuffer(this.gpu, { label: 'models', size: models.byteLength });
-        this.gpu.device.queue.writeBuffer(this.modelBuffer, 0, models);
-
-        this.sphereBuffer = createStorageBuffer(this.gpu, { label: 'spheres', size: spheres.byteLength });
-        this.gpu.device.queue.writeBuffer(this.sphereBuffer, 0, spheres);
+        this.modelBuffer = createStorageBuffer(this.gpu, { label: 'models', data: models });
+        this.sphereBuffer = createStorageBuffer(this.gpu, { label: 'spheres', data: spheres });
 
         // compact list of visible instance indices, filled by the cull pass.
         this.visibleBuffer = createStorageBuffer(this.gpu, { label: 'visible-indices', size: NUM * 4 });
@@ -105,10 +102,9 @@ export class ComputeFrustumCulling {
         // firstInstance]. instanceCount is written by the GPU.
         this.argsBuffer = createStorageBuffer(this.gpu, {
             label: 'draw-args',
-            size: 4 * 4,
             usage: GPUBufferUsage.INDIRECT | GPUBufferUsage.COPY_DST,
+            data: new Uint32Array([this.vertexCount, 0, 0, 0]),
         });
-        this.gpu.device.queue.writeBuffer(this.argsBuffer, 0, new Uint32Array([this.vertexCount, 0, 0, 0]));
         geometry.drawBuffer = this.argsBuffer;
 
         // forest.jpg texture + sampler, shared by every instance.

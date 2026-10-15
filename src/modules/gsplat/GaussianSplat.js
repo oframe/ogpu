@@ -6,7 +6,7 @@ import { Shader } from '@core/Shader';
 import { UniformBuffer } from '@core/UniformBuffer';
 import { ComputeShader } from '@core/ComputeShader';
 import { Mat4 } from '@math';
-import { createStorageBuffer } from '@utils/BufferUtils';
+import { createStorageBuffer, createBuffer } from '@utils/BufferUtils';
 import { BlendFactor } from '@core/GPUEnums.js';
 
 import defaultShaderCode from './gsplat.wgsl?raw';
@@ -65,33 +65,13 @@ export class GaussianSplat extends Mesh {
         // ── Upload per-splat storage buffers (written once) ───────────────────
         const storageUsage = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
 
-        const positionsBuffer = createStorageBuffer(gpu, {
-            label: `${label}-positions`,
-            size: positions.byteLength,
-            usage: storageUsage,
-        });
-        gpu.device.queue.writeBuffer(positionsBuffer, 0, positions);
+        const positionsBuffer = createStorageBuffer(gpu, { label: `${label}-positions`, usage: storageUsage, data: positions });
 
-        const colorsBuffer = createStorageBuffer(gpu, {
-            label: `${label}-colors`,
-            size: colors.byteLength,
-            usage: storageUsage,
-        });
-        gpu.device.queue.writeBuffer(colorsBuffer, 0, colors);
+        const colorsBuffer = createStorageBuffer(gpu, { label: `${label}-colors`, usage: storageUsage, data: colors });
 
-        const rotationsBuffer = createStorageBuffer(gpu, {
-            label: `${label}-rotations`,
-            size: rotations.byteLength,
-            usage: storageUsage,
-        });
-        gpu.device.queue.writeBuffer(rotationsBuffer, 0, rotations);
+        const rotationsBuffer = createStorageBuffer(gpu, { label: `${label}-rotations`, usage: storageUsage, data: rotations });
 
-        const scalesBuffer = createStorageBuffer(gpu, {
-            label: `${label}-scales`,
-            size: scales.byteLength,
-            usage: storageUsage,
-        });
-        gpu.device.queue.writeBuffer(scalesBuffer, 0, scales);
+        const scalesBuffer = createStorageBuffer(gpu, { label: `${label}-scales`, usage: storageUsage, data: scales });
 
         // ── Sort I/O buffers ──────────────────────────────────────────────────
         const sortBufUsage = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
@@ -114,28 +94,21 @@ export class GaussianSplat extends Mesh {
         // upload), so in-progress sort scribbles in the work buffers are never
         // visible — the prerequisite for the time-sliced mode. Initialised to
         // identity so the first frames draw something sane pre-first-sort.
-        const indicesFrontBuffer = gpu.device.createBuffer({
+        const identity = new Uint32Array(count);
+        for (let i = 0; i < count; i++) identity[i] = i;
+        const indicesFrontBuffer = createBuffer(gpu, {
             label: `${label}-sorted-indices-front`,
             size: paddedCount * 4,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-            mappedAtCreation: true,
+            data: identity,
         });
-        {
-            const init = new Uint32Array(indicesFrontBuffer.getMappedRange());
-            for (let i = 0; i < count; i++) init[i] = i;
-            indicesFrontBuffer.unmap();
-        }
 
         // ── Indirect draw buffer: [vertexCount=4, instanceCount=count, 0, 0] ──
-        const drawData = new Uint32Array([4, count, 0, 0]);
-        const drawBuffer = gpu.device.createBuffer({
+        const drawBuffer = createBuffer(gpu, {
             label: `${label}-indirect-draw`,
-            size: drawData.byteLength,
             usage: GPUBufferUsage.INDIRECT | GPUBufferUsage.COPY_DST,
-            mappedAtCreation: true,
+            data: new Uint32Array([4, count, 0, 0]),
         });
-        new Uint32Array(drawBuffer.getMappedRange()).set(drawData);
-        drawBuffer.unmap();
 
         // ── Corner geometry: 4-vertex triangle-strip, XY corners ∈ {±1} ─────
         const geometry = new Geometry(gpu, {
@@ -244,23 +217,21 @@ export class GaussianSplat extends Mesh {
 
         this._totalSteps = totalSteps;
 
-        const stepParamsBuffer = gpu.device.createBuffer({
-            label: `${label}-bitonic-step-params`,
-            size: Math.max(totalSteps * STEP_STRIDE, STEP_STRIDE),
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-        });
-
-        // Write (j, k) pairs into the buffer at STEP_STRIDE-byte offsets.
-        const stepData = new Uint32Array(2);
+        // (j, k) pairs at STEP_STRIDE-byte offsets
+        const stepData = new Uint32Array((Math.max(totalSteps, 1) * STEP_STRIDE) / 4);
         let stepIdx = 0;
         for (let k = 2; k <= paddedCount; k <<= 1) {
             for (let j = k >> 1; j > 0; j >>= 1) {
-                stepData[0] = j;
-                stepData[1] = k;
-                gpu.device.queue.writeBuffer(stepParamsBuffer, stepIdx * STEP_STRIDE, stepData);
+                stepData[(stepIdx * STEP_STRIDE) / 4] = j;
+                stepData[(stepIdx * STEP_STRIDE) / 4 + 1] = k;
                 stepIdx++;
             }
         }
+        const stepParamsBuffer = createBuffer(gpu, {
+            label: `${label}-bitonic-step-params`,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+            data: stepData,
+        });
 
         this._stepParamsBuffer = stepParamsBuffer;
         this._STEP_STRIDE = STEP_STRIDE;
@@ -454,18 +425,18 @@ export class GaussianSplat extends Mesh {
         // Per-pass PassParams { shift, count, numWorkgroups } at 256-byte
         // aligned slots — same pre-baked-uniform-slots scheme as the bitonic
         // step params.
-        this._radixParamsBuffer = gpu.device.createBuffer({
-            label: `${label}-radix-pass-params`,
-            size: this._radixPasses * STEP_STRIDE,
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-        });
-        const passData = new Uint32Array(3);
+        const passData = new Uint32Array((this._radixPasses * STEP_STRIDE) / 4);
         for (let p = 0; p < this._radixPasses; p++) {
-            passData[0] = p * 4; // shift: digit p covers bits [p*4, p*4+4)
-            passData[1] = count;
-            passData[2] = radixWorkgroups;
-            gpu.device.queue.writeBuffer(this._radixParamsBuffer, p * STEP_STRIDE, passData);
+            const o = (p * STEP_STRIDE) / 4;
+            passData[o] = p * 4; // shift: digit p covers bits [p*4, p*4+4)
+            passData[o + 1] = count;
+            passData[o + 2] = radixWorkgroups;
         }
+        this._radixParamsBuffer = createBuffer(gpu, {
+            label: `${label}-radix-pass-params`,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+            data: passData,
+        });
 
         // Pre-bake one bind group per (kernel, pass). Even passes read A and
         // write B; odd passes read B and write A.

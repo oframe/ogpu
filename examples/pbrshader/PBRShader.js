@@ -333,10 +333,9 @@ export class PBRShader {
         const shArray = await loadSphericalHarmonics(shUrl);
         const shBuffer = createBuffer(this.gpu, {
             label: 'sh-constants-buffer',
-            size: shArray.byteLength,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+            data: shArray,
         });
-        this.gpu.device.queue.writeBuffer(shBuffer, 0, shArray);
 
         const lutTexture = createBrdfLUT(this.gpu);
 

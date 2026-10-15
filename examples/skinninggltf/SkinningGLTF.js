@@ -246,8 +246,7 @@ export class SkinningGLTF {
         const ibl = await loadIBLCubeMap(this.gpu, { url, faceSize: 256, mipLevels: 6, label: 'specular-ibl' });
 
         const shArray = await loadSphericalHarmonics(shUrl);
-        const shBuffer = createBuffer(this.gpu, { label: 'sh-constants-buffer', size: shArray.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-        this.gpu.device.queue.writeBuffer(shBuffer, 0, shArray);
+        const shBuffer = createBuffer(this.gpu, { label: 'sh-constants-buffer', usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, data: shArray });
 
         const lutTexture = createBrdfLUT(this.gpu);
 

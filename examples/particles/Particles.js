@@ -39,26 +39,9 @@ export class Particles {
             positionData[i * 4 + 3] = Math.random();
         }
 
-        this.velocityBuffer = createStorageBuffer(this.gpu, {
-            label: 'velocity-data',
-            size: velocityData.byteLength,
-        });
-
-        this.gpu.device.queue.writeBuffer(this.velocityBuffer, 0, velocityData);
-
-        this.positionBufferRead = createStorageBuffer(this.gpu, {
-            label: 'position-data-read',
-            size: positionData.byteLength,
-        });
-
-        this.gpu.device.queue.writeBuffer(this.positionBufferRead, 0, positionData);
-
-        this.positionBufferWrite = createStorageBuffer(this.gpu, {
-            label: 'position-data-write',
-            size: positionData.byteLength,
-        });
-
-        this.gpu.device.queue.writeBuffer(this.positionBufferWrite, 0, positionData);
+        this.velocityBuffer = createStorageBuffer(this.gpu, { label: 'velocity-data', data: velocityData });
+        this.positionBufferRead = createStorageBuffer(this.gpu, { label: 'position-data-read', data: positionData });
+        this.positionBufferWrite = createStorageBuffer(this.gpu, { label: 'position-data-write', data: positionData });
 
         this.computeShader = new ComputeShader(this.gpu, {
             label: 'compute-shader-example',

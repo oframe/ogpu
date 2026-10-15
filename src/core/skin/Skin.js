@@ -112,12 +112,7 @@ export class Skin {
     }
 
     createGeometryBuffer(name, size, data) {
-        const buffer = createStorageBuffer(this.gpu, {
-            label: `${this.label}-${name}-buffer`,
-            size,
-        });
-        this.gpu.device.queue.writeBuffer(buffer, 0, data);
-        return buffer;
+        return createStorageBuffer(this.gpu, { label: `${this.label}-${name}-buffer`, size, data });
     }
 
     initSkinning() {

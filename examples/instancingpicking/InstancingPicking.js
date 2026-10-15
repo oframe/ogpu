@@ -49,11 +49,9 @@ export class InstancingPicking {
         });
 
         // Storage buffers: offset/random as compute inputs, hits as output.
-        this.offsetBuffer = createStorageBuffer(this.gpu, { label: 'offset-data', size: offset.byteLength });
-        this.randomBuffer = createStorageBuffer(this.gpu, { label: 'random-data', size: random.byteLength });
+        this.offsetBuffer = createStorageBuffer(this.gpu, { label: 'offset-data', data: offset });
+        this.randomBuffer = createStorageBuffer(this.gpu, { label: 'random-data', data: random });
         this.hitsBuffer = createStorageBuffer(this.gpu, { label: 'hit-data', size: NUM * 4 });
-        this.gpu.device.queue.writeBuffer(this.offsetBuffer, 0, offset);
-        this.gpu.device.queue.writeBuffer(this.randomBuffer, 0, random);
 
         // Compute: the picking kernel.
         this.compute = new ComputeShader(this.gpu, { label: 'picking-compute', code: picking });

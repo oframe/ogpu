@@ -105,6 +105,20 @@ function parseFile(file) {
             continue;
         }
 
+        // destructured export: export const { a, b } = ns; (may span lines)
+        if (/^export const \{/.test(line)) {
+            const end = code.indexOf('}', lineOffsets[i]);
+            const names = code.slice(lineOffsets[i] + line.indexOf('{') + 1, end);
+            const from = code.slice(end).match(/^\}\s*=\s*([\w.]+)/);
+            const list = names
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean)
+                .join(', ');
+            result.reexports.push(`{ ${list} } = ${from ? from[1] : '?'}`);
+            continue;
+        }
+
         // exported const: arrow/function value -> capture as function, else const.
         m = line.match(/^export const (\w+)\s*=/);
         if (m) {
@@ -125,7 +139,12 @@ function parseFile(file) {
         if (m) {
             const what = m[1].replace(/\s+/g, ' ').trim();
             result.reexports.push(`${what} from '${m[2]}'`);
+            continue;
         }
+
+        // re-export of an imported binding: export { A, B };
+        m = line.match(/^export\s+(\{[^}]*\})\s*;/);
+        if (m) result.reexports.push(m[1].replace(/\s+/g, ' ').trim());
     }
 
     return result;

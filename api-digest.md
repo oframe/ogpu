@@ -240,15 +240,8 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { FullscreenTriangle } from './FullscreenTriangle.js'
 
 ### src/core/primitives/vertices.js
-- fn `createXYQuadVertices({ size: inSize = 2, xOffset = 0, yOffset = 0 } = {})`
-- fn `createPlaneVertices({ width = 1, depth = 1, subdivisionsWidth = 1, subdivisionsDepth = 1 } = {})`
-- fn `createSphereVertices({ radius = 1, subdivisionsAxis = 24, subdivisionsHeight = 12, startLatitudeInRadians = 0,…)`
-- fn `createCubeVertices({ size = 1 } = {})`
-- fn `createTruncatedConeVertices({ bottomRadius = 1, topRadius = 0, height = 1, radialSubdivisions = 24, verticalSubdivisi…)`
-- fn `createCylinderVertices({ radius = 1, height = 1, radialSubdivisions = 24, verticalSubdivisions = 1, topCap = tru…)`
-- fn `createTorusVertices({ radius = 1, thickness = 0.24, radialSubdivisions = 24, bodySubdivisions = 12, startAngl…)`
-- fn `createDiscVertices({ radius = 1, divisions = 24, stacks = 1, innerRadius = 0, stackPower = 1 } = {})`
 - const `primitives`
+- re-export { createCubeVertices, createCylinderVertices, createDiscVertices, createPlaneVertices, createSphereVertices, createTorusVertices, createTruncatedConeVertices, createXYQuadVertices } = wguPrimitives
 
 ### src/core/reflect/StructView.js
 - **class StructView**
@@ -407,8 +400,8 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - fn `glFormatToWebGPU(fmt)`
 
 ### src/utils/mipmap.js
-- fn `numMipLevels(size, dimension)`
 - fn `generateMipmap(gpu, texture)`
+- re-export { numMipLevels }
 
 ### src/utils/miscutils.js
 - **class NonNegativeRollingAverage**

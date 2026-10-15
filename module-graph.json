@@ -1,10 +1,10 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 164,
-    "edges": 302,
+    "nodes": 163,
+    "edges": 304,
     "modules": 110,
-    "shaders": 48,
+    "shaders": 47,
     "external": 6
   },
   "hubs": [
@@ -479,9 +479,9 @@
       "outDegree": 0
     },
     {
-      "id": "pkg:wgsl_reflect",
+      "id": "pkg:webgpu-utils",
       "type": "external",
-      "inDegree": 1,
+      "inDegree": 7,
       "outDegree": 0
     },
     {
@@ -506,7 +506,7 @@
       "id": "src/core/Geometry.js",
       "type": "module",
       "inDegree": 12,
-      "outDegree": 1
+      "outDegree": 2
     },
     {
       "id": "src/core/GPUEnums.js",
@@ -602,7 +602,7 @@
       "id": "src/core/primitives/vertices.js",
       "type": "module",
       "inDegree": 8,
-      "outDegree": 0
+      "outDegree": 1
     },
     {
       "id": "src/core/RecordedGroup.js",
@@ -620,7 +620,7 @@
       "id": "src/core/reflect/layout.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 0
+      "outDegree": 1
     },
     {
       "id": "src/core/reflect/reflect.js",
@@ -632,7 +632,7 @@
       "id": "src/core/reflect/StructView.js",
       "type": "module",
       "inDegree": 2,
-      "outDegree": 0
+      "outDegree": 1
     },
     {
       "id": "src/core/Renderer.js",
@@ -643,7 +643,7 @@
     {
       "id": "src/core/RenderPipeline.js",
       "type": "module",
-      "inDegree": 2,
+      "inDegree": 1,
       "outDegree": 4
     },
     {
@@ -997,14 +997,8 @@
     {
       "id": "src/utils/mipmap.js",
       "type": "module",
-      "inDegree": 2,
-      "outDegree": 3
-    },
-    {
-      "id": "src/utils/mipmap.wgsl",
-      "type": "shader",
       "inDegree": 1,
-      "outDegree": 0
+      "outDegree": 1
     },
     {
       "id": "src/utils/miscutils.js",
@@ -1015,7 +1009,7 @@
     {
       "id": "src/utils/RenderUtils.js",
       "type": "module",
-      "inDegree": 2,
+      "inDegree": 1,
       "outDegree": 0
     },
     {
@@ -1353,6 +1347,10 @@
       "to": "pkg:@math"
     },
     {
+      "from": "src/core/Geometry.js",
+      "to": "pkg:webgpu-utils"
+    },
+    {
       "from": "src/core/index.js",
       "to": "pkg:@core"
     },
@@ -1561,6 +1559,10 @@
       "to": "src/core/primitives/vertices.js"
     },
     {
+      "from": "src/core/primitives/vertices.js",
+      "to": "pkg:webgpu-utils"
+    },
+    {
       "from": "src/core/RecordedGroup.js",
       "to": "src/core/Mesh.js"
     },
@@ -1585,8 +1587,16 @@
       "to": "src/core/reflect/StructView.js"
     },
     {
+      "from": "src/core/reflect/layout.js",
+      "to": "pkg:webgpu-utils"
+    },
+    {
       "from": "src/core/reflect/reflect.js",
-      "to": "pkg:wgsl_reflect"
+      "to": "pkg:webgpu-utils"
+    },
+    {
+      "from": "src/core/reflect/StructView.js",
+      "to": "pkg:webgpu-utils"
     },
     {
       "from": "src/core/Renderer.js",
@@ -2238,19 +2248,11 @@
     },
     {
       "from": "src/utils/mipmap.js",
-      "to": "src/core/RenderPipeline.js"
-    },
-    {
-      "from": "src/utils/mipmap.js",
-      "to": "src/utils/mipmap.wgsl"
-    },
-    {
-      "from": "src/utils/mipmap.js",
-      "to": "src/utils/RenderUtils.js"
+      "to": "pkg:webgpu-utils"
     },
     {
       "from": "src/utils/textureFromSource.js",
-      "to": "src/utils/mipmap.js"
+      "to": "pkg:webgpu-utils"
     }
   ]
 }

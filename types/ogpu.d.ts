@@ -740,7 +740,7 @@ export class FullscreenTriangle extends Geometry {
 // =============================================================================
 // @core/RenderPipeline — an explicit GPURenderPipeline for fullscreen passes and
 // other non-Mesh draws (fixed geometry + fixed target). No engine block: callers
-// own their uniform buffers and bind groups (against bindGroupLayout(i)). Meshes
+// own their uniform buffers and bind groups (bindGroupLayout(i).createBindGroup). Meshes
 // use Shader + MeshState instead.
 // =============================================================================
 
@@ -794,14 +794,49 @@ export class RenderPipeline {
     /** Recompile + recreate the GPURenderPipeline from `code`. */
     build(code: string): void;
     /**
-     * Explicit, hot-reload-stable bind group layout for `groupIndex` — build
-     * your bind groups against this, not pipeline.getBindGroupLayout.
+     * The BindGroupLayout for `groupIndex` (default 0; raw layout at `.layout`) —
+     * build bind groups with its createBindGroup, not pipeline.getBindGroupLayout.
+     * Interned by shape, so bind groups built from it stay valid across a hot reload
+     * that keeps the bindings.
+     * Throws for a group the shader doesn't use.
      */
-    bindGroupLayout(groupIndex?: number): GPUBindGroupLayout;
+    bindGroupLayout(groupIndex?: number): BindGroupLayout;
     /** Hot-reload entry point. */
     reload(code: string): void;
     /** Unregisters from the hot-reload registry. */
     destroy(): void;
+}
+
+// =============================================================================
+// @core/BindGroupLayout — a GPUBindGroupLayout plus its WGSL names. Handed out
+// by Shader, RenderPipeline and ComputeShader; never constructed directly.
+// =============================================================================
+
+export class BindGroupLayout {
+    /** The device it was created on (the intern cache is per device). */
+    device: GPUDevice;
+    /** The raw layout. Interned by shape: equal entries share one GPUBindGroupLayout. */
+    layout: GPUBindGroupLayout;
+    /** Descriptor entries, sorted by binding (frozen). A wrapped explicit layout has `{ binding }` stubs only. */
+    readonly entries: readonly GPUBindGroupLayoutEntry[];
+    /** WGSL name → binding number, for the bindings in this layout (frozen). */
+    readonly names: Readonly<Record<string, number>>;
+    /** Every name the module declares in this group, including names outside this layout. */
+    readonly declared: readonly string[];
+    /**
+     * Owner label, used in errors and default bind-group labels. The engine object
+     * is interned by shape + group + names + declared, so this is the first creator's label.
+     */
+    label: string;
+    group: number;
+    /**
+     * A bind group from resources keyed by WGSL name. An undeclared name throws
+     * (listing the declared ones); a declared name outside this layout is dropped,
+     * so one object can feed every kernel's layout; a binding of this layout left
+     * out, `undefined` or `null` throws (listing what it needs).
+     * Allocates a new GPUBindGroup per call: build once, rebuild only when a resource changes.
+     */
+    createBindGroup(resources: Record<string, ShaderResource | null | undefined>, options?: { label?: string }): GPUBindGroup;
 }
 
 // =============================================================================
@@ -824,7 +859,7 @@ export const NEEDS_NORMAL: 1;
 export const NEEDS_OBJECT: 2;
 
 /**
- * A resource for Shader.createBindGroup: a UniformBuffer or GPUBuffer binds whole;
+ * A resource for BindGroupLayout.createBindGroup: a UniformBuffer or GPUBuffer binds whole;
  * `{ buffer, offset, size }`, texture views, samplers and external textures
  * pass through.
  */
@@ -851,13 +886,12 @@ export class Shader {
 
     /** (Re)compile in place; hot reload calls this. */
     build(code: string): void;
-    bindGroupLayout(group?: number): GPUBindGroupLayout;
     /**
-     * Bind group at `group` from resources keyed by WGSL name. Names declared but
-     * unused by vs/fs are dropped; names not declared in the group throw. Group 1 throws.
-     * Allocates a new GPUBindGroup per call: build once, not per frame.
+     * The BindGroupLayout of a user group (default 0): `shader.bindGroupLayout(0).createBindGroup({ uniforms, tMap })`.
+     * Group 1 (the engine's) throws, as does a group above the highest one vs/fs read. A
+     * declared group vs/fs never read, below that, is an empty layout that drops every name.
      */
-    createBindGroup(group: number, resources: Record<string, ShaderResource>, options?: { label?: string }): GPUBindGroup;
+    bindGroupLayout(group?: number): BindGroupLayout;
     reload(code: string): void;
     /** Unregisters from the hot-reload registry. */
     destroy(): void;
@@ -868,7 +902,10 @@ export class Shader {
 // =============================================================================
 
 export class UniformBuffer {
-    /** `struct` is a reflected struct (usually `shader.uniforms`). */
+    /**
+     * The one way to back a uniform struct. `struct` is a reflected struct:
+     * `shader.uniforms`, `pipeline.defs.uniforms.x`, `computeShader.defs.uniforms.x`.
+     */
     constructor(gpu: GPU, struct: ReflectedVariable | ReflectedType, values?: Record<string, unknown>, options?: { label?: string; usage?: GPUBufferUsageFlags });
     gpu: GPU;
     label: string;
@@ -1125,10 +1162,15 @@ export class ComputeShader {
     isValidKernel(key: string): boolean;
     findKernel(key: string): GPUComputePipeline | undefined;
     /**
-     * Persistent, hot-reload-stable bind group layout for a kernel's group
-     * index. Accepts the kernel object (uses its label) or the entry-point name.
+     * The BindGroupLayout of one kernel's group. Both arguments are required: a
+     * kernel (entry-point) name and a group index; anything else throws. Holds only
+     * what that kernel uses, interned by shape (kernels reading the same bindings
+     * share it; bind groups stay valid across a shape-preserving hot reload). With an
+     * explicit `layout` option it wraps that pipeline's layout instead, not interned:
+     * names and required bindings are every binding the module declares in the group,
+     * so the caller's layout must hold all of them.
      */
-    bindGroupLayout(kernelOrKey: GPUComputePipeline | string, groupIndex?: number): GPUBindGroupLayout;
+    bindGroupLayout(kernel: string, group: number): BindGroupLayout;
     dispatch(encoder: GPUCommandEncoder, options: DispatchOptions): void;
     /** Releases timestamp-query resources and drops out of the hot-reload registry. */
     destroy(): void;
@@ -2003,13 +2045,21 @@ export class MSDFText extends Mesh {
 // --- @utils/BufferUtils --------------------------------------------------------
 export interface CreateBufferOptions {
     label?: string;
-    size: number;
+    /** Bytes. Defaults to `data.byteLength` rounded up to 4 when `data` is given; otherwise required. */
+    size?: number;
     usage?: GPUBufferUsageFlags;
+    /** Initial contents, copied in at creation (mappedAtCreation). An explicit `size` must be >= its byteLength and a multiple of 4. */
+    data?: ArrayBuffer | ArrayBufferView;
 }
-/** createBuffer with GPUBufferUsage.STORAGE OR'd in. */
+/** Raw buffer with GPUBufferUsage.STORAGE OR'd in (default usage COPY_DST | COPY_SRC). */
 export function createStorageBuffer(gpu: GPU, options: CreateBufferOptions): GPUBuffer;
-/** createBuffer with GPUBufferUsage.UNIFORM OR'd in. */
-export function createUniformBuffer(gpu: GPU, options: CreateBufferOptions): GPUBuffer;
+/**
+ * @deprecated Use `UniformBuffer` for a uniform struct, or
+ * `createBuffer(gpu, { usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, data })`
+ * for raw data. Warns once, then forwards to createBuffer with UNIFORM usage.
+ */
+export function createUniformBuffer(gpu: GPU, options: { label?: string; size: number; usage?: GPUBufferUsageFlags }): GPUBuffer;
+/** Raw buffer (default usage COPY_DST | COPY_SRC); structless uniform data passes UNIFORM | COPY_DST. */
 export function createBuffer(gpu: GPU, options: CreateBufferOptions): GPUBuffer;
 
 // --- @utils/RenderUtils ----------------------------------------------------------
@@ -2126,6 +2176,9 @@ declare module '@core/Shader' {
 }
 declare module '@core/UniformBuffer' {
     export { UniformBuffer };
+}
+declare module '@core/BindGroupLayout' {
+    export { BindGroupLayout };
 }
 declare module '@core/PipelineCache' {
     export { PipelineCache, PassInfo };

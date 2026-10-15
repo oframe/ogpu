@@ -56,7 +56,7 @@ same — `references/js-wiring.md` has the full copy-paste blocks.
    `camera`/`object` come from group 1), so you own that `UniformBuffer`. Unset
    fields are zero, and a zeroed `baseColorFactor` renders black. Defaults that
    mean "plain mid-grey dielectric": see `references/js-wiring.md`.
-5. Create the bind group with `shader.createBindGroup(0, { name: resource })` — keys
+5. Create the bind group with `shader.bindGroupLayout(0).createBindGroup({ name: resource })` — keys
    are the WGSL names. With stock `pbr.wgsl` group 0 is: 1 `tSpecular` (cube
    view), 2 `shConstants` (SH buffer), 3 `tBrdf` (LUT view), 4 `iblSampler`
    (linear, mipmap linear, clamp), 5 `tMap`, 6 `tMetallicRoughness`, 7 `tNormal`,

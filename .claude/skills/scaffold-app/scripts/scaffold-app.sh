@@ -115,7 +115,7 @@ export class $CLASS {
             shader,
             state: { cullMode: 'back' },
             // bind by WGSL name; group(1) is the engine's (camera + object)
-            bindGroups: [shader.createBindGroup(0, { uniforms: this.uniforms })],
+            bindGroups: [shader.bindGroupLayout(0).createBindGroup({ uniforms: this.uniforms })],
         });
         this.cube.setParent(this.scene);
 

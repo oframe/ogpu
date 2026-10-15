@@ -12,7 +12,7 @@ memory — they are the ground truth for the binding layout and resource shapes.
 `ogpu` barrel; `@utils`/`@core`/`@modules` aliases also work):
 
 ```js
-import { ComputeShader, createUniformBuffer, loadIBLCubeMap, loadSphericalHarmonics } from 'ogpu';
+import { ComputeShader, createBuffer, loadIBLCubeMap, loadSphericalHarmonics } from 'ogpu';
 import brdflut from '@modules/pbr/brdflut.wgsl?raw';
 ```
 
@@ -32,13 +32,14 @@ async initIBL({
     });
 
     // Diffuse irradiance: 9 SH coefficients from a precomputed JSON, returned as
-    // a vec4-padded Float32Array, uploaded to a uniform buffer.
+    // a vec4-padded Float32Array. Structless, so a raw uniform buffer filled at
+    // creation (size defaults to data.byteLength), not a UniformBuffer.
     const shArray = await loadSphericalHarmonics(shUrl);
-    const shBuffer = createUniformBuffer(this.gpu, {
+    const shBuffer = createBuffer(this.gpu, {
         label: 'sh-constants-buffer',
-        size: shArray.byteLength,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        data: shArray,
     });
-    this.gpu.device.queue.writeBuffer(shBuffer, 0, shArray);
 
     // BRDF LUT: split-sum integration into a 512x512 storage texture at runtime.
     const lutTexture = this.gpu.device.createTexture({
@@ -56,11 +57,10 @@ async initIBL({
         code: brdflut,
     });
     const kernel = brdflutCompute.findKernel('main');
-    const bindGroup = this.gpu.device.createBindGroup({
-        label: 'brdflut-bind-group',
-        layout: brdflutCompute.bindGroupLayout(kernel),
-        entries: [{ binding: 0, resource: lutTexture.createView() }],
-    });
+    // bindGroupLayout(kernelName, group): both arguments required
+    const bindGroup = brdflutCompute
+        .bindGroupLayout('main', 0)
+        .createBindGroup({ brdflutOutput: lutTexture.createView() }, { label: 'brdflut-bind-group' });
 
     const encoder = this.gpu.device.createCommandEncoder({ label: 'brdflut-encoder' });
     const pass = encoder.beginComputePass({ label: 'brdflut-pass' });
@@ -210,8 +210,8 @@ const materialUniforms = new UniformBuffer(
 
 ## Bind group (stock pbr.wgsl layout)
 
-Bind by WGSL name with `shader.createBindGroup(0, {...})` (unknown names throw; names the
-entry points don't use are dropped). A `Mesh` takes no `gpu` and no pipeline; group(1)
+Bind by WGSL name with `shader.bindGroupLayout(0).createBindGroup({...})` (unknown names throw; names the
+entry points don't use are dropped; a binding the entry points read but you leave out throws). A `Mesh` takes no `gpu` and no pipeline; group(1)
 is the engine's, so don't put anything there:
 
 ```js
@@ -221,7 +221,7 @@ const mesh = new Mesh({
     shader,
     state: {}, // e.g. { transparent: true, depthWrite: false } for alpha blend
     bindGroups: [
-        shader.createBindGroup(0, {
+        shader.bindGroupLayout(0).createBindGroup({
             tSpecular: ibl.specView, // cube
             shConstants: ibl.shBuffer, // SHConstants
             tBrdf: ibl.lutTexture.createView(),
@@ -243,7 +243,7 @@ The renderer uploads `camera`/`object` itself; the `material` buffer is yours to
 update (`materialUniforms.set({...})`).
 
 If the shader was folded into a custom layout (different binding numbers), nothing
-changes — `shader.createBindGroup` resolves bindings by name.
+changes — `createBindGroup` resolves bindings by name.
 
 ## GLTFLoader path
 

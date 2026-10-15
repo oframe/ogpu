@@ -48,7 +48,7 @@ The framework is split into **Core**, **Math**, and **Modules**.
 
 The **Core** (`src/core/`) holds the engine primitives. A drawable is a `Mesh`: geometry + `Shader` + a plain `state` object + bind groups. You never build a render pipeline for it — the renderer derives one and caches it.
 
-- **`Shader`** — wraps a WGSL module with a `vs`/`fs` entry pair. It appends the engine block (`engine.wgsl`), reflects the result with `reflect/` (on [`webgpu-utils`](https://github.com/greggman/webgpu-utils)), and serves the bind group layouts. `shader.createBindGroup(0, { name: resource })` binds by WGSL name. Group(1) is the engine's: `camera.*` (projection/view matrices, `cameraPosition`, `cameraQuaternion`, `time`, `resolution`) and `object.*` (`modelMatrix`, `normalMatrix`, `objectMatrix`; view space is `camera.viewMatrix * (object.modelMatrix * p)`, or `modelViewMatrix()` for the matrix) live in one renderer-owned `PerDrawBuffer` and are bound by dynamic offset: a camera slot per `render()` and a fixed object slot per mesh, so one mesh can draw into several passes of one submit (shadow + main). The object slot holds one value per submit — move the mesh between those passes and both see the last transform.
+- **`Shader`** — wraps a WGSL module with a `vs`/`fs` entry pair. It appends the engine block (`engine.wgsl`), reflects the result with `reflect/` (on [`webgpu-utils`](https://github.com/greggman/webgpu-utils)), and serves the bind group layouts. `shader.bindGroupLayout(0).createBindGroup({ name: resource })` binds by WGSL name; `RenderPipeline` and `ComputeShader` (`bindGroupLayout(kernelName, group)`) hand out the same `BindGroupLayout` type. Group(1) is the engine's: `camera.*` (projection/view matrices, `cameraPosition`, `cameraQuaternion`, `time`, `resolution`) and `object.*` (`modelMatrix`, `normalMatrix`, `objectMatrix`; view space is `camera.viewMatrix * (object.modelMatrix * p)`, or `modelViewMatrix()` for the matrix) live in one renderer-owned `PerDrawBuffer` and are bound by dynamic offset: a camera slot per `render()` and a fixed object slot per mesh, so one mesh can draw into several passes of one submit (shadow + main). The object slot holds one value per submit — move the mesh between those passes and both see the last transform.
 - **`Mesh`** — a `Transform` holding `geometry`, `shader`, `state` and `bindGroups`; no `gpu`, no GPU objects of its own. `state` (`transparent`, `depthWrite`, `cullMode`, `topology`, `blending`, …) is frozen — swap the object to change it. The renderer's `PipelineCache` builds a pipeline per (shader, state, vertex layout, pass formats), so the same mesh renders into the canvas, an MSAA target or a depth-only shadow map with no per-target setup. Each mesh owns one fixed slot of the engine buffer, rewritten only when it moves; `mesh.destroy()` gives it back (a dropped mesh frees it when collected).
 - **`ComputeShader`** — the compute counterpart. Every entry point in a WGSL compute module becomes a dispatchable kernel keyed by its name, with optional timestamp-query timing. This is the path for GPU compute work — simulation, culling, image processing — without leaving the framework.
 
@@ -93,7 +93,7 @@ const mesh = new Mesh({
     geometry: new Box(gpu),
     shader,
     state: { transparent: true, depthWrite: false },
-    bindGroups: [shader.createBindGroup(0, { uniforms })],
+    bindGroups: [shader.bindGroupLayout(0).createBindGroup({ uniforms })],
 });
 mesh.setParent(scene);
 
@@ -125,7 +125,7 @@ The **Math** component (`src/math/`) is a function layer (`@math/functions` — 
 
 **Modules** (`src/modules/`) are the optional higher-level pieces, kept out of Core to reduce bloat: `Orbit`, `Raycast`, `GUI`, `Animation`, `GLTFLoader`, `CubeMap`, `VideoTexture`, a shader-only `pbr/` IBL library, and `text/` (MSDF text from msdf-atlas-gen atlases, with SplitText-style reveals).
 
-**Utils** (`src/utils/`, alias `@utils`) are standalone helpers: `BufferUtils`, `RenderUtils` (`blit`), `mipmap` (render-pass mip chain), `textureFromSource` (image/bitmap upload), `IBLUtils`, `ktxutils`, `TimingHelper`, `JSONLoader`, the `Mat3`/`Mat4`/`Euler` helpers, and `wgslOverrides` (bakes `override` constants into `const` literals, since Safari has no pipeline-overridable constants).
+**Utils** (`src/utils/`, alias `@utils`) are standalone helpers: `BufferUtils` (`createStorageBuffer` / `createBuffer`, which fill from `data` at creation), `RenderUtils` (`blit`), `mipmap` (render-pass mip chain), `textureFromSource` (image/bitmap upload), `IBLUtils`, `ktxutils`, `TimingHelper`, `JSONLoader`, the `Mat3`/`Mat4`/`Euler` helpers, and `wgslOverrides` (bakes `override` constants into `const` literals, since Safari has no pipeline-overridable constants).
 
 Examples live in `examples/` (repo root, outside `src/`), switched by a query string in `src/main.js`. The root serves a gallery — sidebar of links plus a preview iframe — and `?example=<name>` deep-links a specific one. `?src=<name>` is the inner URL the iframe loads: that example alone, no gallery chrome.
 
@@ -137,7 +137,7 @@ Post-processing, feedback, and display passes all run through one path instead o
 blit(encoder, { pipeline, geometry: gpu.TRIANGLE, targetView, bindGroup, clear: true });
 ```
 
-It takes the `RenderPipeline` wrapper, not the raw GPU pipeline. A fullscreen `RenderPipeline` has no engine block and nothing dynamic: its owner builds the uniform buffer (if the shader declares one), writes it with `queue.writeBuffer`, and builds the group(0) bind group against `pipeline.bindGroupLayout(0)` — a pass that binds only a sampler + texture needs no `Uniforms` struct at all.
+It takes the `RenderPipeline` wrapper, not the raw GPU pipeline. A fullscreen `RenderPipeline` has no engine block and nothing dynamic: its owner backs the uniform struct (if the shader declares one) with `new UniformBuffer(gpu, pipeline.defs.uniforms.uniforms, values)` and builds the group(0) bind group with `pipeline.bindGroupLayout(0).createBindGroup({ … })` — a pass that binds only a sampler + texture needs no `Uniforms` struct at all.
 
 `targetView` is explicit and a blit lands wherever it points, so `renderer.setContext` (below) never reaches one — to blit onto another canvas take the view from `renderer.contextFor(canvas)`.
 

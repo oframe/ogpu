@@ -194,7 +194,7 @@ this.shadowMesh = new Mesh({
     shader: casterShader,
     state: { depthBias: 1, depthBiasSlopeScale: 1.75, depthBiasClamp: 0.0 },
     // skinned only: bind the Skin's storage buffer by WGSL name
-    // bindGroups: [casterShader.createBindGroup(0, { positionBuffer: skin.skinnedPositionBuffer })],
+    // bindGroups: [casterShader.bindGroupLayout(0).createBindGroup({ positionBuffer: skin.skinnedPositionBuffer })],
 });
 this.shadowMesh.frustumCulled = false; // skinned/storage-positioned casters
 ```
@@ -209,7 +209,7 @@ const receiver = new Mesh({
     shader: receiverShader,
     state: { cullMode: 'back' },
     bindGroups: [
-        receiverShader.createBindGroup(0, {
+        receiverShader.bindGroupLayout(0).createBindGroup({
             shadowUniforms,
             shadowSampler: shadowMapSampler,
             shadowMap: shadowDepthView,

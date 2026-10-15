@@ -239,12 +239,28 @@ rect changes, so a scene without scissors costs no extra calls. It applies to
 `bindGroupLayout(i)`, `pipelineLayout` with the engine layout at slot 1). Empty
 group slots below the highest used group get `renderer.emptyLayout`, and a
 mesh without `bindGroups[0]` (or a hole at 2–3) gets `renderer.emptyBindGroup`
-there. `shader.createBindGroup(group, { name: resource })` maps WGSL names to
-bindings: it throws on a name the WGSL doesn't declare in that group (and on
-group 1) and silently drops a declared one no entry point uses (it's absent
-from the derived layout, so commenting out a read while debugging doesn't
-invalidate the bind group). Resources: UniformBuffer or GPUBuffer (whole
-buffer), `{ buffer, offset, size }`, views, samplers, external textures.
+there. Bind groups come from layouts, never from the shader:
+`shader.bindGroupLayout(group).createBindGroup({ name: resource })`. The
+`BindGroupLayout` (`./BindGroupLayout.js`, also what RenderPipeline and
+ComputeShader hand out) maps WGSL names to bindings: it throws on a name the
+WGSL doesn't declare in that group, silently drops a declared one no entry
+point uses (it's absent from the derived layout, so commenting out a read while
+debugging doesn't invalidate the bind group), and throws when a binding of the
+layout is missing, `undefined` or `null`, listing what it needs. `bindGroupLayout(1)`
+throws (the engine's group). Resources: UniformBuffer or GPUBuffer (whole
+buffer), `{ buffer, offset, size }`, views, samplers, external textures. Each
+call allocates a GPUBindGroup: build once, rebuild only when a resource changes.
+
+`BindGroupLayout`s are interned per device (a WeakMap, so a restored device
+starts fresh): the raw `.layout` by shape (entries incl. visibility and the
+buffer/texture/sampler/storageTexture/externalTexture fields), the engine object by shape + group + names +
+declared. Equal explicit layouts are group-equivalent, so two kernels reading
+the same bindings get the same object (`===`) and share bind groups, and two
+modules with the same shape but other names get different objects over one raw
+layout. Interning keeps the first creator's `label`, so an error can name
+another shader built from the same code. Don't merge layouts across kernels: a
+dispatch's usage scope covers every binding in its layout, so a combined layout
+turns legal per-kernel aliasing (src/dst of one texture) into a validation error.
 `shader.uniforms` is the struct of the var named `uniforms` (any binding), or
 undefined; other uniform vars come from `shader.defs.uniforms.<name>`.
 
@@ -259,8 +275,13 @@ mutating it. Keys: `transparent`, `depthWrite`, `depthTest`, `depthCompare`,
 geometry swap keeps the bind groups (same shader layouts); a shader swap needs
 new ones.
 
-`UniformBuffer` = StructView + GPUBuffer; `set()` writes and queues
-`writeBuffer` at once. Values are therefore shared by every pass in one submit
+`UniformBuffer` = StructView + GPUBuffer, and the only way to back a uniform
+struct — mesh, fullscreen (`pipeline.defs.uniforms.x`) and compute
+(`computeShader.defs.uniforms.x`) alike. Structless bytes (SH coefficients,
+strided param slots) go in `createBuffer(gpu, { usage: UNIFORM | COPY_DST, data })`
+(`@utils/BufferUtils`; `data` fills it at creation, `size` defaults to its byte
+length rounded up to 4; an explicit one must be a multiple of 4); `createUniformBuffer` is a deprecated alias that warns
+once. `set()` writes and queues `writeBuffer` at once. Values are therefore shared by every pass in one submit
 (last write wins): a mesh rendered twice in one encoder with different values
 needs one UniformBuffer + bind group per view, swapped via `mesh.bindGroups`
 before each `render()`. After writing `ub.views` directly, call `upload()`.
@@ -331,7 +352,7 @@ callbacks get no pass.
 
 **Texture resize:** destroying/recreating a `Texture` invalidates its
 `GPUTextureView`s, so any bind group holding them is stale. Rebuild the affected
-group: `mesh.bindGroups[0] = shader.createBindGroup(0, { …fresh views })`. For a
+group: `mesh.bindGroups[0] = shader.bindGroupLayout(0).createBindGroup({ …fresh views })`. For a
 per-frame ping-pong, prebuild the variants and swap the slot:
 `mesh.bindGroups[0] = variants[t % 2]`.
 
@@ -408,12 +429,12 @@ re-encodes, against 6.9 ms for a live frame).
 
 `RenderPipeline` is for passes with fixed geometry and a fixed target
 (fullscreen post, feedback, display blits) and other non-Mesh draws: no engine
-block, a fully reflected layout (`bindGroupLayout(i)` — the explicit,
-hot-reload-stable BGL it built; don't reach into
+block, a fully reflected layout (`bindGroupLayout(i)` — the interned,
+hot-reload-stable BindGroupLayout; don't reach into
 `pipeline.pipeline.getBindGroupLayout(i)`), nothing dynamic. It owns no buffers
-or bind groups. Its owner builds the uniform buffer
-(`makeStructuredView(pipeline.defs.uniforms.uniforms)` + `createUniformBuffer`),
-writes it with `queue.writeBuffer`, and binds group(0) plainly —
+or bind groups. Its owner backs the uniform struct with
+`new UniformBuffer(gpu, pipeline.defs.uniforms.uniforms, values)`, builds the
+bind group with `pipeline.bindGroupLayout(0).createBindGroup({ … })` and binds it plainly —
 `pass.setBindGroup(0, bindGroup)` or through `blit(encoder, { pipeline,
 geometry, targetView, bindGroup, clear })` (`@utils/RenderUtils`). It never
 meets a Mesh, and target formats are declared (`targets`, default
@@ -479,18 +500,23 @@ values get swapped. Don't cache `kernels[name]` — re-read it at dispatch time.
 
 `ComputeShader` is **pure compiled state** like `RenderPipeline` — it owns the
 kernels + layouts, never bind groups. The caller builds its own bind group with
-`device.createBindGroup` and passes it to `dispatch({ bindGroup })`. Get the
-layout via `computeShader.bindGroupLayout(kernelOrKey, groupIndex)` — accepts the
-kernel object (uses its `.label`) or the entry-point name string.
+`computeShader.bindGroupLayout(kernelName, group).createBindGroup({ … })` and
+passes it to `dispatch({ bindGroup })`. Both arguments are required — a kernel
+(entry-point) name string and a group number; a kernel object, a missing group
+or a bare number throws. Uniform structs go on a `UniformBuffer` from
+`computeShader.defs.uniforms.<name>`.
 
-That layout **survives hot-reloads**: for `layout: 'auto'` the shader mints an
-explicit pipeline layout per entry point _once_ (`_resolveLayout`, via
-`bindGroupLayoutDescriptors` from `./reflect`) and reuses the same layout objects on every
-rebuild. So a bind group the caller built at init against `bindGroupLayout(...)`
-stays compatible with the reloaded pipeline — no recreation needed. The one thing
-this can't absorb is a change to a shader's binding _shape_ (add/remove/retype a
-binding): the persisted layout is keyed by entry-point name and won't track it —
-that needs a hard reload, and the caller must rebuild its bind group.
+For `layout: 'auto'` each build derives an explicit pipeline layout per entry
+point (via `bindGroupLayoutDescriptors` from `./reflect`) holding only what that
+kernel uses, from interned BindGroupLayouts. So a reload that keeps a kernel's
+binding shape keeps bind groups built at init valid (and hands back the same
+objects while names stay too); a reload that changes the shape yields new layouts, and the caller must
+rebuild its bind groups. One resource object can feed several kernels' layouts
+(each drops the names it doesn't read): build a shared base and spread
+per-kernel overrides over it. With an explicit caller `layout`, bindGroupLayout
+wraps that pipeline's raw layout, not interned: its names — and the bindings
+createBindGroup requires — are every binding the module declares in the group,
+so the caller's layout must hold all of them.
 
 `dispatch` creates and ends its own compute pass unless you pass an external
 `pass`. The timestamp query set is only allocated when `device.features.has('timestamp-query')`

@@ -74,7 +74,9 @@ intent, newer versions, changelog).
       the library's measured 1.9× slower), so debug `set()` there, not in the
       library; `bindGroupLayoutDescriptors(defs, names, { skip })` =
       `makeBindGroupLayoutDescriptors` minus skipped groups. Shader,
-      RenderPipeline, ComputeShader and UniformBuffer go through it.
+      RenderPipeline, ComputeShader and UniformBuffer go through it; the
+      descriptors become interned engine `BindGroupLayout`s
+      (`src/core/BindGroupLayout.js`), which name bindings for createBindGroup.
     - `Geometry` → `createBuffersAndAttributesFromArrays`;
       `@core/primitives/vertices.js` → `primitives`, but only the 8 generators
       the primitive classes use (no `create3DFVertices`, `deindex`, …): import

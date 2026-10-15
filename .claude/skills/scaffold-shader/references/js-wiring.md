@@ -14,7 +14,7 @@ work at group(1)). `state` is a plain frozen object (`cullMode`, `transparent`,
 `depthWrite`, `blending`, …) — replace it, don't mutate it. The renderer derives
 the `GPURenderPipeline` from shader + state + geometry layout + the pass's
 formats, so a `Mesh` takes no `gpu`, no pipeline, and no targets. Bind groups
-are built by WGSL name with `shader.createBindGroup(group, { name: resource })`;
+are built by WGSL name with `shader.bindGroupLayout(group).createBindGroup({ name: resource })`;
 group(1) is the engine's, so `bindGroups[1]` stays empty.
 
 ## No texture (short path)
@@ -31,7 +31,7 @@ const mesh = new Mesh({
     geometry,
     shader,
     state: { cullMode: 'back' },
-    bindGroups: [shader.createBindGroup(0, { uniforms })],
+    bindGroups: [shader.bindGroupLayout(0).createBindGroup({ uniforms })],
 });
 
 // custom uniforms — names must match the WGSL Uniforms struct; uploads immediately
@@ -62,7 +62,7 @@ const mesh = new Mesh({
     shader,
     state: { cullMode: 'back' },
     bindGroups: [
-        shader.createBindGroup(0, {
+        shader.bindGroupLayout(0).createBindGroup({
             uniforms,
             mySampler: gpu.device.createSampler(),
             tMap: texture.createView(),
@@ -75,4 +75,4 @@ mesh.setParent(scene);
 
 Unknown names throw; a declared name that `vs`/`fs` never use is dropped. After a
 texture resize/recreate the old views are stale — rebuild the group and assign it
-back: `mesh.bindGroups[0] = shader.createBindGroup(0, { uniforms, mySampler, tMap: fresh.createView() })`.
+back: `mesh.bindGroups[0] = shader.bindGroupLayout(0).createBindGroup({ uniforms, mySampler, tMap: fresh.createView() })`.

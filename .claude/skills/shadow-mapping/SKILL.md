@@ -73,7 +73,7 @@ receiverShader.defs.uniforms.shadowUniforms, { projectionViewMatrix, lightDirect
 7. **Fold receiving into each receiver shader:** add the `Shadow` uniform +
    `sampler_comparison` + `texture_depth_2d` bindings and an `override
 shadowDepthTextureSize` (fed via `new Shader(gpu, { constants: { shadowDepthTextureSize: SHADOW_SIZE } })`).
-   Bind them by WGSL name in `receiverShader.createBindGroup(0, { shadowUniforms, shadowSampler, shadowMap, … })`. Vertex computes `vShadowCoord` (NDC→UV, **flip y**).
+   Bind them by WGSL name in `receiverShader.bindGroupLayout(0).createBindGroup({ shadowUniforms, shadowSampler, shadowMap, … })`. Vertex computes `vShadowCoord` (NDC→UV, **flip y**).
    Fragment runs PCF (`shadowVisibility`) and gates the light term. Full blocks
    in `references/folding.md`.
 8. **Render loop:** render the caster scene to the depth target with the light
@@ -120,7 +120,7 @@ shadowDepthTextureSize` (fed via `new Shader(gpu, { constants: { shadowDepthText
   skinned), the receiver fold (bindings, `Shadow` struct, `vShadowCoord`,
   `hash22`+`shadowVisibility` PCF, light gating incl. the IBL+directional case),
   and the JS (depth target, light camera, caster shader+mesh+state, shadow
-  `UniformBuffer`, comparison sampler, receiver `shader.createBindGroup` entries,
+  `UniformBuffer`, comparison sampler, receiver `shader.bindGroupLayout(0).createBindGroup` entries,
   two-pass render loop).
 - Canonical working examples: `examples/shadowmapping/` (static),
   `examples/skinninggltf/` (skinned + IBL self-shadow + contact-shadow floor).

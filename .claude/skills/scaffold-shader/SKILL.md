@@ -82,10 +82,9 @@ silently shades garbage or fails construction:
    (If `naga` is absent the script exits 2 — `brew install naga-cli` (not `naga`), or `cargo install naga-cli`.)
 5. If JS wiring requested, write it from `references/js-wiring.md` (no-texture
    variant is the short path; texture variant adds the sampler/texture by WGSL
-   name in `shader.createBindGroup`).
+   name in `shader.bindGroupLayout(0).createBindGroup`).
 6. Tell the user how to render it: `new Shader(gpu, { label, code })` →
-   `new Mesh({ label, geometry, shader, state, bindGroups: [shader.createBindGroup(0,
-{...})] })` → `mesh.setParent(scene)`. A `Mesh` takes no `gpu` and no
+   `new Mesh({ label, geometry, shader, state, bindGroups: [shader.bindGroupLayout(0).createBindGroup({...})] })` → `mesh.setParent(scene)`. A `Mesh` takes no `gpu` and no
    pipeline (the renderer derives it from shader + `state` + the pass); custom
    uniforms live in a `UniformBuffer` (`set` uploads immediately). See
    `references/js-wiring.md`.

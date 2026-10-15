@@ -131,8 +131,9 @@ export class ComputeShader {
     // The BindGroupLayout of one kernel's group — both arguments required:
     // bindGroupLayout('simulate', 0).createBindGroup({ … }). The caller owns the
     // bind group and passes it to dispatch. With a caller-supplied `layout` it
-    // wraps that pipeline's raw layout (not interned), naming every binding the
-    // module declares in the group, since an explicit layout usually spans kernels.
+    // wraps that pipeline's raw layout (not interned), naming — and requiring —
+    // every binding the module declares in the group, since an explicit layout
+    // usually spans kernels.
     bindGroupLayout(kernel, group) {
         if (typeof kernel !== 'string' || !Number.isInteger(group)) {
             throw new Error(`[compute ${this.label}] bindGroupLayout(kernel, group) needs a kernel name and a group index`);

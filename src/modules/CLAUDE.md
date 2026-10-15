@@ -22,7 +22,7 @@ AABB when both exist.
 ## GUI.js
 
 `gui.uniform(ub, key)` takes a `UniformBuffer` (the same one you bind via
-`shader.createBindGroup`): it keeps a local proxy object, seeds it from the buffer's
+`layout.createBindGroup`): it keeps a local proxy object, seeds it from the buffer's
 current value, and calls `ub.set({[key]: value})` on every Tweakpane change — and
 `set` uploads immediately, so there is no per-draw upload to wait for. Scalar
 uniforms (length-1 typed-array view) are unwrapped to a number for the proxy; vec
@@ -59,7 +59,11 @@ shader, state, bindGroups })`. The only per-material pipeline state is cull +
 blend, kept as shared frozen `state` objects (one per `cullMode|transparent`
 combo) so the pipeline cache sees one identity per combo. There are no `targets`/
 `sampleCount` options — the renderer derives them from the pass. `iblEntries` are
-raw group-0 entries keyed by binding number (bindings 1–4 of `pbr.wgsl`).
+raw group-0 entries keyed by binding number (bindings 1–4 of `pbr.wgsl`); the loader
+names them from the shader's declarations and builds each material group with
+`shader.bindGroupLayout(0).createBindGroup`, so a binding pbr.wgsl doesn't declare,
+or one the material owns (5–12), throws — and so does leaving out one of 1–4 that
+pbr.wgsl reads.
 
 Rig shape: bone order == `skin.joints` order, so JOINTS_0 indices map straight to bone
 indices. glTF `inverseBindMatrices` **are read and used** when the skin declares them —

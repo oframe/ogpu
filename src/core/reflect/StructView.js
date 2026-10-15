@@ -1,4 +1,5 @@
-import { makeTypedArrayViews } from 'webgpu-utils';
+import { makeTypedArrayViews } from '@utils/webgpu-utils.js';
+import { float16Shimmed } from '@utils/float16-shim.js';
 
 // Named typed-array views over one ArrayBuffer (webgpu-utils' makeTypedArrayViews),
 // laid out by a reflected WGSL type (from `reflect()`: defs.uniforms.<name>,
@@ -8,7 +9,8 @@ import { makeTypedArrayViews } from 'webgpu-utils';
 // Views: scalars and vectors are typed arrays (a scalar is length 1); an array
 // of intrinsics is ONE flat typed array (array<vec3f, N> → Float32Array(4N),
 // padding included); an array of structs is a JS array of view objects. f16:
-// a scalar is a Uint16Array (raw bits), vectors and matrices are Float16Array.
+// a scalar is a Uint16Array (raw bits), vectors and matrices are Float16Array —
+// without a native one (Chrome/Edge < 135) the shim's raw-bits stub, warned once.
 export class StructView {
     // def: a reflected variable ({ typeDefinition, group, … }) or a type/struct definition.
     // Pass `arrayBuffer` for runtime-sized arrays (the def's size is the fixed part only).
@@ -19,6 +21,10 @@ export class StructView {
         this.type = type;
         this.arrayBuffer = buffer;
         this.views = views;
+        if (float16Shimmed && !warnedF16 && hasF16Vector(type)) {
+            warnedF16 = true;
+            console.warn('[ogpu] no Float16Array in this browser: f16 vector/matrix fields hold raw bits, not values. Use f32 fields (or an f32 shader variant) here.');
+        }
     }
 
     set(data) {
@@ -26,6 +32,10 @@ export class StructView {
         return this;
     }
 }
+
+let warnedF16 = false;
+// f16 vectors/matrices are the views the stub backs (f16 scalars are Uint16Array either way)
+const hasF16Vector = (t) => (t.elementType ? hasF16Vector(t.elementType) : t.fields ? Object.values(t.fields).some((f) => hasF16Vector(f.type)) : /^(vec|mat)\w*(h|<f16>)$/.test(t.type));
 
 const isTypedArray = (a) => a && typeof a.length === 'number' && a.buffer instanceof ArrayBuffer && a.byteLength >= 0;
 

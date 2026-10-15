@@ -11,7 +11,11 @@
         },
         "./src/*": "./src/*"
     },
-    "sideEffects": false,
+    "sideEffects": [
+        "./src/utils/float16-shim.js",
+        "./src/utils/float16-unshim.js",
+        "./src/utils/webgpu-utils.js"
+    ],
     "types": "./types/ogpu.d.ts",
     "directories": {
         "example": "examples"

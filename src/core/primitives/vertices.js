@@ -1,6 +1,6 @@
 // Vertex generators: webgpu-utils' `primitives`. `primitives` here is the subset
 // the primitive classes use, so the public surface stays these eight.
-import { primitives as wguPrimitives } from 'webgpu-utils';
+import { primitives as wguPrimitives } from '@utils/webgpu-utils.js';
 
 export const { createCubeVertices, createCylinderVertices, createDiscVertices, createPlaneVertices, createSphereVertices, createTorusVertices, createTruncatedConeVertices, createXYQuadVertices } =
     wguPrimitives;

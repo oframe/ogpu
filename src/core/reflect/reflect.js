@@ -1,4 +1,4 @@
-import { makeShaderDataDefinitions } from 'webgpu-utils';
+import { makeShaderDataDefinitions } from '@utils/webgpu-utils.js';
 
 // WGSL → data definitions: webgpu-utils' `makeShaderDataDefinitions` (its
 // bundled wgsl_reflect), plus `inputs` on each entry point:

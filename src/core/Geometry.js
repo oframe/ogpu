@@ -1,4 +1,4 @@
-import { createBuffersAndAttributesFromArrays } from 'webgpu-utils';
+import { createBuffersAndAttributesFromArrays } from '@utils/webgpu-utils.js';
 import { Vec3 } from '@math';
 
 // Vertex data + GPU buffers (webgpu-utils' createBuffersAndAttributesFromArrays);

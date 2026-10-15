@@ -52,18 +52,25 @@ export default [
     {
         files: ['**/*.{js,mjs}'],
         rules: {
-            // src/math wraps wgpu-matrix with local fixes (quat.rotationTo's 180° turn)
+            // src/math wraps wgpu-matrix with local fixes (quat.rotationTo's 180° turn);
+            // @utils/webgpu-utils loads the Float16Array shim before webgpu-utils
             'no-restricted-imports': [
                 'error',
                 {
-                    paths: [{ name: 'wgpu-matrix', message: "Import from '@math/functions' (or '@math'); src/math holds the local fixes." }],
-                    patterns: [{ group: ['wgpu-matrix/*'], message: "Import from '@math/functions'." }],
+                    paths: [
+                        { name: 'wgpu-matrix', message: "Import from '@math/functions' (or '@math'); src/math holds the local fixes." },
+                        { name: 'webgpu-utils', message: "Import from '@utils/webgpu-utils'; it loads the Float16Array shim first." },
+                    ],
+                    patterns: [
+                        { group: ['wgpu-matrix/*'], message: "Import from '@math/functions'." },
+                        { group: ['webgpu-utils/*'], message: "Import from '@utils/webgpu-utils'." },
+                    ],
                 },
             ],
         },
     },
     {
-        files: ['src/math/functions/*.js'],
+        files: ['src/math/functions/*.js', 'src/utils/webgpu-utils.js'],
         rules: { 'no-restricted-imports': 'off' },
     },
     // Disable ESLint stylistic rules that conflict with Prettier — keep last.

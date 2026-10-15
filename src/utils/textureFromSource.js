@@ -5,7 +5,8 @@
 // mipLevelCount, flipY, premultipliedAlpha, colorSpace, format, usage,
 // dimension, viewDimension (webgpu-utils' CreateTextureOptions). `mips: true`
 // allocates and fills a full chain.
-import * as wgu from 'webgpu-utils';
+import * as wgu from './webgpu-utils.js';
+import { float16Shimmed } from './float16-shim.js';
 
 // Texture's `dimension: 'cube'` (isCubeMap) is six layers of a 2d texture;
 // webgpu-utils hands `dimension` to createTexture as is. Mips are filled
@@ -16,12 +17,25 @@ const toLibrary = (o) => ({
     ...(o.dimension === 'cube' && { dimension: '2d' }),
 });
 
+// Without a native Float16Array the library packs plain-number 16float data
+// through the stub, truncating each value to an integer.
+let warnedF16 = false;
+function checkF16(sources, format) {
+    if (!float16Shimmed || warnedF16 || !format?.includes('16float')) return;
+    const raw = (s) => Array.isArray(s) || Array.isArray(s?.data);
+    if (!sources.some(raw)) return;
+    warnedF16 = true;
+    console.warn(`[ogpu] no Float16Array in this browser: plain-number ${format} data is truncated to integers. Pass half-float bits in a Uint16Array, or use a 32float format.`);
+}
+
 /** @param {object} gpu OGPU gpu context (renderer.gpu) */
 export function createTextureFromSources(gpu, sources, options = {}) {
+    checkF16(sources, options.format);
     return wgu.createTextureFromSources(gpu.device, sources, toLibrary(options));
 }
 
 export function createTextureFromSource(gpu, source, options = {}) {
+    checkF16([source], options.format);
     return wgu.createTextureFromSource(gpu.device, source, toLibrary(options));
 }
 

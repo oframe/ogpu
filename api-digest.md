@@ -393,6 +393,10 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - beginComputePass(encoder, descriptor = {})
   - getResult()
 
+### src/utils/float16-shim.js
+- **class Float16Stub** extends Uint16Array
+- const `float16Shimmed`
+
 ### src/utils/ktxutils.js
 - fn `formatBlockInfo(format)`
 - fn `parseKTXHeader(u8)`
@@ -416,6 +420,9 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 
 ### src/utils/utils.js
 - fn `getPromise()`
+
+### src/utils/webgpu-utils.js
+- re-export * from 'webgpu-utils'
 
 ### src/utils/wgslOverrides.js
 - fn `applyOverrideConstants(code, constants = {})`

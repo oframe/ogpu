@@ -1,9 +1,9 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 164,
-    "edges": 307,
-    "modules": 110,
+    "nodes": 167,
+    "edges": 313,
+    "modules": 113,
     "shaders": 47,
     "external": 7
   },
@@ -23,6 +23,10 @@
     {
       "id": "src/math/functions/index.js",
       "inDegree": 8
+    },
+    {
+      "id": "src/utils/webgpu-utils.js",
+      "inDegree": 7
     },
     {
       "id": "src/core/Shader.js",
@@ -51,10 +55,6 @@
     {
       "id": "src/core/UniformBuffer.js",
       "inDegree": 5
-    },
-    {
-      "id": "src/core/ComputeShader.js",
-      "inDegree": 4
     }
   ],
   "nodes": [
@@ -481,7 +481,7 @@
     {
       "id": "pkg:webgpu-utils",
       "type": "external",
-      "inDegree": 7,
+      "inDegree": 1,
       "outDegree": 0
     },
     {
@@ -638,7 +638,7 @@
       "id": "src/core/reflect/StructView.js",
       "type": "module",
       "inDegree": 2,
-      "outDegree": 1
+      "outDegree": 2
     },
     {
       "id": "src/core/Renderer.js",
@@ -953,6 +953,18 @@
       "outDegree": 0
     },
     {
+      "id": "src/utils/float16-shim.js",
+      "type": "module",
+      "inDegree": 4,
+      "outDegree": 0
+    },
+    {
+      "id": "src/utils/float16-unshim.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 1
+    },
+    {
       "id": "src/utils/IBLUtils/ggx.wgsl",
       "type": "shader",
       "inDegree": 1,
@@ -1022,7 +1034,7 @@
       "id": "src/utils/textureFromSource.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 1
+      "outDegree": 2
     },
     {
       "id": "src/utils/TimingHelper.js",
@@ -1035,6 +1047,12 @@
       "type": "module",
       "inDegree": 1,
       "outDegree": 0
+    },
+    {
+      "id": "src/utils/webgpu-utils.js",
+      "type": "module",
+      "inDegree": 7,
+      "outDegree": 3
     },
     {
       "id": "src/utils/wgslOverrides.js",
@@ -1354,7 +1372,7 @@
     },
     {
       "from": "src/core/Geometry.js",
-      "to": "pkg:webgpu-utils"
+      "to": "src/utils/webgpu-utils.js"
     },
     {
       "from": "src/core/index.js",
@@ -1566,7 +1584,7 @@
     },
     {
       "from": "src/core/primitives/vertices.js",
-      "to": "pkg:webgpu-utils"
+      "to": "src/utils/webgpu-utils.js"
     },
     {
       "from": "src/core/RecordedGroup.js",
@@ -1594,15 +1612,19 @@
     },
     {
       "from": "src/core/reflect/layout.js",
-      "to": "pkg:webgpu-utils"
+      "to": "src/utils/webgpu-utils.js"
     },
     {
       "from": "src/core/reflect/reflect.js",
-      "to": "pkg:webgpu-utils"
+      "to": "src/utils/webgpu-utils.js"
     },
     {
       "from": "src/core/reflect/StructView.js",
-      "to": "pkg:webgpu-utils"
+      "to": "src/utils/float16-shim.js"
+    },
+    {
+      "from": "src/core/reflect/StructView.js",
+      "to": "src/utils/webgpu-utils.js"
     },
     {
       "from": "src/core/Renderer.js",
@@ -2205,6 +2227,10 @@
       "to": "src/core/GPUEnums.js"
     },
     {
+      "from": "src/utils/float16-unshim.js",
+      "to": "src/utils/float16-shim.js"
+    },
+    {
       "from": "src/utils/IBLUtils/IBLUtils.js",
       "to": "pkg:parse-exr"
     },
@@ -2266,11 +2292,27 @@
     },
     {
       "from": "src/utils/mipmap.js",
-      "to": "pkg:webgpu-utils"
+      "to": "src/utils/webgpu-utils.js"
     },
     {
       "from": "src/utils/textureFromSource.js",
+      "to": "src/utils/float16-shim.js"
+    },
+    {
+      "from": "src/utils/textureFromSource.js",
+      "to": "src/utils/webgpu-utils.js"
+    },
+    {
+      "from": "src/utils/webgpu-utils.js",
       "to": "pkg:webgpu-utils"
+    },
+    {
+      "from": "src/utils/webgpu-utils.js",
+      "to": "src/utils/float16-shim.js"
+    },
+    {
+      "from": "src/utils/webgpu-utils.js",
+      "to": "src/utils/float16-unshim.js"
     }
   ]
 }

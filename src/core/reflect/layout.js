@@ -1,4 +1,4 @@
-import { makeBindGroupLayoutDescriptors } from 'webgpu-utils';
+import { makeBindGroupLayoutDescriptors } from '@utils/webgpu-utils.js';
 
 const STAGE_KEY = { 1: 'vertex', 2: 'fragment', 4: 'compute' }; // GPUShaderStage bits
 

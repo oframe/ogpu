@@ -1,5 +1,53 @@
 # Changelog
 
+## 0.11.0
+
+The engine object block no longer depends on the camera. Breaking for shaders that read
+`object.modelViewMatrix`. Ported from dgpu 0.10.0.
+
+### Changed
+
+- **`object.modelViewMatrix` is gone** from the engine block: `struct Object` is model,
+  normalMatrix, objectMatrix (240 → 176 B). A camera move no longer touches any object slice,
+  and the CPU no longer multiplies view × model per draw. Per vertex, write
+  `camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * p))`: three mat-vec
+  products, where the old `camera.projectionMatrix * object.modelViewMatrix * p` did a mat-mat
+  product per vertex (WGSL `*` is left-associative). Migrate:
+  `object.modelViewMatrix * v` → `camera.viewMatrix * (object.modelMatrix * v)`.
+  `modelViewMatrix()` in `engine.wgsl` returns the matrix for code that needs it (a
+  module-scope `modelViewMatrix` of your own now collides with it). Every shader in `src/` and
+  `examples/` is migrated, as are the scaffold skills and the shadow-mapping skill; the
+  `camera.projectionMatrix * camera.viewMatrix * worldPos` chains (pbr, shadow receivers,
+  skinned glTF, its shadow caster) are re-associated the same way.
+- **Only the derived matrices a shader reads are computed and written.** `Shader.needs`
+  (`NEEDS_NORMAL | NEEDS_OBJECT`, from `@core/Shader`) is a text check of the user code for
+  `normalMatrix` / `objectMatrix`; a mesh whose shader doesn't mention them skips the adjugate /
+  the 4×4 inverse and leaves those bytes alone. `mesh.normalMatrix` / `objectMatrix` can
+  therefore be stale on the CPU; `mesh.updateDerived()` (no argument) makes both current. A
+  shader swap or hot reload that adds a need computes it on the next draw.
+- `PerDrawBuffer.writeObject(mesh)` drops its `camera` argument; `OBJECT_SIZE` is 176.
+
+### Measured
+
+`highmeshcount` with a seeded scene and a pinned camera (581 of 1000 / 5780 of 10000 meshes
+drawn), Apple M1 Pro, headless Chromium, against 0.10.1: medians of 4 interleaved page
+loads, best of 5 × 300 frames (× 40 at 10000). CPU = synchronous `render()`, wall = pipelined
+frame time to `onSubmittedWorkDone`. The A/A noise floor of the same setup is about ±3% at
+1000 meshes and ±10% at 10000.
+
+| case                    | CPU ms        | wall ms       |
+| ----------------------- | ------------- | ------------- |
+| 1000 static             | 0.559 → 0.533 | 0.577 → 0.542 |
+| 1000 every mesh moving  | 0.918 → 0.885 | 0.926 → 0.889 |
+| 1000 camera orbiting    | 0.577 → 0.537 | 0.582 → 0.551 |
+| 10000 every mesh moving | 17.4 → 14.8   | 17.5 → 15.0   |
+
+0.9.0 had measured 1000 meshes all moving at +10% over 0.8.0 (every moved mesh computed the
+`objectMatrix` inverse); against 0.8.0 this release is −2% there (0.921 → 0.901 ms) and
+−26% static. GPU time (frames batched into one submit) and the summed per-pass GPU time of
+`skinning`, `skinninggltf`, `gltf`, `instancing`, `pbrshader` and `highmeshcount` are
+unchanged within noise. Screenshots of every example match 0.10.1.
+
 ## 0.10.1
 
 ### Added

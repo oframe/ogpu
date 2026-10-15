@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.15.0
+
+MSDF text, ported from dgpu 0.15.0.
+
+### Added
+
+- **`MSDFFont`, `MSDFText`, `TEXT_PRESETS`, `layoutText`** (`@modules/text`, also from `ogpu`).
+  `MSDFFont.load(gpu, { json, image })` reads an msdf-atlas-gen MTSDF atlas (decoded without
+  premultiplied alpha, `rgba8unorm`, no mips). `MSDFText` is a Mesh: one instanced quad per glyph,
+  laid out on the CPU (wrap, align, anchors, letter spacing, kerning from the atlas) and revealed
+  on the GPU with SplitText-style staggers over chars, words or lines, overflow-hidden masks,
+  clip wipes, sdf blur and outline. `animate(preset, overrides)`, scrubbable `progress`,
+  `play()` / `reverse()` promises, `setText()`. Nine presets. Every MSDFText shares one Shader per
+  device, so they share a pipeline per pass kind and `depthTest` setting; playback advances by
+  `renderer.deltaTime` once per frame, so hidden or culled text pauses. Gotchas in
+  `src/modules/text/CLAUDE.md`.
+- **`?example=msdftext`** (gallery section Text) — headline + body with a GUI over every preset
+  and split option.
+- **`npm run build:font`** (`scripts/build-msdf-font.mjs`) — rebakes the atlas with
+  msdf-atlas-gen (build steps in the script header; exits 2 when it isn't installed).
+- Instrument Serif (SIL OFL 1.1, licence beside it) baked to
+  `public/assets/fonts/instrument-serif/`.
+
+### Measured
+
+`?src=msdftext`: 13 captures (rest, outline, `setText`, every preset at a fixed progress) are
+pixel-identical to dgpu 0.15.0 and to the 0.7.1 draft it was ported from; `play()` resolves in its
+`totalDuration`.
+
+### Known issues
+
+- Kerning comes from the legacy `kern` table only; GPOS-only fonts, the bundled one included,
+  bake `kerning: []`.
+- `outline` / `outlineColor` have no setters after construction; set `text.uniforms`
+  (`uOutline`, `uOutlineColor`) as the example does.
+- A new `size` passed to `setText` doesn't rescale the em-based `from` offsets until the next
+  `animate()`.
+
 ## 0.14.0
 
 `Shader.bindGroup` is renamed `createBindGroup`. It allocates a new `GPUBindGroup` on every

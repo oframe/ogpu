@@ -13,7 +13,7 @@ Hand-rolled WebGPU engine. Vanilla JS, Vite, no framework, no TypeScript (ambien
 This file is the _why_; api-digest is the _what_. Keep method lists out of here.
 
 Each source directory has its own `CLAUDE.md` with that area's footguns, auto-loaded when you read files there:
-`src/core/` (Renderer, Transform, Camera, Mesh, Shader, UniformBuffer, PipelineCache, PerDrawBuffer, RenderPipeline, Geometry, ComputeShader, Texture, RenderTarget, `reflect/`, `primitives/`, `skin/`, ShaderReload) · `src/math/` (`Float32Array`-subclass wrappers over `wgpu-matrix`) · `src/modules/` (Orbit, Raycast, GUI, Animation, GLTFLoader, CubeMap, VideoTexture, `pbr/`, `gsplat/`) · `src/utils/IBLUtils/`.
+`src/core/` (Renderer, Transform, Camera, Mesh, Shader, UniformBuffer, PipelineCache, PerDrawBuffer, RenderPipeline, Geometry, ComputeShader, Texture, RenderTarget, `reflect/`, `primitives/`, `skin/`, ShaderReload) · `src/math/` (in-house, no dependency: the `@math/functions` layer — `vec2`/`vec3`/`vec4`/`quat`/`mat3`/`mat4`, out param last — under chainable `Float32Array`-subclass classes) · `src/modules/` (Orbit, Raycast, GUI, Animation, GLTFLoader, CubeMap, VideoTexture, `pbr/`, `gsplat/`) · `src/utils/IBLUtils/`.
 `src/utils/` is standalone helpers; `examples/` is runnable demos at the repo root.
 
 `examples/` covers shadows, skinning, PBR/IBL, render targets, compute particles, glTF. Anything overlapping those extends the existing path rather than starting a new one.
@@ -67,7 +67,7 @@ Keys live in the `views` map, gallery rows in the `items` array inside `renderLa
 
 - `public/assets/` — KTX cubemaps, PBR textures, JSON rigs/animations. Plain `fetch('./assets/...')`.
 - `public/libktx_read.js` + `.wasm` — Khronos KTX reader, loaded as a global `<script>` in `index.html`; `initDevice` stashes it on `window.ktx`, ready once `renderer.ready` resolves.
-- `wgpu-matrix` — functions mutate the out param (last arg) and return it.
+- No math dependency — see `src/math/`.
 - `wgsl_reflect` — the WGSL parser under `src/core/reflect/`. Vertex generators (`src/core/primitives/vertices.js`), mip chains (`@utils/mipmap`) and texture upload (`@utils/textureFromSource`) are in-house.
 - `parse-exr` — EXR loading inside `@utils/IBLUtils`.
 - `@utils/wgslOverrides` (`applyOverrideConstants`) — Safari lacks pipeline-overridable constants, so this bakes `override` decls into module-scope `const` literals before compile, resolving default expressions to numeric literals so wgsl_reflect's parser doesn't choke.

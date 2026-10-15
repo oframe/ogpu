@@ -120,7 +120,7 @@ The rest of Core:
 - `primitives/` — `Box`, `Sphere`, `Plane`, `Disc`, `Cone`, `Cylinder`, `Torus`, `Quad`, `FullscreenTriangle`; raw generators in `primitives/vertices.js`
 - `skin/` — GPU skinning
 
-The **Math** component (`src/math/`) is a set of chainable, THREE-style wrappers over [`wgpu-matrix`](https://github.com/greggman/wgpu-matrix) — `Vec2`–`Vec4`, `Quat`, `Mat3`/`Mat4`, `Euler`, `Color` — each a `Float32Array` subclass.
+The **Math** component (`src/math/`) is in-house, with no dependency: a function layer (`@math/functions` — `vec2`, `vec3`, `vec4`, `quat`, `mat3`, `mat4`; out param last and optional) under chainable, THREE-style classes — `Vec2`–`Vec4`, `Quat`, `Mat3`/`Mat4`, `Euler`, `Color` — each a `Float32Array` subclass.
 
 **Modules** (`src/modules/`) are the optional higher-level pieces, kept out of Core to reduce bloat: `Orbit`, `Raycast`, `GUI`, `Animation`, `GLTFLoader`, `CubeMap`, `VideoTexture`, and a shader-only `pbr/` IBL library.
 

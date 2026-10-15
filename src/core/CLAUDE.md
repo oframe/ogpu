@@ -117,7 +117,7 @@ wired in the constructor — never replace either with a new instance, mutate in
 place (`src/math/CLAUDE.md` has the full contract).
 
 `decompose()` writes `matrix` back to position/quaternion/scale via the raw
-wgpu-matrix decompose, which bypasses the `Quat` setter. It manually fires
+`@utils/Mat4Utils` decompose, which bypasses the `Quat` setter. It manually fires
 `quaternion.onChange()` afterwards — if you decompose by any other means, do
 the same or `rotation` will drift.
 

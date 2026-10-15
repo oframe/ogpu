@@ -141,10 +141,10 @@ export function makeStructuredView(def: ReflectedVariable | ReflectedType, array
 export function reflect(code: string): ShaderDefs;
 
 // =============================================================================
-// @math — chainable Float32Array math wrappers over wgpu-matrix
+// @math — chainable Float32Array math classes
 // =============================================================================
-// Each subclasses Float32Array, so any instance is a drop-in arg to a
-// wgpu-matrix call. Methods mutate `this` and return `this` for chaining.
+// Each subclasses Float32Array, so any instance is a drop-in arg to the
+// function layer below. Methods mutate `this` and return `this` for chaining.
 
 export class Vec2 extends Float32Array {
     constructor(x?: number, y?: number);
@@ -394,6 +394,122 @@ export class Color extends Float32Array {
     fromArray(a: ArrayLike<number>, offset?: number): this;
     toArray(a?: number[], offset?: number): number[];
 }
+
+// =============================================================================
+// @math/functions — the function layer under the classes (also re-exported
+// from '@math' and 'ogpu'). Column-major; mat3 is 12 floats (3 columns × vec4).
+// `out` is last and optional: allocated as a Float32Array when omitted, always
+// returned, and may alias any input. Lanes are written by index, so a plain-array
+// `out` of any length works.
+// =============================================================================
+
+type NumArray = ArrayLike<number>;
+type OutArray = Float32Array | number[];
+
+interface VecOps<N extends Float32Array> {
+    add<T extends OutArray = N>(a: NumArray, b: NumArray, out?: T): T;
+    subtract<T extends OutArray = N>(a: NumArray, b: NumArray, out?: T): T;
+    multiply<T extends OutArray = N>(a: NumArray, b: NumArray, out?: T): T;
+    scale<T extends OutArray = N>(v: NumArray, k: number, out?: T): T;
+    negate<T extends OutArray = N>(v: NumArray, out?: T): T;
+    lerp<T extends OutArray = N>(a: NumArray, b: NumArray, t: number, out?: T): T;
+    /** Zero-length input stays zero. */
+    normalize<T extends OutArray = N>(v: NumArray, out?: T): T;
+    dot(a: NumArray, b: NumArray): number;
+    length(v: NumArray): number;
+    lengthSq(v: NumArray): number;
+    distance(a: NumArray, b: NumArray): number;
+}
+
+interface VecOpsExt<N extends Float32Array> extends VecOps<N> {
+    addScaled<T extends OutArray = N>(a: NumArray, b: NumArray, k: number, out?: T): T;
+    min<T extends OutArray = N>(a: NumArray, b: NumArray, out?: T): T;
+    max<T extends OutArray = N>(a: NumArray, b: NumArray, out?: T): T;
+    distanceSq(a: NumArray, b: NumArray): number;
+}
+
+export const vec2: VecOps<Float32Array>;
+
+export const vec3: VecOpsExt<Float32Array> & {
+    divide<T extends OutArray = Float32Array>(a: NumArray, b: NumArray, out?: T): T;
+    cross<T extends OutArray = Float32Array>(a: NumArray, b: NumArray, out?: T): T;
+    /** Radians; a zero-length input gives π/2. */
+    angle(a: NumArray, b: NumArray): number;
+    /** Point transform with divide by w (w of 0 treated as 1). */
+    transformMat4<T extends OutArray = Float32Array>(v: NumArray, m: NumArray, out?: T): T;
+    transformMat4Upper3x3<T extends OutArray = Float32Array>(v: NumArray, m: NumArray, out?: T): T;
+    /** m is a 12-float mat3. */
+    transformMat3<T extends OutArray = Float32Array>(v: NumArray, m: NumArray, out?: T): T;
+    transformQuat<T extends OutArray = Float32Array>(v: NumArray, q: NumArray, out?: T): T;
+};
+
+export const vec4: VecOpsExt<Float32Array> & {
+    transformMat4<T extends OutArray = Float32Array>(v: NumArray, m: NumArray, out?: T): T;
+};
+
+export type EulerOrderLower = 'xyz' | 'xzy' | 'yxz' | 'yzx' | 'zxy' | 'zyx';
+
+export const quat: {
+    identity<T extends OutArray = Float32Array>(out?: T): T;
+    /** a ⊗ b: applies b, then a. */
+    mul<T extends OutArray = Float32Array>(a: NumArray, b: NumArray, out?: T): T;
+    conjugate<T extends OutArray = Float32Array>(q: NumArray, out?: T): T;
+    inverse<T extends OutArray = Float32Array>(q: NumArray, out?: T): T;
+    /** Length ≤ 1e-5 gives identity. */
+    normalize<T extends OutArray = Float32Array>(q: NumArray, out?: T): T;
+    dot(a: NumArray, b: NumArray): number;
+    length(q: NumArray): number;
+    fromAxisAngle<T extends OutArray = Float32Array>(axis: NumArray, angle: number, out?: T): T;
+    /** Order 'abc' = qa ⊗ qb ⊗ qc; throws on any other string. */
+    fromEuler<T extends OutArray = Float32Array>(x: number, y: number, z: number, order: EulerOrderLower, out?: T): T;
+    /** Rotation part of a mat4 or 12-float mat3. */
+    fromMat<T extends OutArray = Float32Array>(m: NumArray, out?: T): T;
+    /** Antiparallel input returns a 180° turn (axis, 0), axis ⊥ a (x̂ × a, or ŷ × a when a ≈ ±x̂). */
+    rotationTo<T extends OutArray = Float32Array>(a: NumArray, b: NumArray, out?: T): T;
+    slerp<T extends OutArray = Float32Array>(a: NumArray, b: NumArray, t: number, out?: T): T;
+    rotateX<T extends OutArray = Float32Array>(q: NumArray, angle: number, out?: T): T;
+    rotateY<T extends OutArray = Float32Array>(q: NumArray, angle: number, out?: T): T;
+    rotateZ<T extends OutArray = Float32Array>(q: NumArray, angle: number, out?: T): T;
+};
+
+export const mat3: {
+    set<T extends OutArray = Float32Array>(v0: number, v1: number, v2: number, v3: number, v4: number, v5: number, v6: number, v7: number, v8: number, out?: T): T;
+    /** Reads exactly 12 floats: a 16-float source gives its upper 3x3 (its m[3]/m[7]/m[11] land in the padding); a shorter one leaves NaN. */
+    copy<T extends OutArray = Float32Array>(m: NumArray, out?: T): T;
+    identity<T extends OutArray = Float32Array>(out?: T): T;
+    fromMat4<T extends OutArray = Float32Array>(m: NumArray, out?: T): T;
+    multiply<T extends OutArray = Float32Array>(a: NumArray, b: NumArray, out?: T): T;
+    inverse<T extends OutArray = Float32Array>(m: NumArray, out?: T): T;
+    transpose<T extends OutArray = Float32Array>(m: NumArray, out?: T): T;
+};
+
+export const mat4: {
+    copy<T extends OutArray = Float32Array>(m: NumArray, out?: T): T;
+    identity<T extends OutArray = Float32Array>(out?: T): T;
+    multiply<T extends OutArray = Float32Array>(a: NumArray, b: NumArray, out?: T): T;
+    /** Singular input yields Inf/NaN. */
+    inverse<T extends OutArray = Float32Array>(m: NumArray, out?: T): T;
+    determinant(m: NumArray): number;
+    transpose<T extends OutArray = Float32Array>(m: NumArray, out?: T): T;
+    fromQuat<T extends OutArray = Float32Array>(q: NumArray, out?: T): T;
+    translate<T extends OutArray = Float32Array>(m: NumArray, v: NumArray, out?: T): T;
+    scale<T extends OutArray = Float32Array>(m: NumArray, v: NumArray, out?: T): T;
+    rotateX<T extends OutArray = Float32Array>(m: NumArray, angle: number, out?: T): T;
+    rotateY<T extends OutArray = Float32Array>(m: NumArray, angle: number, out?: T): T;
+    rotateZ<T extends OutArray = Float32Array>(m: NumArray, angle: number, out?: T): T;
+    /** Column 0–3 as a vec3 (3 = translation). */
+    getAxis<T extends OutArray = Float32Array>(m: NumArray, axis: number, out?: T): T;
+    getTranslation<T extends OutArray = Float32Array>(m: NumArray, out?: T): T;
+    getScaling<T extends OutArray = Float32Array>(m: NumArray, out?: T): T;
+    /** Depth [near, far] -> [0, 1]; far may be Infinity. */
+    perspective<T extends OutArray = Float32Array>(fovy: number, aspect: number, near: number, far: number, out?: T): T;
+    /** Depth [near, far] -> [0, 1]. */
+    ortho<T extends OutArray = Float32Array>(left: number, right: number, bottom: number, top: number, near: number, far: number, out?: T): T;
+    /** View matrix (−Z forward). */
+    lookAt<T extends OutArray = Float32Array>(eye: NumArray, target: NumArray, up: NumArray, out?: T): T;
+    /** Object matrix (+Z toward target). */
+    aim<T extends OutArray = Float32Array>(position: NumArray, target: NumArray, up: NumArray, out?: T): T;
+};
 
 // =============================================================================
 // @core/Transform — scene-graph node. Everything renderable extends this.
@@ -1834,7 +1950,10 @@ declare module '@core/primitives' {
     export { Box, Sphere, Plane, Torus, Cylinder, Disc, Cone, Quad, FullscreenTriangle, PrimitiveOptions };
 }
 declare module '@math' {
-    export { Vec2, Vec3, Vec4, Quat, Mat3, Mat4, Euler, Color };
+    export { Vec2, Vec3, Vec4, Quat, Mat3, Mat4, Euler, Color, vec2, vec3, vec4, quat, mat3, mat4 };
+}
+declare module '@math/functions' {
+    export { vec2, vec3, vec4, quat, mat3, mat4 };
 }
 declare module '@modules/Orbit' {
     export { Orbit, OrbitOptions, OrbitControls };

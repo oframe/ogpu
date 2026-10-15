@@ -1,16 +1,15 @@
 // glTF/glb loader: parse chunks, decode accessors to packed typed arrays, build
-// a Transform graph of Mesh nodes sharing a small pool of RenderPipelines.
+// a Transform graph of Mesh nodes sharing one Shader and a few state objects.
 // Ref: https://toji.dev/webgpu-gltf-case-study/
 
-import { makeStructuredView } from '@core/reflect/index.js';
-import { createUniformBuffer } from '@utils/BufferUtils';
 import { Vec3, Quat, Mat4 } from '@math';
 
 import { Geometry } from '@core/Geometry';
 import { Texture } from '@core/Texture';
 import { Mesh } from '@core/Mesh';
 import { Transform } from '@core/Transform';
-import { RenderPipeline } from '@core/RenderPipeline';
+import { Shader } from '@core/Shader';
+import { UniformBuffer } from '@core/UniformBuffer';
 import { Skin } from '@core/skin/Skin';
 import { TextureFormat } from '@core/GPUEnums.js';
 import { Animation } from './Animation.js';
@@ -47,14 +46,14 @@ const CHUNK_BIN = 0x004e4942; // 'BIN\0'
 
 // Loads a .gltf / .glb file into a Transform scene graph of Mesh nodes that
 // render with the supplied PBR shader. Geometry is decoded onto the engine's
-// Geometry/RenderPipeline/Mesh primitives; materials are mapped to texture maps
+// Geometry/Shader/Mesh primitives; materials are mapped to texture maps
 // + factor uniforms and bound alongside the shared IBL resources.
 //
 // Diverges from toji.dev's zero-copy bufferView upload: accessors are decoded to
 // packed typed arrays so they flow through the existing Geometry abstraction, and
 // because the engine writes per-mesh uniforms each draw, nodes are drawn as
 // individual Mesh draws (each binding its own geometry + material bind group)
-// sharing pipelines keyed by cull/blend state, rather than instanced through a
+// sharing one Shader with per-cull/blend state objects, rather than instanced through a
 // transform storage buffer. The rest of
 // the blog's guidance is followed: glb chunk parsing, accessor componentType ->
 // format mapping, hierarchy traversal, per-material bind groups, sRGB-correct
@@ -66,12 +65,10 @@ export class GLTFLoader {
             code,
             iblEntries = [],
             // override constants baked into the shader (e.g. roughnessLevels for
-            // pbr.wgsl IBL specular lod) — forwarded to every primitive pipeline.
+            // pbr.wgsl IBL specular lod) — forwarded to the shared Shader.
             constants = {},
-            targets = null,
-            sampleCount = 1,
-            // parse geometry / skin / animation data only — skip building render
-            // pipelines, materials and textures (no PBR shader / IBL required).
+            // parse geometry / skin / animation data only — skip building the render
+            // shader, materials and textures (no PBR shader / IBL required).
             // Useful when the geometry feeds something else.
             dataOnly = false,
         } = {}
@@ -84,21 +81,17 @@ export class GLTFLoader {
         this.code = code;
         this.iblEntries = iblEntries;
         this.constants = constants;
-        this.targets = targets;
-        this.sampleCount = sampleCount;
 
         this.meshes = [];
-        this.pipelines = [];
         this.skins = []; // parsed rigs (one per glTF skin)
         this.animations = []; // parsed animation channels (raw, resampled on demand)
         this.skinnedMeshes = []; // meshes carrying skin attributes
         this.staticMeshes = []; // dataOnly: decoded non-skinned primitives (raw attribute arrays)
         this._textureCache = new Map(); // image index -> GPUTexture
-        // shared pipelines keyed by `cullMode|transparent` — every glTF primitive
-        // has the same vertex layout (position/normal/uv/tangent), so the only
-        // pipeline-state that varies per material is cull + blend. Reusing them
-        // keeps a typical file to 1-2 pipelines instead of one per node.
-        this._pipelineCache = new Map();
+        // one Shader for the whole file; the only per-material pipeline state is
+        // cull + blend, kept as shared frozen state objects keyed by `cullMode|transparent`
+        this.shader = dataOnly ? null : new Shader(gpu, { label: 'gltf-shader', code, constants });
+        this._stateCache = new Map();
         this._defaults = null;
     }
 
@@ -250,7 +243,7 @@ export class GLTFLoader {
 
         const cullMode = material.doubleSided ? 'none' : 'back';
         const transparent = alphaMode === 'BLEND';
-        const pipeline = this._getPipeline(geometry, cullMode, transparent);
+        const state = this._getState(cullMode, transparent);
 
         const [baseColor, metalRough, normalMap, occlusion, emissive] = await Promise.all([
             this._materialTexture(pbr.baseColorTexture, true),
@@ -263,38 +256,38 @@ export class GLTFLoader {
         const iblEntries = this.iblEntries;
         const defaultSampler = this._defaults.sampler;
 
-        // Material factors live in their own uniform block (binding 12), separate
-        // from the per-draw Mesh uniforms. Written once here.
-        const materialView = makeStructuredView(pipeline.defs.uniforms.material);
-        materialView.set({
-            baseColorFactor: pbr.baseColorFactor || [1, 1, 1, 1],
-            emissiveFactor: material.emissiveFactor || [0, 0, 0],
-            metallicFactor: pbr.metallicFactor ?? 1,
-            roughnessFactor: pbr.roughnessFactor ?? 1,
-            normalScale: material.normalTexture?.scale ?? 1,
-            occlusionStrength: material.occlusionTexture?.strength ?? 1,
-            alphaCutoff: material.alphaCutoff ?? 0.5,
-            alphaMode: alphaMode === 'MASK' ? 1 : alphaMode === 'BLEND' ? 2 : 0,
-            hasNormalMap: material.normalTexture ? 1 : 0,
-            hasTangents: tangent ? 1 : 0,
-            useGeometricNormal: 0,
-        });
-        const materialBuffer = createUniformBuffer(this.gpu, {
-            label: `${name}-material-uniforms`,
-            size: materialView.arrayBuffer.byteLength,
-        });
-        this.gpu.device.queue.writeBuffer(materialBuffer, 0, materialView.arrayBuffer);
+        // Material factors live in their own uniform block (binding 12). Written once here.
+        const materialUniforms = new UniformBuffer(
+            this.gpu,
+            this.shader.defs.uniforms.material,
+            {
+                baseColorFactor: pbr.baseColorFactor || [1, 1, 1, 1],
+                emissiveFactor: material.emissiveFactor || [0, 0, 0],
+                metallicFactor: pbr.metallicFactor ?? 1,
+                roughnessFactor: pbr.roughnessFactor ?? 1,
+                normalScale: material.normalTexture?.scale ?? 1,
+                occlusionStrength: material.occlusionTexture?.strength ?? 1,
+                alphaCutoff: material.alphaCutoff ?? 0.5,
+                alphaMode: alphaMode === 'MASK' ? 1 : alphaMode === 'BLEND' ? 2 : 0,
+                hasNormalMap: material.normalTexture ? 1 : 0,
+                hasTangents: tangent ? 1 : 0,
+                useGeometricNormal: 0,
+            },
+            { label: `${name}-material-uniforms` }
+        );
 
-        const m = new Mesh(this.gpu, {
+        // iblEntries come in by binding number, so this group is built raw against
+        // the shader's layout rather than through shader.bindGroup()
+        const m = new Mesh({
             label: `${name}-mesh`,
-            pipeline,
-            geometry, // mesh owns the geometry; pipeline carries layout only
-            bindGroups: (uniformResource) => [
+            geometry,
+            shader: this.shader,
+            state,
+            bindGroups: [
                 this.gpu.device.createBindGroup({
                     label: `${name}-material`,
-                    layout: pipeline.bindGroupLayout(0),
+                    layout: this.shader.bindGroupLayout(0),
                     entries: [
-                        { binding: 0, resource: uniformResource },
                         ...iblEntries,
                         { binding: 5, resource: baseColor.createView() },
                         { binding: 6, resource: metalRough.createView() },
@@ -303,7 +296,7 @@ export class GLTFLoader {
                         { binding: 9, resource: emissive.createView() },
                         { binding: 10, resource: defaultSampler },
                         { binding: 11, resource: this._defaults.white.createView() }, // opacity (fully opaque)
-                        { binding: 12, resource: { buffer: materialBuffer } },
+                        { binding: 12, resource: { buffer: materialUniforms.buffer } },
                     ],
                 }),
             ],
@@ -332,28 +325,16 @@ export class GLTFLoader {
         return m;
     }
 
-    // One shared RenderPipeline per (cullMode, transparent) combo. All glTF
-    // primitives carry the identical vertex layout, so a cache miss builds the
-    // pipeline from the current geometry's layout and every later primitive with
-    // the same state reuses it. `this.pipelines` holds the unique set.
-    _getPipeline(geometry, cullMode, transparent) {
+    // One shared state object per (cullMode, transparent) combo so the pipeline
+    // cache sees the same identity for every primitive with that material state.
+    _getState(cullMode, transparent) {
         const key = `${cullMode}|${transparent}`;
-        let pipeline = this._pipelineCache.get(key);
-        if (!pipeline) {
-            pipeline = new RenderPipeline(this.gpu, {
-                label: `gltf-${key}`,
-                code: this.code,
-                vertexBuffers: geometry.bufferLayouts,
-                constants: this.constants,
-                targets: this.targets,
-                sampleCount: this.sampleCount,
-                cullMode,
-                transparent,
-            });
-            this._pipelineCache.set(key, pipeline);
-            this.pipelines.push(pipeline);
+        let state = this._stateCache.get(key);
+        if (!state) {
+            state = { cullMode, transparent };
+            this._stateCache.set(key, state);
         }
-        return pipeline;
+        return state;
     }
 
     // ---- accessors ----
@@ -536,6 +517,10 @@ export class GLTFLoader {
     // dataOnly: turnkey skinned PBR mesh. Builds the Skin (compute buffers) + its
     // Animation, decodes the glTF material maps (factor-only fallbacks for the rest),
     // and wires everything into a Mesh against `skinnedmesh.wgsl`'s bind layout.
+    // group(0) binds by WGSL name — `code` must declare exactly positionBuffer,
+    // normalBuffer, tSpecular, shConstants, tBrdf, iblSampler, tMap,
+    // tMetallicRoughness, tNormal, tOcclusion, tEmissive, materialSampler, tOpacity
+    // and material, and read nothing else there.
     // Caller supplies the skinned PBR `code` + `ibl` resources ({ specView, mipLevels,
     // shBuffer, lutTexture }, e.g. the shape returned by an initIBL helper).
     // Returns { mesh, skin, animation } — drive `animation.elapsed` + `skin.update()`
@@ -582,55 +567,52 @@ export class GLTFLoader {
             addressModeW: 'clamp-to-edge',
         });
 
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: `${label}-pbr-pipeline`,
+        const shader = new Shader(this.gpu, {
+            label: `${label}-pbr-shader`,
             code,
-            vertexBuffers: geometry.bufferLayouts,
             constants: { roughnessLevels: ibl.mipLevels },
         });
 
-        const view = makeStructuredView(pipeline.defs.uniforms.material);
-        view.set({
-            baseColorFactor: pbr.baseColorFactor || [1, 1, 1, 1],
-            emissiveFactor: mat.emissiveFactor || [0, 0, 0],
-            metallicFactor: pbr.metallicFactor ?? 1,
-            roughnessFactor: pbr.roughnessFactor ?? 1,
-            normalScale: mat.normalTexture?.scale ?? 1,
-            occlusionStrength: mat.occlusionTexture?.strength ?? 1,
-            alphaCutoff: mat.alphaCutoff ?? 0.5,
-            alphaMode: 0,
-            hasNormalMap: mat.normalTexture ? 1 : 0,
-            hasTangents: 0, // skinned geometry carries no tangents -> screen-space frame
-            useGeometricNormal: 0,
-            ...material,
-        });
-        const materialBuffer = createUniformBuffer(this.gpu, { label: `${label}-material`, size: view.arrayBuffer.byteLength });
-        this.gpu.device.queue.writeBuffer(materialBuffer, 0, view.arrayBuffer);
+        const materialUniforms = new UniformBuffer(
+            this.gpu,
+            shader.defs.uniforms.material,
+            {
+                baseColorFactor: pbr.baseColorFactor || [1, 1, 1, 1],
+                emissiveFactor: mat.emissiveFactor || [0, 0, 0],
+                metallicFactor: pbr.metallicFactor ?? 1,
+                roughnessFactor: pbr.roughnessFactor ?? 1,
+                normalScale: mat.normalTexture?.scale ?? 1,
+                occlusionStrength: mat.occlusionTexture?.strength ?? 1,
+                alphaCutoff: mat.alphaCutoff ?? 0.5,
+                alphaMode: 0,
+                hasNormalMap: mat.normalTexture ? 1 : 0,
+                hasTangents: 0, // skinned geometry carries no tangents -> screen-space frame
+                useGeometricNormal: 0,
+                ...material,
+            },
+            { label: `${label}-material` }
+        );
 
-        const m = new Mesh(this.gpu, {
+        const m = new Mesh({
             label: `${label}-mesh`,
-            pipeline,
             geometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: pipeline.bindGroupLayout(0),
-                    entries: [
-                        { binding: 0, resource: uniformResource },
-                        { binding: 1, resource: { buffer: skin.skinnedPositionBuffer } },
-                        { binding: 2, resource: { buffer: skin.skinnedNormalBuffer } },
-                        { binding: 3, resource: ibl.specView },
-                        { binding: 4, resource: { buffer: ibl.shBuffer } },
-                        { binding: 5, resource: ibl.lutTexture.createView() },
-                        { binding: 6, resource: iblSampler },
-                        { binding: 7, resource: baseColor.createView() },
-                        { binding: 8, resource: metalRough.createView() },
-                        { binding: 9, resource: normalMap.createView() },
-                        { binding: 10, resource: d.whiteLin.createView() }, // occlusion
-                        { binding: 11, resource: d.black.createView() }, // emissive
-                        { binding: 12, resource: d.sampler },
-                        { binding: 13, resource: d.white.createView() }, // opacity
-                        { binding: 14, resource: { buffer: materialBuffer } },
-                    ],
+            shader,
+            bindGroups: [
+                shader.bindGroup(0, {
+                    positionBuffer: skin.skinnedPositionBuffer,
+                    normalBuffer: skin.skinnedNormalBuffer,
+                    tSpecular: ibl.specView,
+                    shConstants: ibl.shBuffer,
+                    tBrdf: ibl.lutTexture.createView(),
+                    iblSampler,
+                    tMap: baseColor.createView(),
+                    tMetallicRoughness: metalRough.createView(),
+                    tNormal: normalMap.createView(),
+                    tOcclusion: d.whiteLin.createView(),
+                    tEmissive: d.black.createView(),
+                    materialSampler: d.sampler,
+                    tOpacity: d.white.createView(),
+                    material: materialUniforms,
                 }),
             ],
         });
@@ -664,7 +646,7 @@ export class GLTFLoader {
     }
 
     // dataOnly convenience: build an engine Geometry from a decoded static primitive,
-    // ready to hand to a RenderPipeline of the caller's choosing. Always includes a
+    // ready to hand to a Shader of the caller's choosing. Always includes a
     // vec4 tangent attribute (zero placeholder when the glTF lacked tangents) so it
     // drops straight into the pbr shader; `geometry.hasTangents` reflects whether the
     // tangents are real (drive the matching `hasTangents` shader uniform from it).

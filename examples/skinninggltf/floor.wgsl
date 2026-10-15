@@ -1,20 +1,14 @@
+// validate-prepend: ../../src/core/engine.wgsl
 // Shadow-receiving ground plane. Matte directional-lit floor whose direct light
 // is gated by the shadow map (PCF), so the skinned character drops a soft
 // contact shadow onto it.
 
 override shadowDepthTextureSize : f32 = 2048.0;
 
-struct Uniforms {
-  projectionMatrix : mat4x4f,
-  viewMatrix : mat4x4f,
-  modelMatrix : mat4x4f,
-}
-
 struct Shadow {
   projectionViewMatrix : mat4x4f,
 }
 
-@group(0) @binding(0) var<uniform> uniforms : Uniforms;
 @group(0) @binding(1) var<uniform> shadowUniforms : Shadow;
 @group(0) @binding(2) var shadowSampler : sampler_comparison;
 @group(0) @binding(3) var shadowMap : texture_depth_2d;
@@ -33,8 +27,8 @@ struct VertexOutput {
 @vertex
 fn vs(in : Vertex) -> VertexOutput {
   var out : VertexOutput;
-  let worldPos = uniforms.modelMatrix * vec4f(in.position, 1.0);
-  out.position = uniforms.projectionMatrix * uniforms.viewMatrix * worldPos;
+  let worldPos = object.modelMatrix * vec4f(in.position, 1.0);
+  out.position = camera.projectionMatrix * camera.viewMatrix * worldPos;
 
   var shadowCoord = shadowUniforms.projectionViewMatrix * worldPos;
   shadowCoord = shadowCoord / shadowCoord.w;

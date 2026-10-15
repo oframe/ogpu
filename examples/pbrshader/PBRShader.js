@@ -8,7 +8,8 @@ import {
     Renderer,
     Geometry,
     Mesh,
-    RenderPipeline,
+    Shader,
+    UniformBuffer,
     Transform,
     Camera,
     Orbit,
@@ -22,7 +23,6 @@ import {
     loadJSON,
     createBrdfLUT,
     TextureFormat,
-    makeStructuredView,
 } from 'ogpu';
 
 export class PBRShader {
@@ -91,6 +91,13 @@ export class PBRShader {
         });
 
         this.carMeshes = [];
+        // one pbr Shader for every car part; transparent parts share one state object
+        this.pbrShader = new Shader(this.gpu, {
+            label: 'car-pbr-shader',
+            code: pbr,
+            constants: { roughnessLevels: ibl.mipLevels },
+        });
+        this.carGlassState = { transparent: true };
 
         // White fallback for parts with no opacity map (fully opaque).
         const opaqueView = this.whiteTex.createView();
@@ -191,64 +198,54 @@ export class PBRShader {
         });
 
         const ibl = this.ibl;
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: `car-pipeline-${this.carMeshes.length}`,
-            vertexBuffers: geometry.bufferLayouts,
-            code: pbr,
-            constants: { roughnessLevels: ibl.mipLevels },
-            transparent,
-        });
+        const shader = this.pbrShader;
 
         // Material factors live in their own uniform block (binding 12).
-        const materialView = makeStructuredView(pipeline.defs.uniforms.material);
-        materialView.set({
-            baseColorFactor: [1, 1, 1, 1],
-            emissiveFactor: maps.emissiveFactor,
-            metallicFactor: this.params.metallicFactor,
-            roughnessFactor: this.params.roughnessFactor,
-            normalScale: 0.5,
-            occlusionStrength: this.params.occlusionStrength,
-            alphaCutoff: 0.5,
-            alphaMode: 0,
-            hasNormalMap: 1,
-            hasTangents: geometry.hasTangents ? 1 : 0,
-            useGeometricNormal: 0,
-            useBrdfApprox: this.params.useBrdfApprox ? 1 : 0,
-        });
-        const materialBuffer = createUniformBuffer(this.gpu, {
-            label: `car-material-${this.carMeshes.length}`,
-            size: materialView.arrayBuffer.byteLength,
-        });
-        this.gpu.device.queue.writeBuffer(materialBuffer, 0, materialView.arrayBuffer);
+        const material = new UniformBuffer(
+            this.gpu,
+            shader.defs.uniforms.material,
+            {
+                baseColorFactor: [1, 1, 1, 1],
+                emissiveFactor: maps.emissiveFactor,
+                metallicFactor: this.params.metallicFactor,
+                roughnessFactor: this.params.roughnessFactor,
+                normalScale: 0.5,
+                occlusionStrength: this.params.occlusionStrength,
+                alphaCutoff: 0.5,
+                alphaMode: 0,
+                hasNormalMap: 1,
+                hasTangents: geometry.hasTangents ? 1 : 0,
+                useGeometricNormal: 0,
+                useBrdfApprox: this.params.useBrdfApprox ? 1 : 0,
+            },
+            { label: `car-material-${this.carMeshes.length}` }
+        );
 
-        const mesh = new Mesh(this.gpu, {
+        const mesh = new Mesh({
             label: `car-mesh-${this.carMeshes.length}`,
-            pipeline,
             geometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: pipeline.bindGroupLayout(0),
-                    entries: [
-                        { binding: 0, resource: uniformResource },
-                        { binding: 1, resource: ibl.specView },
-                        { binding: 2, resource: { buffer: ibl.shBuffer } },
-                        { binding: 3, resource: ibl.lutTexture.createView() },
-                        { binding: 4, resource: this.iblSampler },
-                        { binding: 5, resource: maps.baseView }, // tMap
-                        { binding: 6, resource: maps.rmoView }, // tMetallicRoughness (g/b)
-                        { binding: 7, resource: maps.normalView }, // tNormal
-                        { binding: 8, resource: maps.rmoView }, // tOcclusion (r)
-                        { binding: 9, resource: maps.emissiveView }, // tEmissive
-                        { binding: 10, resource: this.materialSampler },
-                        { binding: 11, resource: maps.opacityView }, // tOpacity (g)
-                        { binding: 12, resource: { buffer: materialBuffer } },
-                    ],
+            shader,
+            state: transparent ? this.carGlassState : undefined,
+            bindGroups: [
+                shader.bindGroup(0, {
+                    tSpecular: ibl.specView,
+                    shConstants: ibl.shBuffer,
+                    tBrdf: ibl.lutTexture.createView(),
+                    iblSampler: this.iblSampler,
+                    tMap: maps.baseView,
+                    tMetallicRoughness: maps.rmoView, // g/b
+                    tNormal: maps.normalView,
+                    tOcclusion: maps.rmoView, // r
+                    tEmissive: maps.emissiveView,
+                    materialSampler: this.materialSampler,
+                    tOpacity: maps.opacityView, // g
+                    material,
                 }),
             ],
         });
 
-        // Keep the material view + buffer on the mesh so the pane can update them.
-        mesh.material = { view: materialView, buffer: materialBuffer };
+        // Keep the material UniformBuffer on the mesh so the pane can update it.
+        mesh.material = material;
 
         mesh.setParent(this.sceneOne);
         this.carMeshes.push(mesh);
@@ -264,28 +261,14 @@ export class PBRShader {
             magFilter: 'linear',
         });
 
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: 'car-shadow-pipeline',
-            vertexBuffers: geometry.bufferLayouts,
-            code: shadowShader,
-            transparent: true,
-            cullMode: 'none',
-        });
+        const shader = new Shader(this.gpu, { label: 'car-shadow-shader', code: shadowShader });
 
-        const mesh = new Mesh(this.gpu, {
+        const mesh = new Mesh({
             label: 'car-shadow',
-            pipeline,
             geometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: pipeline.bindGroupLayout(0),
-                    entries: [
-                        { binding: 0, resource: uniformResource },
-                        { binding: 1, resource: sampler },
-                        { binding: 2, resource: view },
-                    ],
-                }),
-            ],
+            shader,
+            state: { transparent: true, cullMode: 'none' },
+            bindGroups: [shader.bindGroup(0, { shadowSampler: sampler, tMap: view })],
         });
         mesh.setParent(this.sceneOne);
     }
@@ -303,32 +286,29 @@ export class PBRShader {
             addressModeW: 'clamp-to-edge',
         });
 
-        const makeProbe = (mode, position) => {
-            const pipeline = new RenderPipeline(this.gpu, {
-                label: `probe-pipeline-mode-${mode}`,
-                vertexBuffers: geometry.bufferLayouts,
-                code: probe,
-            });
+        const shader = new Shader(this.gpu, { label: 'probe-shader', code: probe });
 
-            const mesh = new Mesh(this.gpu, {
+        const makeProbe = (mode, position) => {
+            const uniforms = new UniformBuffer(this.gpu, shader.uniforms, { mode }, { label: `probe-uniforms-mode-${mode}` });
+
+            const mesh = new Mesh({
                 label: `probe-mesh-mode-${mode}`,
-                pipeline,
                 geometry,
-                bindGroups: (uniformResource) => [
-                    this.gpu.device.createBindGroup({
-                        label: `probe-bind-group-mode-${mode}`,
-                        layout: pipeline.bindGroupLayout(0),
-                        entries: [
-                            { binding: 0, resource: uniformResource },
-                            { binding: 1, resource: ibl.specView },
-                            { binding: 2, resource: { buffer: ibl.shBuffer } },
-                            { binding: 3, resource: iblSampler },
-                        ],
-                    }),
+                shader,
+                bindGroups: [
+                    shader.bindGroup(
+                        0,
+                        {
+                            uniforms,
+                            tSpecular: ibl.specView,
+                            shConstants: ibl.shBuffer,
+                            iblSampler,
+                        },
+                        { label: `probe-bind-group-mode-${mode}` }
+                    ),
                 ],
             });
 
-            mesh.uniforms.set({ mode });
             mesh.position.copy(position);
             mesh.setParent(this.probes);
             return mesh;
@@ -381,7 +361,7 @@ export class PBRShader {
 
         const apply = () => {
             for (const mesh of this.carMeshes) {
-                mesh.material.view.set({
+                mesh.material.set({
                     roughnessFactor: this.params.roughnessFactor,
                     metallicFactor: this.params.metallicFactor,
                     occlusionStrength: this.params.occlusionStrength,
@@ -389,7 +369,6 @@ export class PBRShader {
                     useGeometricNormal: this.params.useGeometricNormal ? 1 : 0,
                     useBrdfApprox: this.params.useBrdfApprox ? 1 : 0,
                 });
-                this.gpu.device.queue.writeBuffer(mesh.material.buffer, 0, mesh.material.view.arrayBuffer);
             }
         };
 

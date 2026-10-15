@@ -1,19 +1,10 @@
+// validate-prepend: ../../core/engine.wgsl
 // PBR metallic-roughness shader (glTF-style materials + IBL).
-// Standard Mesh uniforms (projection/view/model/normal matrices, cameraPosition,
-// resolution) are written per-draw by Mesh.draw; material factors are set by the
-// consumer (GLTFLoader per material, or the pbrshader example via Tweakpane).
+// Camera/object matrices come from the engine block (camera.*, object.*); material
+// factors are set by the consumer (GLTFLoader per material, or the pbrshader example via Tweakpane).
 // Lighting: prefiltered specular cube + SH irradiance + split-sum BRDF LUT.
 //
 // Texture uniforms follow the engine convention of a `t<Name>` prefix.
-
-struct Uniforms {
-  projectionMatrix : mat4x4f,
-  viewMatrix : mat4x4f,
-  modelMatrix : mat4x4f,
-  normalMatrix : mat3x3f,
-  cameraPosition : vec3f,
-  resolution : vec2f,
-}
 
 struct Material {
   baseColorFactor : vec4f,
@@ -34,7 +25,6 @@ struct SHConstants {
   coefficients: array<vec4f, 9>
 }
 
-@group(0) @binding(0) var<uniform> uniforms : Uniforms;
 @group(0) @binding(1) var tSpecular : texture_cube<f32>;
 @group(0) @binding(2) var<uniform> shConstants : SHConstants;
 @group(0) @binding(3) var tBrdf : texture_2d<f32>;
@@ -53,7 +43,7 @@ const PI = 3.14159265358979323846;
 
 // Total roughness mip levels in the prefiltered IBL specular cube. roughness in
 // [0,1] maps to lod [0, roughnessLevels - 1]. Supplied by the consumer via the
-// RenderPipeline `constants` from the IBL build (ibl.mipLevels); default keeps
+// Shader `constants` from the IBL build (ibl.mipLevels); default keeps
 // the old 6-level (lod*5) behavior when unset.
 override roughnessLevels : f32 = 6.0;
 
@@ -77,13 +67,13 @@ struct VertexOutput {
 @vertex
 fn vs(in : Vertex) -> VertexOutput {
   var vsOut : VertexOutput;
-  let worldPos = uniforms.modelMatrix * vec4f(in.position, 1.0);
+  let worldPos = object.modelMatrix * vec4f(in.position, 1.0);
   vsOut.vWorldPos = worldPos.xyz;
-  vsOut.position = uniforms.projectionMatrix * uniforms.viewMatrix * worldPos;
-  vsOut.vNormal = normalize(uniforms.normalMatrix * in.normal);
+  vsOut.position = camera.projectionMatrix * camera.viewMatrix * worldPos;
+  vsOut.vNormal = normalize(object.normalMatrix * in.normal);
   vsOut.vUv = in.uv;
   // tangent rotates with the model; keep w (handedness) for the bitangent.
-  let worldTangent = (uniforms.modelMatrix * vec4f(in.tangent.xyz, 0.0)).xyz;
+  let worldTangent = (object.modelMatrix * vec4f(in.tangent.xyz, 0.0)).xyz;
   vsOut.vTangent = vec4f(worldTangent, in.tangent.w);
   return vsOut;
 }
@@ -196,7 +186,7 @@ fn fs(in : VertexOutput) -> @location(0) vec4f {
     }
   }
 
-  let v = normalize(uniforms.cameraPosition - in.vWorldPos);
+  let v = normalize(camera.cameraPosition - in.vWorldPos);
   let nDotV = max(dot(normal, v), 0.0);
 
   let albedo = baseColor.rgb;

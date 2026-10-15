@@ -1,3 +1,4 @@
+// validate-prepend: ../../src/core/engine.wgsl
 // Debug probe spheres for the PBR example. Two display modes selected by
 // `uniforms.mode`: 0 = SH irradiance evaluated at the surface normal (the
 // diffuse environment), 1 = the prefiltered specular cube sampled by the
@@ -5,11 +6,6 @@
 // bound by the main pbr shader.
 
 struct Uniforms {
-  projectionMatrix : mat4x4f,
-  viewMatrix : mat4x4f,
-  modelMatrix : mat4x4f,
-  normalMatrix : mat3x3f,
-  cameraPosition : vec3f,
   mode : f32, // 0 = SH irradiance, 1 = specular cube
 }
 
@@ -34,12 +30,12 @@ struct VertexOutput {
 }
 
 @vertex
-fn vs(v : Vertex) -> VertexOutput {
+fn vs(in : Vertex) -> VertexOutput {
   var vsOut : VertexOutput;
-  let worldPos = uniforms.modelMatrix * vec4f(v.position, 1.0);
+  let worldPos = object.modelMatrix * vec4f(in.position, 1.0);
   vsOut.vWorldPos = worldPos.xyz;
-  vsOut.position = uniforms.projectionMatrix * uniforms.viewMatrix * worldPos;
-  vsOut.vNormal = normalize(uniforms.normalMatrix * v.normal);
+  vsOut.position = camera.projectionMatrix * camera.viewMatrix * worldPos;
+  vsOut.vNormal = normalize(object.normalMatrix * in.normal);
   return vsOut;
 }
 
@@ -72,7 +68,7 @@ fn fs(in : VertexOutput) -> @location(0) vec4f {
     col = max(evaluateSH(normal, shConstants.coefficients), vec3f(0.0, 0.0, 0.0));
   } else {
     // prefiltered specular cube, mirror reflection at the lowest mip
-    let v = normalize(uniforms.cameraPosition - in.vWorldPos);
+    let v = normalize(camera.cameraPosition - in.vWorldPos);
     let r = reflect(-v, normal);
     col = textureSampleLevel(tSpecular, iblSampler, r, 0.0).xyz;
   }

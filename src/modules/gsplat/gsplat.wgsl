@@ -1,16 +1,13 @@
+// validate-prepend: ../../core/engine.wgsl
 // ─── Gaussian Splat Renderer ────────────────────────────────────────────────
 // Standard 3DGS EWA splatting.  Each splat is drawn as a 4-vertex triangle-strip
 // quad (instanced); the VS projects the 2D Gaussian ellipse and the FS evaluates
 // the Gaussian fall-off, outputting premultiplied alpha.
 //
-// Uniforms struct names must match exactly what Mesh.draw() writes by name.
+// Camera/object matrices and resolution come from the engine block (group 1).
 
 struct Uniforms {
-    projectionMatrix : mat4x4f,
-    modelViewMatrix  : mat4x4f,
-    resolution       : vec2f,
-    uCount           : u32,
-    time            : f32
+    uCount : u32,
 }
 
 @group(0) @binding(0) var<uniform>        uniforms      : Uniforms;
@@ -63,9 +60,8 @@ fn vs(
 
     // ── Camera-space centre ──────────────────────────────────────────────────
 
-    let time = uniforms.time;
     let pos = positions[splatIdx].xyz;
-    let t   = uniforms.modelViewMatrix * vec4f(pos.xyz, 1.0);
+    let t   = object.modelViewMatrix * vec4f(pos.xyz, 1.0);
 
     // Near-plane guard (z is negative in front of camera in WebGPU/RH convention).
     if (t.z >= -0.01) {
@@ -86,15 +82,15 @@ fn vs(
 
     // ── Transform covariance to camera space ────────────────────────────────
     // W = upper-left 3×3 of modelViewMatrix (column-major storage).
-    let mv = uniforms.modelViewMatrix;
+    let mv = object.modelViewMatrix;
     let W  = mat3x3f(mv[0].xyz, mv[1].xyz, mv[2].xyz);
     let Vrk = W * Sigma * transpose(W);
 
     // ── EWA Jacobian ─────────────────────────────────────────────────────────
     // focal lengths from projection matrix diagonal.
-    let proj    = uniforms.projectionMatrix;
-    let focal_x = proj[0][0] * uniforms.resolution.x * 0.5;
-    let focal_y = proj[1][1] * uniforms.resolution.y * 0.5;
+    let proj    = camera.projectionMatrix;
+    let focal_x = proj[0][0] * camera.resolution.x * 0.5;
+    let focal_y = proj[1][1] * camera.resolution.y * 0.5;
 
     // Clamp tan(fov/2) extents to avoid numerical blowup at extreme angles.
     let limx = 1.3 / proj[0][0]; // 1.3 * tan(fovX/2)
@@ -158,7 +154,7 @@ fn vs(
     // Clip-space centre.
     let clip    = proj * t;
     // Add pixel-space offset via homogeneous NDC trick.
-    let ndcOff  = offset * 2.0 / uniforms.resolution;
+    let ndcOff  = offset * 2.0 / camera.resolution;
     out.position = vec4f(clip.xy + ndcOff * clip.w, clip.z, clip.w);
 
     // Gaussian-space coordinate passed to the fragment shader.

@@ -8,7 +8,8 @@ import {
     Mesh,
     Geometry,
     GLTFLoader,
-    RenderPipeline,
+    Shader,
+    UniformBuffer,
     RenderTarget,
     Plane,
     Mat4,
@@ -17,7 +18,6 @@ import {
     loadSphericalHarmonics,
     createBrdfLUT,
     TextureFormat,
-    makeStructuredView,
 } from 'ogpu';
 
 import skinnedmesh from './skinnedmesh.wgsl?raw';
@@ -118,10 +118,9 @@ export class SkinningGLTF {
             addressModeV: 'repeat',
         });
 
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: 'skinned-pbr-pipeline',
+        const shader = new Shader(this.gpu, {
+            label: 'skinned-pbr-shader',
             code: skinnedmesh,
-            vertexBuffers: geometry.bufferLayouts,
             constants: { roughnessLevels: ibl.mipLevels },
         });
 
@@ -153,56 +152,51 @@ export class SkinningGLTF {
             compare: 'less',
         });
 
-        const shadowView = makeStructuredView(pipeline.defs.uniforms.shadowUniforms);
-        shadowView.set({ projectionViewMatrix: shadowVP });
-        const shadowUniformBuffer = createUniformBuffer(this.gpu, { label: 'shadow-uniforms', size: shadowView.arrayBuffer.byteLength });
-        this.gpu.device.queue.writeBuffer(shadowUniformBuffer, 0, shadowView.arrayBuffer);
+        const shadowUniforms = new UniformBuffer(this.gpu, shader.defs.uniforms.shadowUniforms, { projectionViewMatrix: shadowVP }, { label: 'shadow-uniforms' });
         const shadowDepthView = this.shadowBuffer.depthTexture.createView();
 
-        const materialView = makeStructuredView(pipeline.defs.uniforms.material);
-        materialView.set({
-            baseColorFactor: [1, 1, 1, 1],
-            emissiveFactor: [0, 0, 0],
-            metallicFactor: 0, // mixamo body: non-metallic
-            roughnessFactor: 1,
-            normalScale: 1,
-            occlusionStrength: 1,
-            alphaCutoff: 0.5,
-            alphaMode: 0,
-            hasNormalMap: 1,
-            hasTangents: 0, // skinned geometry carries no tangents -> screen-space frame
-            useGeometricNormal: 0,
-        });
-        const materialBuffer = createUniformBuffer(this.gpu, { label: 'mixamo-material', size: materialView.arrayBuffer.byteLength });
-        this.gpu.device.queue.writeBuffer(materialBuffer, 0, materialView.arrayBuffer);
+        const material = new UniformBuffer(
+            this.gpu,
+            shader.defs.uniforms.material,
+            {
+                baseColorFactor: [1, 1, 1, 1],
+                emissiveFactor: [0, 0, 0],
+                metallicFactor: 0, // mixamo body: non-metallic
+                roughnessFactor: 1,
+                normalScale: 1,
+                occlusionStrength: 1,
+                alphaCutoff: 0.5,
+                alphaMode: 0,
+                hasNormalMap: 1,
+                hasTangents: 0, // skinned geometry carries no tangents -> screen-space frame
+                useGeometricNormal: 0,
+            },
+            { label: 'mixamo-material' }
+        );
 
-        this.mesh = new Mesh(this.gpu, {
+        this.mesh = new Mesh({
             label: 'mixamo-mesh',
-            pipeline,
             geometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: pipeline.bindGroupLayout(0),
-                    entries: [
-                        { binding: 0, resource: uniformResource },
-                        { binding: 1, resource: { buffer: this.skin.skinnedPositionBuffer } },
-                        { binding: 2, resource: { buffer: this.skin.skinnedNormalBuffer } },
-                        { binding: 3, resource: ibl.specView },
-                        { binding: 4, resource: { buffer: ibl.shBuffer } },
-                        { binding: 5, resource: ibl.lutTexture.createView() },
-                        { binding: 6, resource: iblSampler },
-                        { binding: 7, resource: baseColor.createView() },
-                        { binding: 8, resource: metalRough.createView() },
-                        { binding: 9, resource: normalMap.createView() },
-                        { binding: 10, resource: white.createView() }, // occlusion
-                        { binding: 11, resource: black.createView() }, // emissive
-                        { binding: 12, resource: materialSampler },
-                        { binding: 13, resource: white.createView() }, // opacity
-                        { binding: 14, resource: { buffer: materialBuffer } },
-                        { binding: 15, resource: { buffer: shadowUniformBuffer } },
-                        { binding: 16, resource: shadowMapSampler },
-                        { binding: 17, resource: shadowDepthView },
-                    ],
+            shader,
+            bindGroups: [
+                shader.bindGroup(0, {
+                    positionBuffer: this.skin.skinnedPositionBuffer,
+                    normalBuffer: this.skin.skinnedNormalBuffer,
+                    tSpecular: ibl.specView,
+                    shConstants: ibl.shBuffer,
+                    tBrdf: ibl.lutTexture.createView(),
+                    iblSampler,
+                    tMap: baseColor.createView(),
+                    tMetallicRoughness: metalRough.createView(),
+                    tNormal: normalMap.createView(),
+                    tOcclusion: white.createView(),
+                    tEmissive: black.createView(),
+                    materialSampler,
+                    tOpacity: white.createView(),
+                    material,
+                    shadowUniforms,
+                    shadowSampler: shadowMapSampler,
+                    shadowMap: shadowDepthView,
                 }),
             ],
         });
@@ -213,57 +207,34 @@ export class SkinningGLTF {
 
         // Shadow-receiving floor under the character.
         const floorGeo = new Plane(this.gpu, { width: 10, depth: 10 });
-        const floorPipeline = new RenderPipeline(this.gpu, {
-            label: 'shadow-floor-pipeline',
+        const floorShaderModule = new Shader(this.gpu, {
+            label: 'shadow-floor-shader',
             code: floorShader,
-            vertexBuffers: floorGeo.bufferLayouts,
             constants: { shadowDepthTextureSize: SHADOW_SIZE },
         });
-        this.floor = new Mesh(this.gpu, {
+        this.floor = new Mesh({
             label: 'shadow-floor',
-            pipeline: floorPipeline,
             geometry: floorGeo,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: floorPipeline.bindGroupLayout(0),
-                    entries: [
-                        { binding: 0, resource: uniformResource },
-                        { binding: 1, resource: { buffer: shadowUniformBuffer } },
-                        { binding: 2, resource: shadowMapSampler },
-                        { binding: 3, resource: shadowDepthView },
-                    ],
+            shader: floorShaderModule,
+            bindGroups: [
+                floorShaderModule.bindGroup(0, {
+                    shadowUniforms,
+                    shadowSampler: shadowMapSampler,
+                    shadowMap: shadowDepthView,
                 }),
             ],
         });
         this.scene.addChild(this.floor);
 
-        // Shadow caster: same skin buffers, depth-only pass from the light's POV.
-        const casterPipeline = new RenderPipeline(this.gpu, {
-            label: 'skinned-shadow-caster',
-            code: shadowCasterShader,
-            vertexBuffers: geometry.bufferLayouts,
-            depthStencil: {
-                depthWriteEnabled: true,
-                depthCompare: 'less',
-                format: SHADOW_FORMAT,
-                depthBias: 1,
-                depthBiasSlopeScale: 1.75,
-                depthBiasClamp: 0.0,
-            },
-        });
-        this.shadowMesh = new Mesh(this.gpu, {
+        // Shadow caster: same skin buffers, depth-only pass from the light's POV
+        // (the depth32float format comes from shadowBuffer).
+        const casterShader = new Shader(this.gpu, { label: 'skinned-shadow-caster', code: shadowCasterShader });
+        this.shadowMesh = new Mesh({
             label: 'mixamo-shadow-caster',
-            pipeline: casterPipeline,
             geometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: casterPipeline.bindGroupLayout(0),
-                    entries: [
-                        { binding: 0, resource: uniformResource },
-                        { binding: 1, resource: { buffer: this.skin.skinnedPositionBuffer } },
-                    ],
-                }),
-            ],
+            shader: casterShader,
+            state: { depthBias: 1, depthBiasSlopeScale: 1.75 },
+            bindGroups: [casterShader.bindGroup(0, { positionBuffer: this.skin.skinnedPositionBuffer })],
         });
         this.shadowMesh.frustumCulled = false;
 

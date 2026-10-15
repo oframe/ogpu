@@ -2,7 +2,8 @@
 
 import { Mesh } from '@core/Mesh';
 import { Geometry } from '@core/Geometry';
-import { RenderPipeline } from '@core/RenderPipeline';
+import { Shader } from '@core/Shader';
+import { UniformBuffer } from '@core/UniformBuffer';
 import { ComputeShader } from '@core/ComputeShader';
 import { Mat4 } from '@math';
 import { createStorageBuffer, createUniformBuffer } from '@utils/BufferUtils';
@@ -29,7 +30,7 @@ function log2(n) {
     return l;
 }
 
-// Reusable scratch matrix for modelView computation.
+// Reusable scratch matrix for the sort's modelView (camera.viewMatrix × worldMatrix).
 const _mv = new Mat4();
 
 export class GaussianSplat extends Mesh {
@@ -159,51 +160,46 @@ export class GaussianSplat extends Mesh {
         }
         geometry.bounds.radius += 3 * maxScale;
 
-        // ── Render pipeline ───────────────────────────────────────────────────
-        const pipeline = new RenderPipeline(gpu, {
-            label,
-            code,
-            vertexBuffers: geometry.bufferLayouts,
-            topology: 'triangle-strip',
-            cullMode: 'none',
-            transparent: true,
-            depthTest: true,
-            depthWrite: false,
-            blending: {
-                color: { srcFactor: BlendFactor.ONE, dstFactor: BlendFactor.ONE_MINUS_SRC_ALPHA },
-                alpha: { srcFactor: BlendFactor.ONE, dstFactor: BlendFactor.ONE_MINUS_SRC_ALPHA },
-            },
-        });
+        // ── Render shader + state ─────────────────────────────────────────────
+        const shader = new Shader(gpu, { label, code });
+        const uniforms = new UniformBuffer(gpu, shader.uniforms, { uCount: count }, { label: `${label}-uniforms` });
 
         // ── Mesh base construction ────────────────────────────────────────────
-        // Bind group 0: uniforms (factory receives the shared per-draw uniformResource)
-        // + 5 storage buffers (positions, colors, rotations, scales, sortedIndices).
-        super(gpu, {
+        // Bind group 0: uCount uniform + 5 storage buffers (positions, colors,
+        // rotations, scales, sortedIndices). Camera/object live in the engine group.
+        super({
             label,
-            pipeline,
             geometry,
-            bindGroups: (uniformResource) => [
-                gpu.device.createBindGroup({
-                    label: `${label}-render-bind-group`,
-                    layout: pipeline.bindGroupLayout(0),
-                    entries: [
-                        { binding: 0, resource: uniformResource },
-                        { binding: 1, resource: { buffer: positionsBuffer } },
-                        { binding: 2, resource: { buffer: colorsBuffer } },
-                        { binding: 3, resource: { buffer: rotationsBuffer } },
-                        { binding: 4, resource: { buffer: scalesBuffer } },
-                        { binding: 5, resource: { buffer: indicesFrontBuffer } },
-                    ],
-                }),
+            shader,
+            state: {
+                topology: 'triangle-strip',
+                cullMode: 'none',
+                transparent: true,
+                depthWrite: false,
+                blending: {
+                    color: { srcFactor: BlendFactor.ONE, dstFactor: BlendFactor.ONE_MINUS_SRC_ALPHA },
+                    alpha: { srcFactor: BlendFactor.ONE, dstFactor: BlendFactor.ONE_MINUS_SRC_ALPHA },
+                },
+            },
+            bindGroups: [
+                shader.bindGroup(
+                    0,
+                    {
+                        uniforms,
+                        positions: positionsBuffer,
+                        colors: colorsBuffer,
+                        rotations: rotationsBuffer,
+                        scales: scalesBuffer,
+                        sortedIndices: indicesFrontBuffer,
+                    },
+                    { label: `${label}-render-bind-group` }
+                ),
             ],
         });
 
-        // Static uniform: tell the shader the real splat count.
-        // Written after super() because this.uniforms is available only then.
-        this.uniforms.set({
-            uCount: count,
-            time: 0,
-        });
+        // the new Mesh takes no gpu; the sort passes need it
+        this.gpu = gpu;
+        this.uniforms = uniforms; // static: the real splat count
 
         // Active sort implementation — public, hot-swappable per frame.
         this.sortMethod = sortMethod;
@@ -357,6 +353,8 @@ export class GaussianSplat extends Mesh {
             buffer?.destroy();
         }
         this._timingQuerySet?.destroy();
+        this.uniforms.destroy();
+        this.shader.destroy();
     }
 
     /**

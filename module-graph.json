@@ -22,7 +22,7 @@
     },
     {
       "id": "src/core/reflect/index.js",
-      "inDegree": 7
+      "inDegree": 6
     },
     {
       "id": "src/core/Texture.js",
@@ -37,7 +37,7 @@
       "inDegree": 5
     },
     {
-      "id": "src/utils/BufferUtils.js",
+      "id": "src/core/UniformBuffer.js",
       "inDegree": 5
     },
     {
@@ -45,16 +45,16 @@
       "inDegree": 4
     },
     {
-      "id": "src/core/RenderPipeline.js",
+      "id": "src/core/Shader.js",
+      "inDegree": 4
+    },
+    {
+      "id": "src/utils/BufferUtils.js",
       "inDegree": 4
     },
     {
       "id": "src/utils/wgslOverrides.js",
       "inDegree": 4
-    },
-    {
-      "id": "src/core/Mesh.js",
-      "inDegree": 3
     }
   ],
   "nodes": [
@@ -619,7 +619,7 @@
     {
       "id": "src/core/reflect/index.js",
       "type": "module",
-      "inDegree": 7,
+      "inDegree": 6,
       "outDegree": 3
     },
     {
@@ -649,7 +649,7 @@
     {
       "id": "src/core/RenderPipeline.js",
       "type": "module",
-      "inDegree": 4,
+      "inDegree": 2,
       "outDegree": 4
     },
     {
@@ -661,7 +661,7 @@
     {
       "id": "src/core/Shader.js",
       "type": "module",
-      "inDegree": 2,
+      "inDegree": 4,
       "outDegree": 5
     },
     {
@@ -697,7 +697,7 @@
     {
       "id": "src/core/UniformBuffer.js",
       "type": "module",
-      "inDegree": 3,
+      "inDegree": 5,
       "outDegree": 1
     },
     {
@@ -788,13 +788,13 @@
       "id": "src/modules/GLTFLoader.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 11
+      "outDegree": 10
     },
     {
       "id": "src/modules/gsplat/GaussianSplat.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 11
+      "outDegree": 12
     },
     {
       "id": "src/modules/gsplat/gsplat.wgsl",
@@ -901,7 +901,7 @@
     {
       "id": "src/utils/BufferUtils.js",
       "type": "module",
-      "inDegree": 5,
+      "inDegree": 4,
       "outDegree": 0
     },
     {
@@ -1950,11 +1950,7 @@
     },
     {
       "from": "src/modules/GLTFLoader.js",
-      "to": "src/core/reflect/index.js"
-    },
-    {
-      "from": "src/modules/GLTFLoader.js",
-      "to": "src/core/RenderPipeline.js"
+      "to": "src/core/Shader.js"
     },
     {
       "from": "src/modules/GLTFLoader.js",
@@ -1970,11 +1966,11 @@
     },
     {
       "from": "src/modules/GLTFLoader.js",
-      "to": "src/modules/Animation.js"
+      "to": "src/core/UniformBuffer.js"
     },
     {
       "from": "src/modules/GLTFLoader.js",
-      "to": "src/utils/BufferUtils.js"
+      "to": "src/modules/Animation.js"
     },
     {
       "from": "src/modules/gsplat/GaussianSplat.js",
@@ -2002,7 +1998,11 @@
     },
     {
       "from": "src/modules/gsplat/GaussianSplat.js",
-      "to": "src/core/RenderPipeline.js"
+      "to": "src/core/Shader.js"
+    },
+    {
+      "from": "src/modules/gsplat/GaussianSplat.js",
+      "to": "src/core/UniformBuffer.js"
     },
     {
       "from": "src/modules/gsplat/GaussianSplat.js",

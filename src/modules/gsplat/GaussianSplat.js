@@ -360,41 +360,22 @@ export class GaussianSplat extends Mesh {
         // per-sort uniforms (struct SortUniforms): count/paddedCount fixed, modelViewMatrix per sort()
         this._sortUniforms ??= new UniformBuffer(gpu, this._sortCompute.defs.uniforms.sortUniforms, { count, paddedCount: this._paddedCount }, { label: `${label}-sort-uniforms` });
 
-        // ── Per-step bitonic bind groups ───────────────────────────────────────
-        // Unified WGSL binding layout:
-        //   @binding(0) keys         (read_write) — shared by both kernels
-        //   @binding(1) indices      (read_write) — shared by both kernels
-        //   @binding(2) positions    (read)        — computeKeys only
-        //   @binding(3) sortUniforms (uniform)     — computeKeys only
-        //   @binding(4) stepParams   (uniform)     — bitonicStep only
-        // auto-layout for bitonicStep only includes @binding(0,1,4).
+        // ── Sort bind groups: one shared base, each kernel's layout keeps what it reads
+        //   keys, indices          — both kernels
+        //   positions, sortUniforms — computeKeys (uniforms written per sort)
+        //   stepParams              — bitonicStep, one 256-byte slot per (j, k) step
+        const sortShared = {
+            keys: this._keysBuffer,
+            indices: this._indicesBuffer,
+            positions: this._positionsBuffer,
+            sortUniforms: this._sortUniforms,
+        };
         const bitonicLayout = this._sortCompute.bindGroupLayout('bitonicStep', 0);
-
-        this._bitonicBindGroups = [];
-        for (let s = 0; s < this._totalSteps; s++) {
-            const bg = bitonicLayout.createBindGroup(
-                {
-                    keys: this._keysBuffer,
-                    indices: this._indicesBuffer,
-                    // StepParams: two u32s (j, k), padded to 16-byte minimum
-                    stepParams: { buffer: this._stepParamsBuffer, offset: s * STEP_STRIDE, size: 16 },
-                },
-                { label: `step-${s}` }
-            );
-            this._bitonicBindGroups.push(bg);
-        }
-
-        // ── computeKeys bind group (created once; uniforms written per frame) ──
-        // auto-layout for computeKeys includes @binding(0,1,2,3).
-        this._computeKeysBindGroup = this._sortCompute.bindGroupLayout('computeKeys', 0).createBindGroup(
-            {
-                keys: this._keysBuffer,
-                indices: this._indicesBuffer,
-                positions: this._positionsBuffer,
-                sortUniforms: this._sortUniforms,
-            },
-            { label: 'compute-keys' }
+        this._bitonicBindGroups = Array.from({ length: this._totalSteps }, (_, s) =>
+            // StepParams: two u32s (j, k), padded to 16-byte minimum
+            bitonicLayout.createBindGroup({ ...sortShared, stepParams: { buffer: this._stepParamsBuffer, offset: s * STEP_STRIDE, size: 16 } }, { label: `step-${s}` })
         );
+        this._computeKeysBindGroup = this._sortCompute.bindGroupLayout('computeKeys', 0).createBindGroup(sortShared, { label: 'compute-keys' });
 
         // ══════════════════════════════════════════════════════════════════════
         // Radix sort resources (alternative to bitonic — toggle via sortMethod)
@@ -438,35 +419,28 @@ export class GaussianSplat extends Mesh {
             data: passData,
         });
 
-        // Pre-bake one bind group per (kernel, pass). Even passes read A and
-        // write B; odd passes read B and write A.
-        const histLayout = this._radixCompute.bindGroupLayout('histogram', 0);
-        const scanLayout = this._radixCompute.bindGroupLayout('scan', 0);
-        const scatterLayout = this._radixCompute.bindGroupLayout('scatter', 0);
-
-        this._radixHistBindGroups = [];
-        this._radixScanBindGroups = [];
-        this._radixScatterBindGroups = [];
-
-        for (let p = 0; p < this._radixPasses; p++) {
-            const evenPass = p % 2 === 0;
-            const keysIn = evenPass ? this._keysBuffer : this._keysBufferB;
-            const indicesIn = evenPass ? this._indicesBuffer : this._indicesBufferB;
-            const keysOut = evenPass ? this._keysBufferB : this._keysBuffer;
-            const indicesOut = evenPass ? this._indicesBufferB : this._indicesBuffer;
-            // PassParams: three u32s, struct size rounds to 16
-            const passParams = { buffer: this._radixParamsBuffer, offset: p * STEP_STRIDE, size: 16 };
-
-            // auto-layout per entry point only includes the bindings that
-            // kernel actually uses (same trick as the bitonic shader).
-            this._radixHistBindGroups.push(histLayout.createBindGroup({ keysIn, histograms: this._histogramsBuffer, passParams }, { label: `radix-histogram-pass-${p}` }));
-
-            this._radixScanBindGroups.push(scanLayout.createBindGroup({ histograms: this._histogramsBuffer, passParams }, { label: `radix-scan-pass-${p}` }));
-
-            this._radixScatterBindGroups.push(
-                scatterLayout.createBindGroup({ keysIn, indicesIn, keysOut, indicesOut, histograms: this._histogramsBuffer, passParams }, { label: `radix-scatter-pass-${p}` })
-            );
-        }
+        // One bind group per (kernel, pass) from one resource object per pass: even
+        // passes read A and write B, odd passes read B and write A. histogram, scan
+        // and scatter each keep only the names they read.
+        const pass = (p) => {
+            const even = p % 2 === 0;
+            return {
+                keysIn: even ? this._keysBuffer : this._keysBufferB,
+                indicesIn: even ? this._indicesBuffer : this._indicesBufferB,
+                keysOut: even ? this._keysBufferB : this._keysBuffer,
+                indicesOut: even ? this._indicesBufferB : this._indicesBuffer,
+                histograms: this._histogramsBuffer,
+                // PassParams: three u32s, struct size rounds to 16
+                passParams: { buffer: this._radixParamsBuffer, offset: p * STEP_STRIDE, size: 16 },
+            };
+        };
+        const perPass = (kernel) => {
+            const layout = this._radixCompute.bindGroupLayout(kernel, 0);
+            return Array.from({ length: this._radixPasses }, (_, p) => layout.createBindGroup(pass(p), { label: `radix-${kernel}-pass-${p}` }));
+        };
+        this._radixHistBindGroups = perPass('histogram');
+        this._radixScanBindGroups = perPass('scan');
+        this._radixScatterBindGroups = perPass('scatter');
     }
 
     /**

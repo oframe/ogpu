@@ -51,7 +51,10 @@ conflate them.
 Changing `workgroupSize` via `setWorkgroupSize()` rebuilds both sort
 `ComputeShader`s and all their bind groups (WORKGROUP_SIZE is an `override`
 constant baked by `applyOverrideConstants` before compile). Any in-flight
-sliced sort is abandoned and re-queued.
+sliced sort is abandoned and re-queued. The sort `UniformBuffer` (SortUniforms)
+survives the rebuild. Bind groups share resource objects across kernels — one
+sort base for computeKeys/bitonicStep, one object per radix pass for
+histogram/scan/scatter — and each kernel's layout drops the names it doesn't bind.
 
 Blending: `one / one-minus-src-alpha` (premultiplied); `depthWrite: false`;
 `cullMode: 'none'` — all set in the mesh's frozen `state`, which the pipeline

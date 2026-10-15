@@ -14,7 +14,8 @@ seconds. So for platform questions, check the sources before answering.
 
 This skill is for questions about **WebGPU the platform** — support, features,
 limits, spec behavior. It is NOT for questions about OGPU's own engine code
-(that's the codebase).
+(that's the codebase) or the `webgpu-utils` library (that's the
+`webgpu-utils-lookup` skill).
 
 ## Sources
 

@@ -182,8 +182,7 @@ export class GaussianSplat extends Mesh {
                 },
             },
             bindGroups: [
-                shader.createBindGroup(
-                    0,
+                shader.bindGroupLayout(0).createBindGroup(
                     {
                         uniforms,
                         positions: positionsBuffer,
@@ -375,7 +374,6 @@ export class GaussianSplat extends Mesh {
         this._resortQueued = true;
 
         const gpu = this.gpu;
-        const { device } = gpu;
         const ws = this._workgroupSize;
         const label = this._label;
         const STEP_STRIDE = this._STEP_STRIDE;
@@ -404,42 +402,33 @@ export class GaussianSplat extends Mesh {
         //   @binding(3) sortUniforms (uniform)     — computeKeys only
         //   @binding(4) stepParams   (uniform)     — bitonicStep only
         // auto-layout for bitonicStep only includes @binding(0,1,4).
-        const bitonicKernel = this._sortCompute.findKernel('bitonicStep');
+        const bitonicLayout = this._sortCompute.bindGroupLayout('bitonicStep', 0);
 
         this._bitonicBindGroups = [];
         for (let s = 0; s < this._totalSteps; s++) {
-            const bg = device.createBindGroup({
-                label: `step-${s}`,
-                layout: this._sortCompute.bindGroupLayout(bitonicKernel),
-                entries: [
-                    { binding: 0, resource: { buffer: this._keysBuffer } },
-                    { binding: 1, resource: { buffer: this._indicesBuffer } },
-                    {
-                        binding: 4,
-                        resource: {
-                            buffer: this._stepParamsBuffer,
-                            offset: s * STEP_STRIDE,
-                            size: 16, // StepParams: two u32s (j, k), padded to 16-byte minimum
-                        },
-                    },
-                ],
-            });
+            const bg = bitonicLayout.createBindGroup(
+                {
+                    keys: this._keysBuffer,
+                    indices: this._indicesBuffer,
+                    // StepParams: two u32s (j, k), padded to 16-byte minimum
+                    stepParams: { buffer: this._stepParamsBuffer, offset: s * STEP_STRIDE, size: 16 },
+                },
+                { label: `step-${s}` }
+            );
             this._bitonicBindGroups.push(bg);
         }
 
         // ── computeKeys bind group (created once; uniforms written per frame) ──
         // auto-layout for computeKeys includes @binding(0,1,2,3).
-        const computeKeysKernel = this._sortCompute.findKernel('computeKeys');
-        this._computeKeysBindGroup = device.createBindGroup({
-            label: 'compute-keys',
-            layout: this._sortCompute.bindGroupLayout(computeKeysKernel),
-            entries: [
-                { binding: 0, resource: { buffer: this._keysBuffer } },
-                { binding: 1, resource: { buffer: this._indicesBuffer } },
-                { binding: 2, resource: { buffer: this._positionsBuffer } },
-                { binding: 3, resource: { buffer: this._sortUniformsBuffer } },
-            ],
-        });
+        this._computeKeysBindGroup = this._sortCompute.bindGroupLayout('computeKeys', 0).createBindGroup(
+            {
+                keys: this._keysBuffer,
+                indices: this._indicesBuffer,
+                positions: this._positionsBuffer,
+                sortUniforms: this._sortUniformsBuffer,
+            },
+            { label: 'compute-keys' }
+        );
 
         // ══════════════════════════════════════════════════════════════════════
         // Radix sort resources (alternative to bitonic — toggle via sortMethod)
@@ -485,9 +474,9 @@ export class GaussianSplat extends Mesh {
 
         // Pre-bake one bind group per (kernel, pass). Even passes read A and
         // write B; odd passes read B and write A.
-        const histKernel = this._radixCompute.findKernel('histogram');
-        const scanKernel = this._radixCompute.findKernel('scan');
-        const scatterKernel = this._radixCompute.findKernel('scatter');
+        const histLayout = this._radixCompute.bindGroupLayout('histogram', 0);
+        const scanLayout = this._radixCompute.bindGroupLayout('scan', 0);
+        const scatterLayout = this._radixCompute.bindGroupLayout('scatter', 0);
 
         this._radixHistBindGroups = [];
         this._radixScanBindGroups = [];
@@ -499,46 +488,17 @@ export class GaussianSplat extends Mesh {
             const indicesIn = evenPass ? this._indicesBuffer : this._indicesBufferB;
             const keysOut = evenPass ? this._keysBufferB : this._keysBuffer;
             const indicesOut = evenPass ? this._indicesBufferB : this._indicesBuffer;
-            const params = {
-                binding: 5,
-                resource: {
-                    buffer: this._radixParamsBuffer,
-                    offset: p * STEP_STRIDE,
-                    size: 16, // PassParams: three u32s, struct size rounds to 16
-                },
-            };
+            // PassParams: three u32s, struct size rounds to 16
+            const passParams = { buffer: this._radixParamsBuffer, offset: p * STEP_STRIDE, size: 16 };
 
             // auto-layout per entry point only includes the bindings that
             // kernel actually uses (same trick as the bitonic shader).
-            this._radixHistBindGroups.push(
-                device.createBindGroup({
-                    label: `radix-histogram-pass-${p}`,
-                    layout: this._radixCompute.bindGroupLayout(histKernel),
-                    entries: [{ binding: 0, resource: { buffer: keysIn } }, { binding: 4, resource: { buffer: this._histogramsBuffer } }, params],
-                })
-            );
+            this._radixHistBindGroups.push(histLayout.createBindGroup({ keysIn, histograms: this._histogramsBuffer, passParams }, { label: `radix-histogram-pass-${p}` }));
 
-            this._radixScanBindGroups.push(
-                device.createBindGroup({
-                    label: `radix-scan-pass-${p}`,
-                    layout: this._radixCompute.bindGroupLayout(scanKernel),
-                    entries: [{ binding: 4, resource: { buffer: this._histogramsBuffer } }, params],
-                })
-            );
+            this._radixScanBindGroups.push(scanLayout.createBindGroup({ histograms: this._histogramsBuffer, passParams }, { label: `radix-scan-pass-${p}` }));
 
             this._radixScatterBindGroups.push(
-                device.createBindGroup({
-                    label: `radix-scatter-pass-${p}`,
-                    layout: this._radixCompute.bindGroupLayout(scatterKernel),
-                    entries: [
-                        { binding: 0, resource: { buffer: keysIn } },
-                        { binding: 1, resource: { buffer: indicesIn } },
-                        { binding: 2, resource: { buffer: keysOut } },
-                        { binding: 3, resource: { buffer: indicesOut } },
-                        { binding: 4, resource: { buffer: this._histogramsBuffer } },
-                        params,
-                    ],
-                })
+                scatterLayout.createBindGroup({ keysIn, indicesIn, keysOut, indicesOut, histograms: this._histogramsBuffer, passParams }, { label: `radix-scatter-pass-${p}` })
             );
         }
     }

@@ -102,7 +102,7 @@ export class Shadowmapping {
 
         const shadowDepthView = this.shadowBuffer.depthTexture.createView();
         const makeRenderBG = (gpuTexture) =>
-            renderShader.createBindGroup(0, {
+            renderShader.bindGroupLayout(0).createBindGroup({
                 shadowUniforms,
                 shadowSampler: shadowMapSampler,
                 shadowMap: shadowDepthView,

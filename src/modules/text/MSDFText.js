@@ -100,7 +100,7 @@ export class MSDFText extends Mesh {
             shader,
             state: depthTest ? DEPTH_TESTED : ALWAYS_ON_TOP,
             renderOrder,
-            bindGroups: [shader.createBindGroup(0, { uniforms, atlasSampler: font.sampler, tMap: font.texture.createView() }, { label: `${label}-bind-group` })],
+            bindGroups: [shader.bindGroupLayout(0).createBindGroup({ uniforms, atlasSampler: font.sampler, tMap: font.texture.createView() }, { label: `${label}-bind-group` })],
         });
 
         this.gpu = gpu;

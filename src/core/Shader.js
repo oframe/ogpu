@@ -1,7 +1,7 @@
 import engineCode from './engine.wgsl?raw';
 import { reflect, bindGroupLayoutDescriptors } from './reflect/index.js';
 import { registerShader } from './ShaderReload.js';
-import { UniformBuffer } from './UniformBuffer.js';
+import { internBindGroupLayout, wrapBindGroupLayout, declaredBindings } from './BindGroupLayout.js';
 import { applyOverrideConstants } from '@utils/wgslOverrides';
 
 export const ENGINE_GROUP = 1;
@@ -53,24 +53,26 @@ export class Shader {
 
         const module = device.createShaderModule({ label: this.label, code: baked });
         const hasFragment = defs.entryPoints.fs?.stage === GPUShaderStage.FRAGMENT;
-        const descriptors = bindGroupLayoutDescriptors(defs, hasFragment ? ['vs', 'fs'] : ['vs'], {
+        const stages = hasFragment ? ['vs', 'fs'] : ['vs'];
+        const descriptors = bindGroupLayoutDescriptors(defs, stages, {
             skip: [ENGINE_GROUP],
         });
 
         // every slot below the highest group gets a layout; empty slots share the
         // renderer's empty layout so `renderer.emptyBindGroup` binds there
         const layouts = [];
+        const groups = [];
         const count = Math.max(ENGINE_GROUP + 1, descriptors.length);
         for (let i = 0; i < count; i++) {
             if (i === ENGINE_GROUP) layouts.push(renderer.engineLayout);
             else if (descriptors[i]?.entries.length) {
-                layouts.push(
-                    device.createBindGroupLayout({
-                        label: `${this.label}-group-${i}-layout`,
-                        ...descriptors[i],
-                    })
-                );
-            } else layouts.push(renderer.emptyLayout);
+                groups[i] = internBindGroupLayout(device, defs, i, descriptors[i].entries, this.label, stages);
+                layouts.push(groups[i].layout);
+            } else {
+                layouts.push(renderer.emptyLayout);
+                // declared but unread by vs/fs: an empty group, so its names still bind (and drop)
+                if (declaredBindings(defs, i).length) groups[i] = wrapBindGroupLayout(device, renderer.emptyLayout, defs, i, this.label, { empty: true });
+            }
         }
 
         const prevSize = this.uniforms?.size;
@@ -86,7 +88,7 @@ export class Shader {
         // A plain text check of the user code (comments included, so it errs
         // toward computing): meshes skip the matrices no shader of theirs reads.
         this.needs = (/\bnormalMatrix\b/.test(code) ? NEEDS_NORMAL : 0) | (/\bobjectMatrix\b/.test(code) ? NEEDS_OBJECT : 0);
-        this._layouts = layouts;
+        this._groups = groups;
         this.pipelineLayout = device.createPipelineLayout({
             label: `${this.label}-layout`,
             bindGroupLayouts: layouts,
@@ -98,58 +100,13 @@ export class Shader {
         }
     }
 
+    // The BindGroupLayout of a user group (0, 2, 3); build bind groups from it:
+    // shader.bindGroupLayout(0).createBindGroup({ uniforms, tMap: view }).
     bindGroupLayout(group = 0) {
-        return this._layouts[group];
-    }
-
-    // Resources by WGSL name: shader.createBindGroup(0, { uniforms, tMap: view, samp: sampler }).
-    // A UniformBuffer or GPUBuffer binds whole; `{ buffer, offset, size }` and
-    // views/samplers/external textures pass through. A name declared in this group
-    // but unused by vs/fs is dropped (it's absent from the derived layout); a name
-    // the WGSL doesn't declare in this group throws.
-    // Allocates a new GPUBindGroup per call: build once, not per frame.
-    createBindGroup(group, resources, { label } = {}) {
         if (group === ENGINE_GROUP) throw new Error(`[shader ${this.label}] group(1) is the engine's`);
-        const layout = this._layouts[group];
+        const layout = this._groups[group];
         if (!layout) throw new Error(`[shader ${this.label}] has no group(${group})`);
-
-        const used = this._usedBindings(group);
-        const entries = [];
-        for (const name in resources) {
-            const binding = this._bindingOf(group, name);
-            if (!used.has(binding)) continue;
-            entries.push({ binding, resource: asResource(resources[name]) });
-        }
-        return this.gpu.device.createBindGroup({
-            label: label ?? `${this.label}-group-${group}`,
-            layout,
-            entries,
-        });
-    }
-
-    _bindingOf(group, name) {
-        const d = this.defs;
-        const v = d.uniforms[name] ?? d.storages[name] ?? d.textures[name] ?? d.samplers[name] ?? d.storageTextures[name] ?? d.externalTextures[name];
-        if (!v || v.group !== group) {
-            const names = this._declaredNames(group);
-            throw new Error(`[shader ${this.label}] no binding '${name}' in group(${group}) — declared: ${names.join(', ') || 'none'}`);
-        }
-        return v.binding;
-    }
-
-    _declaredNames(group) {
-        const d = this.defs;
-        return [d.uniforms, d.storages, d.textures, d.samplers, d.storageTextures, d.externalTextures].flatMap((vars) => Object.keys(vars).filter((n) => vars[n].group === group));
-    }
-
-    _usedBindings(group) {
-        const used = new Set();
-        for (const name of this.hasFragment ? ['vs', 'fs'] : ['vs']) {
-            for (const r of this.defs.entryPoints[name].resources) {
-                if (r.group === group) used.add(r.entry.binding);
-            }
-        }
-        return used;
+        return layout;
     }
 
     reload(code) {
@@ -164,10 +121,4 @@ export class Shader {
     destroy() {
         this._unregister?.();
     }
-}
-
-function asResource(r) {
-    if (r instanceof GPUBuffer) return { buffer: r };
-    if (r instanceof UniformBuffer) return { buffer: r.buffer };
-    return r;
 }

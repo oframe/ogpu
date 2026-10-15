@@ -62,7 +62,7 @@ export class FrustumCulling {
         });
 
         // one bind group shared by the whole field
-        const fieldBindGroups = [shader.createBindGroup(0, { textureSampler: sampler, tMap: textureView })];
+        const fieldBindGroups = [shader.bindGroupLayout(0).createBindGroup({ textureSampler: sampler, tMap: textureView })];
 
         // Field: a size x size grid spread across a wide area.
         const size = 20;

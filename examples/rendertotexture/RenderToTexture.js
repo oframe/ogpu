@@ -52,26 +52,15 @@ export class RenderToTexture {
     }
 
     buildDisplayBindGroup() {
-        const pipeline = this.displayPipeline;
-        return this.gpu.device.createBindGroup({
-            label: 'display-rendering',
-            layout: pipeline.bindGroupLayout(0),
-            entries: [
-                { binding: 0, resource: { buffer: this.displayUniforms } },
-                {
-                    binding: pipeline.defs.samplers.sampler2d.binding,
-                    resource: this.displaySampler,
-                },
-                {
-                    binding: pipeline.defs.textures.map.binding,
-                    resource: this.sceneBuffer.createView(0),
-                },
-                {
-                    binding: pipeline.defs.textures.normals.binding,
-                    resource: this.sceneBuffer.createView(1),
-                },
-            ],
-        });
+        return this.displayPipeline.bindGroupLayout(0).createBindGroup(
+            {
+                uniforms: this.displayUniforms,
+                sampler2d: this.displaySampler,
+                map: this.sceneBuffer.createView(0),
+                normals: this.sceneBuffer.createView(1),
+            },
+            { label: 'display-rendering' }
+        );
     }
 
     initTestScene() {

@@ -21,7 +21,7 @@ export class BoxMesh extends Transform {
             geometry,
             shader,
             state: { cullMode: 'back' },
-            bindGroups: [shader.createBindGroup(0, { scaleUniform: this.scaleStruct, alphaUniform: this.alphaStruct })],
+            bindGroups: [shader.bindGroupLayout(0).createBindGroup({ scaleUniform: this.scaleStruct, alphaUniform: this.alphaStruct })],
         });
 
         this.mesh.setParent(this);

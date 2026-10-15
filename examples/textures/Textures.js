@@ -48,7 +48,7 @@ export class Textures {
             label: 'saddle',
             geometry: saddleGeo,
             shader,
-            bindGroups: [shader.createBindGroup(0, { sampler2d: sampler, testTexture: saddleView })],
+            bindGroups: [shader.bindGroupLayout(0).createBindGroup({ sampler2d: sampler, testTexture: saddleView })],
         });
         this.scene.addChild(this.saddle);
 
@@ -67,7 +67,7 @@ export class Textures {
                 geometry: boxGeo,
                 shader,
                 state: { cullMode: 'none' },
-                bindGroups: [shader.createBindGroup(0, { sampler2d: this.videoSampler, testTexture: video.createView() })],
+                bindGroups: [shader.bindGroupLayout(0).createBindGroup({ sampler2d: this.videoSampler, testTexture: video.createView() })],
             });
 
             this.videoBox.scale.set(1.78 * 1.5, 1.5, 1.78 * 1.5);
@@ -100,7 +100,7 @@ export class Textures {
         if (this.videoBox) {
             const view = this.videoTexture.createView();
             if (view) {
-                this.videoBox.bindGroups[0] = this.shader.createBindGroup(0, { sampler2d: this.videoSampler, testTexture: view });
+                this.videoBox.bindGroups[0] = this.shader.bindGroupLayout(0).createBindGroup({ sampler2d: this.videoSampler, testTexture: view });
             }
         }
     };

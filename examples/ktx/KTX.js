@@ -59,7 +59,7 @@ export class KTX {
             geometry,
             shader,
             state: { cullMode: 'none' },
-            bindGroups: [shader.createBindGroup(0, { textureSampler: sampler, tMap: view })],
+            bindGroups: [shader.bindGroupLayout(0).createBindGroup({ textureSampler: sampler, tMap: view })],
         });
         this.mesh.rotation.x = -Math.PI / 2; // stand the XZ plane up to face the camera
         this.scene.addChild(this.mesh);

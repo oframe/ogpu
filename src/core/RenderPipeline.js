@@ -1,6 +1,7 @@
 let ID = 1;
 
 import { reflect, bindGroupLayoutDescriptors } from './reflect/index.js';
+import { internBindGroupLayout } from './BindGroupLayout.js';
 import { registerShader } from './ShaderReload';
 import { applyOverrideConstants } from '@utils/wgslOverrides';
 import { TextureFormat, BlendFactor } from './GPUEnums.js';
@@ -8,7 +9,7 @@ import { TextureFormat, BlendFactor } from './GPUEnums.js';
 // An explicit GPURenderPipeline for fullscreen passes and other non-Mesh draws
 // (fixed geometry + fixed target, so the renderer's pipeline cache buys nothing).
 // No engine block, a fully reflected layout, nothing dynamic: callers own their
-// uniform buffers and bind groups (against bindGroupLayout(i)). Meshes use
+// uniform buffers and bind groups (bindGroupLayout(i).createBindGroup). Meshes use
 // Shader + state instead and never see one of these.
 
 export class RenderPipeline {
@@ -123,19 +124,18 @@ export class RenderPipeline {
             };
         }
 
-        const descriptors = bindGroupLayoutDescriptors(this.defs, pipelineDesc.fragment ? ['vs', 'fs'] : ['vs']);
+        const stages = pipelineDesc.fragment ? ['vs', 'fs'] : ['vs'];
+        const descriptors = bindGroupLayoutDescriptors(this.defs, stages);
 
-        // Keep the explicit BGLs around so callers can build bind groups against
-        // them via bindGroupLayout(i) instead of reaching into the compiled
-        // pipeline (pipeline.getBindGroupLayout). Explicit layouts from identical
-        // descriptors are group-equivalent, so a bind group built against these
-        // survives a hot-reload even though build() mints fresh objects.
-        this._bindGroupLayouts = descriptors.map((d) => {
-            return this.gpu.device.createBindGroupLayout(d);
-        });
+        // Explicit layouts, interned by shape (BindGroupLayout.js): callers build
+        // bind groups from bindGroupLayout(i) instead of reaching into the compiled
+        // pipeline, and a hot reload that keeps the shape hands back the same
+        // objects, so those bind groups survive it.
+        const { device } = this.gpu;
+        this._bindGroupLayouts = descriptors.map((d, i) => internBindGroupLayout(device, this.defs, i, d.entries, this.label, stages));
 
-        const layout = this.gpu.device.createPipelineLayout({
-            bindGroupLayouts: this._bindGroupLayouts,
+        const layout = device.createPipelineLayout({
+            bindGroupLayouts: this._bindGroupLayouts.map((l) => l.layout),
         });
 
         // depthStencil resolves three ways:
@@ -166,16 +166,16 @@ export class RenderPipeline {
         });
     }
 
-    // Returns the explicit bind group layout for `groupIndex` so callers can
-    // build their own bind groups. Mirrors ComputeShader.bindGroupLayout — both
-    // pipeline classes are pure compiled state that serve layouts; the caller
-    // owns the bind group.
+    // The BindGroupLayout for `groupIndex` (raw GPUBindGroupLayout at `.layout`);
+    // the caller builds and owns the bind group: bindGroupLayout(0).createBindGroup({ … }).
     bindGroupLayout(groupIndex = 0) {
-        return this._bindGroupLayouts[groupIndex];
+        const layout = this._bindGroupLayouts[groupIndex];
+        if (!layout) throw new Error(`[render-pipeline ${this.label}] has no group(${groupIndex})`);
+        return layout;
     }
 
-    // Hot-reload entry point; bind groups built against bindGroupLayout(i) stay
-    // valid (identical descriptors give group-equivalent layouts).
+    // Hot-reload entry point; bind groups built from bindGroupLayout(i) stay
+    // valid while the binding shape is unchanged (same interned layouts).
     reload(code) {
         try {
             this.build(code);

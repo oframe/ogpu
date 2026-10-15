@@ -115,19 +115,11 @@ export class Particles {
          * buffers in WebGPU. here we are ping-ponging the positions and keeping
          * velocity as read_write.
          *
-         * we prebuild two bind groups (read A/write B, read B/write A) against the
-         * kernel's layout (computeShader.bindGroupLayout(kernel)) and swap by index
+         * we prebuild two bind groups (read A/write B, read B/write A) from the
+         * kernel's layout (computeShader.bindGroupLayout('simulate', 0)) and swap by index
          * each frame — the caller owns the bind groups; ComputeShader only serves
          * the layout.
          */
-
-        const simEntries = (readBuffer, writeBuffer) => [
-            { binding: 0, resource: { buffer: this.simUniformBuffer } },
-            { binding: 1, resource: { buffer: this.velocityUniformBuffer } },
-            { binding: 2, resource: { buffer: this.velocityBuffer } },
-            { binding: 3, resource: { buffer: readBuffer } },
-            { binding: 4, resource: { buffer: writeBuffer } },
-        ];
 
         // state 0: read A / write B. state 1: read B / write A. swap each frame.
         const pingPong = [
@@ -135,14 +127,17 @@ export class Particles {
             [this.positionBufferWrite, this.positionBufferRead],
         ];
 
-        const simKernel = this.computeShader.findKernel('simulate');
-
         this.simBindGroups = pingPong.map(([read, write], i) =>
-            this.gpu.device.createBindGroup({
-                label: `sim-bind-group-${i}`,
-                layout: this.computeShader.bindGroupLayout(simKernel),
-                entries: simEntries(read, write),
-            })
+            this.computeShader.bindGroupLayout('simulate', 0).createBindGroup(
+                {
+                    uniforms: this.simUniformBuffer,
+                    velocityUniforms: this.velocityUniformBuffer,
+                    velocityData: this.velocityBuffer,
+                    positionDataRead: read,
+                    positionDataWrite: write,
+                },
+                { label: `sim-bind-group-${i}` }
+            )
         );
 
         this.t = 0;
@@ -167,7 +162,7 @@ export class Particles {
         const shader = new Shader(this.gpu, { label: 'particle-shader', code: particles });
 
         // one bind group per ping-pong state, swapped by index each frame
-        this.renderBGs = [this.positionBufferWrite, this.positionBufferRead].map((positionData) => shader.createBindGroup(0, { positionData }));
+        this.renderBGs = [this.positionBufferWrite, this.positionBufferRead].map((positionData) => shader.bindGroupLayout(0).createBindGroup({ positionData }));
 
         this.particles = new Mesh({
             label: 'particles',

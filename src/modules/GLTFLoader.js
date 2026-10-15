@@ -9,6 +9,7 @@ import { Texture } from '@core/Texture';
 import { Mesh } from '@core/Mesh';
 import { Transform } from '@core/Transform';
 import { Shader } from '@core/Shader';
+import { declaredBindings } from '@core/BindGroupLayout';
 import { UniformBuffer } from '@core/UniformBuffer';
 import { Skin } from '@core/skin/Skin';
 import { TextureFormat } from '@core/GPUEnums.js';
@@ -39,6 +40,9 @@ const MIN = {
     9986: { min: 'nearest', mip: 'linear' },
     9987: { min: 'linear', mip: 'linear' },
 };
+
+// pbr.wgsl group(0) names the loader binds per material; iblEntries fill the rest
+const MATERIAL_BINDINGS = ['tMap', 'tMetallicRoughness', 'tNormal', 'tOcclusion', 'tEmissive', 'materialSampler', 'tOpacity', 'material'];
 
 const GLB_MAGIC = 0x46546c67; // 'glTF'
 const CHUNK_JSON = 0x4e4f534a; // 'JSON'
@@ -276,29 +280,37 @@ export class GLTFLoader {
             { label: `${name}-material-uniforms` }
         );
 
-        // iblEntries come in by binding number, so this group is built raw against
-        // the shader's layout rather than through shader.createBindGroup()
+        // iblEntries come in by binding number; named through the layout so the
+        // whole group goes through createBindGroup's checks
+        const layout = this.shader.bindGroupLayout(0);
+        const declared = declaredBindings(this.shader.defs, 0);
+        const ibl = {};
+        for (const { binding, resource } of iblEntries) {
+            const wgslName = declared.find(([, b]) => b === binding)?.[0];
+            if (wgslName === undefined) throw new Error(`GLTFLoader: iblEntries binding ${binding} is not declared in the shader's group(0)`);
+            if (MATERIAL_BINDINGS.includes(wgslName)) throw new Error(`GLTFLoader: iblEntries binding ${binding} is the material's '${wgslName}'`);
+            ibl[wgslName] = resource;
+        }
         const m = new Mesh({
             label: `${name}-mesh`,
             geometry,
             shader: this.shader,
             state,
             bindGroups: [
-                this.gpu.device.createBindGroup({
-                    label: `${name}-material`,
-                    layout: this.shader.bindGroupLayout(0),
-                    entries: [
-                        ...iblEntries,
-                        { binding: 5, resource: baseColor.createView() },
-                        { binding: 6, resource: metalRough.createView() },
-                        { binding: 7, resource: normalMap.createView() },
-                        { binding: 8, resource: occlusion.createView() },
-                        { binding: 9, resource: emissive.createView() },
-                        { binding: 10, resource: defaultSampler },
-                        { binding: 11, resource: this._defaults.white.createView() }, // opacity (fully opaque)
-                        { binding: 12, resource: { buffer: materialUniforms.buffer } },
-                    ],
-                }),
+                layout.createBindGroup(
+                    {
+                        ...ibl,
+                        tMap: baseColor.createView(),
+                        tMetallicRoughness: metalRough.createView(),
+                        tNormal: normalMap.createView(),
+                        tOcclusion: occlusion.createView(),
+                        tEmissive: emissive.createView(),
+                        materialSampler: defaultSampler,
+                        tOpacity: this._defaults.white.createView(), // fully opaque
+                        material: materialUniforms,
+                    },
+                    { label: `${name}-material` }
+                ),
             ],
         });
 
@@ -598,7 +610,7 @@ export class GLTFLoader {
             geometry,
             shader,
             bindGroups: [
-                shader.createBindGroup(0, {
+                shader.bindGroupLayout(0).createBindGroup({
                     positionBuffer: skin.skinnedPositionBuffer,
                     normalBuffer: skin.skinnedNormalBuffer,
                     tSpecular: ibl.specView,

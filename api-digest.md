@@ -4,6 +4,14 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 
 ## core
 
+### src/core/BindGroupLayout.js
+- **class BindGroupLayout**
+  - constructor(device, { layout, entries, names, declared, label, group })
+  - createBindGroup(resources = {}, { label } = {})
+- fn `internBindGroupLayout(device, defs, group, entries, label, entryPoints)`
+- fn `wrapBindGroupLayout(device, layout, defs, group, label, { empty = false } = {})`
+- fn `declaredBindings(defs, group)`
+
 ### src/core/Camera.js
 - **class Camera** extends Transform
   - constructor({ near = 0.1, far = 100, fov = 45, aspect = 1, left, right, bottom, top, zoom = 1 } = {})
@@ -26,7 +34,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - reload(code)
   - isValidKernel(key)
   - findKernel(key)
-  - bindGroupLayout(kernelOrKey, groupIndex = 0)
+  - bindGroupLayout(kernel, group)
   - dispatch(encoder, { pass = null, kernel, bindGroup, bindGroupIndex = 0, dispatchCount, workgroupBu…)
   - destroy()
 
@@ -134,7 +142,6 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - constructor(gpu, { label = 'shader', code, constants = {} } = {})
   - build(code)
   - bindGroupLayout(group = 0)
-  - createBindGroup(group, resources, { label } = {})
   - reload(code)
   - destroy()
 - const `ENGINE_GROUP`, `NEEDS_NORMAL`, `NEEDS_OBJECT`
@@ -181,6 +188,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { Geometry } from './Geometry.js'
 - re-export { Box, Sphere, Plane, Torus, Cylinder, Disc, Cone, Quad, FullscreenTriangle } from './primitives/index.js'
 - re-export { Shader } from './Shader.js'
+- re-export { BindGroupLayout } from './BindGroupLayout.js'
 - re-export { UniformBuffer } from './UniformBuffer.js'
 - re-export { PipelineCache } from './PipelineCache.js'
 - re-export { RenderPipeline } from './RenderPipeline.js'

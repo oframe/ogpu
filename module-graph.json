@@ -1,9 +1,9 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 174,
-    "edges": 329,
-    "modules": 119,
+    "nodes": 175,
+    "edges": 334,
+    "modules": 120,
     "shaders": 48,
     "external": 7
   },
@@ -53,7 +53,7 @@
       "inDegree": 6
     },
     {
-      "id": "src/core/reflect/index.js",
+      "id": "src/core/BindGroupLayout.js",
       "inDegree": 5
     }
   ],
@@ -497,6 +497,12 @@
       "outDegree": 0
     },
     {
+      "id": "src/core/BindGroupLayout.js",
+      "type": "module",
+      "inDegree": 5,
+      "outDegree": 1
+    },
+    {
       "id": "src/core/Camera.js",
       "type": "module",
       "inDegree": 2,
@@ -506,7 +512,7 @@
       "id": "src/core/ComputeShader.js",
       "type": "module",
       "inDegree": 4,
-      "outDegree": 3
+      "outDegree": 4
     },
     {
       "id": "src/core/engine.wgsl",
@@ -530,7 +536,7 @@
       "id": "src/core/index.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 19
+      "outDegree": 20
     },
     {
       "id": "src/core/Mesh.js",
@@ -656,7 +662,7 @@
       "id": "src/core/RenderPipeline.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 4
+      "outDegree": 5
     },
     {
       "id": "src/core/RenderTarget.js",
@@ -836,7 +842,7 @@
       "id": "src/modules/GLTFLoader.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 10
+      "outDegree": 11
     },
     {
       "id": "src/modules/gsplat/GaussianSplat.js",
@@ -1393,12 +1399,20 @@
       "to": "pkg:ogpu"
     },
     {
+      "from": "src/core/BindGroupLayout.js",
+      "to": "src/core/UniformBuffer.js"
+    },
+    {
       "from": "src/core/Camera.js",
       "to": "pkg:@math"
     },
     {
       "from": "src/core/Camera.js",
       "to": "src/core/Transform.js"
+    },
+    {
+      "from": "src/core/ComputeShader.js",
+      "to": "src/core/BindGroupLayout.js"
     },
     {
       "from": "src/core/ComputeShader.js",
@@ -1423,6 +1437,10 @@
     {
       "from": "src/core/index.js",
       "to": "pkg:@core"
+    },
+    {
+      "from": "src/core/index.js",
+      "to": "src/core/BindGroupLayout.js"
     },
     {
       "from": "src/core/index.js",
@@ -1714,6 +1732,10 @@
     },
     {
       "from": "src/core/RenderPipeline.js",
+      "to": "src/core/BindGroupLayout.js"
+    },
+    {
+      "from": "src/core/RenderPipeline.js",
       "to": "src/core/GPUEnums.js"
     },
     {
@@ -1738,6 +1760,10 @@
     },
     {
       "from": "src/core/Shader.js",
+      "to": "src/core/BindGroupLayout.js"
+    },
+    {
+      "from": "src/core/Shader.js",
       "to": "src/core/engine.wgsl"
     },
     {
@@ -1747,10 +1773,6 @@
     {
       "from": "src/core/Shader.js",
       "to": "src/core/ShaderReload.js"
-    },
-    {
-      "from": "src/core/Shader.js",
-      "to": "src/core/UniformBuffer.js"
     },
     {
       "from": "src/core/Shader.js",
@@ -2127,6 +2149,10 @@
     {
       "from": "src/modules/GLTFLoader.js",
       "to": "pkg:@math"
+    },
+    {
+      "from": "src/modules/GLTFLoader.js",
+      "to": "src/core/BindGroupLayout.js"
     },
     {
       "from": "src/modules/GLTFLoader.js",

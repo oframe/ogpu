@@ -149,21 +149,18 @@ export class Skin {
             code: skin,
         });
 
-        this.skinningBindGroup = this.gpu.device.createBindGroup({
-            label: `${this.label}-skinning-bind-group`,
-            layout: this.skinner.bindGroupLayout(this.skinner.findKernel('skin')),
-            entries: [
-                { binding: 0, resource: { buffer: this.positionBuffer } },
-                { binding: 1, resource: { buffer: this.normalBuffer } },
-                { binding: 2, resource: { buffer: this.weightBuffer } },
-                { binding: 3, resource: { buffer: this.boneIndexBuffer } },
-
-                { binding: 5, resource: { buffer: this.boneMatrixBuffer } },
-
-                { binding: 6, resource: { buffer: this.skinnedPositionBuffer } },
-                { binding: 7, resource: { buffer: this.skinnedNormalBuffer } },
-            ],
-        });
+        this.skinningBindGroup = this.skinner.bindGroupLayout('skin', 0).createBindGroup(
+            {
+                positionBuffer: this.positionBuffer,
+                normalBuffer: this.normalBuffer,
+                weightBuffer: this.weightBuffer,
+                boneIndexBuffer: this.boneIndexBuffer,
+                boneMatrixBuffer: this.boneMatrixBuffer,
+                positionOutBuffer: this.skinnedPositionBuffer,
+                normalOutBuffer: this.skinnedNormalBuffer,
+            },
+            { label: `${this.label}-skinning-bind-group` }
+        );
     }
 
     addAnimation(animation) {

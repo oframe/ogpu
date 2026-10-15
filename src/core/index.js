@@ -10,6 +10,7 @@ export { RecordedGroup } from './RecordedGroup.js';
 export { Geometry } from './Geometry.js';
 export { Box, Sphere, Plane, Torus, Cylinder, Disc, Cone, Quad, FullscreenTriangle } from './primitives/index.js';
 export { Shader } from './Shader.js';
+export { BindGroupLayout } from './BindGroupLayout.js';
 export { UniformBuffer } from './UniformBuffer.js';
 export { PipelineCache } from './PipelineCache.js';
 export { RenderPipeline } from './RenderPipeline.js';

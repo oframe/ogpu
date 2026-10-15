@@ -49,7 +49,7 @@ export class SortTransparency {
         const color = new Color('#ffc219');
         // tint is identical for every leaf: one buffer + bind group shared by all
         const uniforms = new UniformBuffer(this.gpu, shader.uniforms, { color: [color[0], color[1], color[2]] }, { label: 'leaf-uniforms' });
-        const bindGroups = [shader.createBindGroup(0, { uniforms, textureSampler: sampler, tMap: view })];
+        const bindGroups = [shader.bindGroupLayout(0).createBindGroup({ uniforms, textureSampler: sampler, tMap: view })];
 
         this.meshes = [];
         for (let i = 0; i < 50; i++) {

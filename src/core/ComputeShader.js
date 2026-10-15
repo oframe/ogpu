@@ -1,4 +1,5 @@
 import { reflect, bindGroupLayoutDescriptors } from './reflect/index.js';
+import { internBindGroupLayout, wrapBindGroupLayout, declaredBindings } from './BindGroupLayout.js';
 import { registerShader } from './ShaderReload';
 import { applyOverrideConstants } from '@utils/wgslOverrides';
 
@@ -20,14 +21,8 @@ export class ComputeShader {
         // stash for hot-reload rebuilds (see ShaderReload.js)
         this._buildOpts = { layout, constants };
 
-        // For layout:'auto', we mint an explicit pipeline layout per entry point
-        // ONCE and reuse it across reloads. Auto layouts mint a fresh
-        // BindGroupLayout every build, so bind groups created against the old
-        // pipeline break on hot-reload ("not created by the pipeline"). Stable
-        // explicit layouts keep cached bind groups valid. Keyed by entry-point
-        // name: entry-point -> GPUPipelineLayout, and -> GPUBindGroupLayout[].
-        this._pipelineLayouts = {};
-        this._bindGroupLayouts = {};
+        // per build, entry-point name -> BindGroupLayout[] (sparse, by group)
+        this._layouts = {};
 
         try {
             this.build(code);
@@ -77,11 +72,12 @@ export class ComputeShader {
         const { entryPoints } = this.defs;
 
         for (const key in this.kernels) delete this.kernels[key];
+        this._layouts = {};
 
         for (let key in entryPoints) {
             this.kernels[key] = this.gpu.device.createComputePipeline({
                 label: key,
-                layout: this._resolveLayout(key, layout),
+                layout: layout === 'auto' ? this._pipelineLayout(key) : layout,
                 compute: {
                     module: this.module,
                     entryPoint: key,
@@ -90,31 +86,17 @@ export class ComputeShader {
         }
     }
 
-    // Returns the layout to hand createComputePipeline for entry point `key`.
-    // Anything other than 'auto' is passed through untouched. For 'auto' we
-    // build an explicit, persistent pipeline layout the first time we see the
-    // entry point and reuse the same objects on every reload — that stability
-    // is what keeps already-built bind groups compatible across hot-reloads.
-    // persisted by entry-point name, so changing a shader's binding
-    // *shape* (add/remove/retype a binding) needs a hard reload, not hot-reload.
-    _resolveLayout(key, layout) {
-        if (layout !== 'auto') return layout;
-
-        if (!this._pipelineLayouts[key]) {
-            const { device } = this.gpu;
-            // no key (bindGroupLayout(0) on a one-kernel shader passes a number) → the
-            // first compute entry point, as the previous derivation did
-            const name = key === undefined ? Object.keys(this.defs.entryPoints).find((k) => this.defs.entryPoints[k].stage === GPUShaderStage.COMPUTE) : key;
-            if (!Object.hasOwn(this.defs.entryPoints, name)) {
-                throw new Error(`[compute-shader ${this.label}] no entry point '${name}'`);
-            }
-            const descriptors = bindGroupLayoutDescriptors(this.defs, [name]);
-            const bindGroupLayouts = descriptors.map((d) => device.createBindGroupLayout(d));
-            this._bindGroupLayouts[key] = bindGroupLayouts;
-            this._pipelineLayouts[key] = device.createPipelineLayout({ bindGroupLayouts });
-        }
-
-        return this._pipelineLayouts[key];
+    // For layout:'auto', an explicit pipeline layout per entry point (an 'auto'
+    // layout is tied to its pipeline; bind groups built against it break on the
+    // next reload). Its BindGroupLayouts hold only what this entry point uses and
+    // are interned by shape, so a reload that keeps the shape returns the same
+    // objects and bind groups built from them stay valid.
+    _pipelineLayout(key) {
+        const { device } = this.gpu;
+        const descriptors = bindGroupLayoutDescriptors(this.defs, [key]);
+        const layouts = descriptors.map((d, i) => internBindGroupLayout(device, this.defs, i, d.entries, `${this.label}-${key}`, [key]));
+        this._layouts[key] = layouts;
+        return device.createPipelineLayout({ label: `${this.label}-${key}-layout`, bindGroupLayouts: layouts.map((l) => l.layout) });
     }
 
     // Hot-reload entry point. Callers that cached a kernel pipeline value (or
@@ -146,18 +128,26 @@ export class ComputeShader {
         return this.kernels[key];
     }
 
-    // Returns the persistent, hot-reload-stable bind group layout for a kernel's
-    // group index. The caller builds its own GPUBindGroup against it and passes
-    // that to dispatch — ComputeShader owns the pipeline + layout, never the bind
-    // group (mirrors RenderPipeline.bindGroupLayout). Accepts the kernel object
-    // (uses its label) or the entry-point name string.
-    bindGroupLayout(kernelOrKey, groupIndex = 0) {
-        const key = typeof kernelOrKey === 'string' ? kernelOrKey : kernelOrKey.label;
-        // Ensure the explicit layout is built/persisted (no-op for non-'auto').
-        this._resolveLayout(key, this._buildOpts.layout);
-        // Prefer the persistent explicit BGL (stable across reloads); fall back
-        // to the pipeline's own layout for the non-'auto' case.
-        return this._bindGroupLayouts[key]?.[groupIndex] ?? this.kernels[key].getBindGroupLayout(groupIndex);
+    // The BindGroupLayout of one kernel's group — both arguments required:
+    // bindGroupLayout('simulate', 0).createBindGroup({ … }). The caller owns the
+    // bind group and passes it to dispatch. With a caller-supplied `layout` it
+    // wraps that pipeline's raw layout (not interned), naming every binding the
+    // module declares in the group, since an explicit layout usually spans kernels.
+    bindGroupLayout(kernel, group) {
+        if (typeof kernel !== 'string' || !Number.isInteger(group)) {
+            throw new Error(`[compute ${this.label}] bindGroupLayout(kernel, group) needs a kernel name and a group index`);
+        }
+        if (!Object.hasOwn(this.kernels, kernel)) {
+            throw new Error(`[compute ${this.label}] no kernel '${kernel}' — kernels: ${Object.keys(this.kernels).join(', ')}`);
+        }
+        const layouts = (this._layouts[kernel] ??= []);
+        // caller-supplied pipeline layout: wrap lazily, cached until the next build
+        if (!layouts[group] && this._buildOpts.layout !== 'auto' && declaredBindings(this.defs, group).length) {
+            layouts[group] = wrapBindGroupLayout(this.gpu.device, this.kernels[kernel].getBindGroupLayout(group), this.defs, group, `${this.label}-${kernel}`);
+        }
+        const layout = layouts[group];
+        if (!layout) throw new Error(`[compute ${this.label}] kernel '${kernel}' has no group(${group})`);
+        return layout;
     }
 
     dispatch(encoder, { pass = null, kernel, bindGroup, bindGroupIndex = 0, dispatchCount, workgroupBuffer = null, timing = false } = {}) {

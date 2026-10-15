@@ -117,11 +117,7 @@ export function createBrdfLUT(gpu, { size = 512, label = 'brdflut' } = {}) {
     const code = tier1 ? brdflut : brdflut.replace('<rg16float, write>', '<rgba16float, write>');
     const compute = new ComputeShader(gpu, { label: `${label}-compute`, code });
     const kernel = compute.findKernel('main');
-    const bindGroup = gpu.device.createBindGroup({
-        label: `${label}-bind-group`,
-        layout: compute.bindGroupLayout(kernel),
-        entries: [{ binding: 0, resource: texture.createView() }],
-    });
+    const bindGroup = compute.bindGroupLayout('main', 0).createBindGroup({ brdflutOutput: texture.createView() }, { label: `${label}-bind-group` });
 
     const encoder = gpu.device.createCommandEncoder({ label: `${label}-encoder` });
     const pass = encoder.beginComputePass({ label: `${label}-pass` });

@@ -31,7 +31,7 @@ export class CubeMapExample {
         const shader = new Shader(this.gpu, { label: 'cubemap', code: skybox });
         // both the inside-out skybox and the box are drawn with one state
         const state = { cullMode: 'none' };
-        const bindGroups = [shader.createBindGroup(0, { cubeSampler: sampler, tMap: cubemap.view })];
+        const bindGroups = [shader.bindGroupLayout(0).createBindGroup({ cubeSampler: sampler, tMap: cubemap.view })];
 
         const makeMesh = (label) => new Mesh({ label, geometry, shader, state, bindGroups });
 

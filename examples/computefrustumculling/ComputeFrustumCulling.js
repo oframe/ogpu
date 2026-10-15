@@ -130,7 +130,11 @@ export class ComputeFrustumCulling {
             shader,
             frustumCulled: false,
             // group(1) is the engine's; the instance buffers live at group(2)
-            bindGroups: [shader.createBindGroup(0, { textureSampler: sampler, tMap: textureView }), null, shader.createBindGroup(2, { models: this.modelBuffer, visible: this.visibleBuffer })],
+            bindGroups: [
+                shader.bindGroupLayout(0).createBindGroup({ textureSampler: sampler, tMap: textureView }),
+                null,
+                shader.bindGroupLayout(2).createBindGroup({ models: this.modelBuffer, visible: this.visibleBuffer }),
+            ],
         });
         this.field.setParent(this.scene);
     }
@@ -144,16 +148,15 @@ export class ComputeFrustumCulling {
 
         this.cull = new ComputeShader(this.gpu, { label: 'cull-shader', code: cullShader });
         this.cullKernel = this.cull.findKernel('cull');
-        this.cullBindGroup = this.gpu.device.createBindGroup({
-            label: 'cull-bind-group',
-            layout: this.cull.bindGroupLayout(this.cullKernel),
-            entries: [
-                { binding: 0, resource: { buffer: this.cullUniform } },
-                { binding: 1, resource: { buffer: this.sphereBuffer } },
-                { binding: 2, resource: { buffer: this.visibleBuffer } },
-                { binding: 3, resource: { buffer: this.argsBuffer } },
-            ],
-        });
+        this.cullBindGroup = this.cull.bindGroupLayout('cull', 0).createBindGroup(
+            {
+                u: this.cullUniform,
+                spheres: this.sphereBuffer,
+                visible: this.visibleBuffer,
+                args: this.argsBuffer,
+            },
+            { label: 'cull-bind-group' }
+        );
     }
 
     _initMarker() {

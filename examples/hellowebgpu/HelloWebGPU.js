@@ -43,7 +43,7 @@ export class HelloWebGPU {
         const alphaDef = shader.defs.uniforms.alphaUniform;
 
         // each mesh owns its own scale + alpha UniformBuffers, bound by WGSL name
-        const scaleAlpha = (scale, alpha) => [shader.createBindGroup(0, { scaleUniform: scale, alphaUniform: alpha })];
+        const scaleAlpha = (scale, alpha) => [shader.bindGroupLayout(0).createBindGroup({ scaleUniform: scale, alphaUniform: alpha })];
 
         this.secondScale = new UniformBuffer(this.gpu, scaleDef, { scale: 1 }, { label: 'second-scale' });
         this.secondAlpha = new UniformBuffer(this.gpu, alphaDef, { alpha: 1 }, { label: 'second-alpha' });

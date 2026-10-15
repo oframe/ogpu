@@ -66,16 +66,15 @@ export class InstancingPicking {
             size: this.pickUniforms.arrayBuffer.byteLength,
         });
 
-        this.pickBindGroup = this.gpu.device.createBindGroup({
-            label: 'pick-bind-group',
-            layout: this.compute.bindGroupLayout(this.pickKernel),
-            entries: [
-                { binding: 0, resource: { buffer: this.pickUniformBuffer } },
-                { binding: 1, resource: { buffer: this.offsetBuffer } },
-                { binding: 2, resource: { buffer: this.randomBuffer } },
-                { binding: 3, resource: { buffer: this.hitsBuffer } },
-            ],
-        });
+        this.pickBindGroup = this.compute.bindGroupLayout('pick', 0).createBindGroup(
+            {
+                uniforms: this.pickUniformBuffer,
+                offsets: this.offsetBuffer,
+                randoms: this.randomBuffer,
+                hits: this.hitsBuffer,
+            },
+            { label: 'pick-bind-group' }
+        );
 
         // Render: instanced cubes, coloured by the hits buffer.
         const shader = new Shader(this.gpu, { label: 'instancing-picking-shader', code: instances });
@@ -84,7 +83,7 @@ export class InstancingPicking {
             label: 'cubes',
             geometry,
             shader,
-            bindGroups: [shader.createBindGroup(0, { hits: this.hitsBuffer })],
+            bindGroups: [shader.bindGroupLayout(0).createBindGroup({ hits: this.hitsBuffer })],
         });
         this.scene.addChild(this.cubes);
 

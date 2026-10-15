@@ -77,7 +77,7 @@ export class FeedbackTrails {
         const view = texture.createView();
         const color = new Color('#ffc219');
         const uniforms = new UniformBuffer(this.gpu, shader.uniforms, { color: [color[0], color[1], color[2]] }, { label: 'leaf-uniforms' });
-        const bindGroups = [shader.createBindGroup(0, { uniforms, textureSampler: sampler, tMap: view })];
+        const bindGroups = [shader.bindGroupLayout(0).createBindGroup({ uniforms, textureSampler: sampler, tMap: view })];
 
         this.meshes = [];
         for (let i = 0; i < 50; i++) {
@@ -147,29 +147,12 @@ export class FeedbackTrails {
         this.feedbackTargets = fbView;
 
         // slot t writes fb[t] and samples fb[1-t] as the previous frame
-        this.feedbackBindGroups = [0, 1].map((t) =>
-            this.gpu.device.createBindGroup({
-                layout: this.feedbackPipeline.bindGroupLayout(0),
-                entries: [
-                    { binding: 0, resource: { buffer: this.feedbackUniformBuffer } },
-                    { binding: 1, resource: this.sampler },
-                    { binding: 2, resource: sceneView },
-                    { binding: 3, resource: fbView[1 - t] },
-                ],
-            })
-        );
+        const feedbackLayout = this.feedbackPipeline.bindGroupLayout(0);
+        this.feedbackBindGroups = [0, 1].map((t) => feedbackLayout.createBindGroup({ uniforms: this.feedbackUniformBuffer, samp: this.sampler, tScene: sceneView, tPrev: fbView[1 - t] }));
 
-        // present slot t shows fb[t] (the one just written this frame). No uniform
-        // here — sampler is binding 0, texture binding 1.
-        this.presentBindGroups = [0, 1].map((t) =>
-            this.gpu.device.createBindGroup({
-                layout: this.presentPipeline.bindGroupLayout(0),
-                entries: [
-                    { binding: 0, resource: this.sampler },
-                    { binding: 1, resource: fbView[t] },
-                ],
-            })
-        );
+        // present slot t shows fb[t] (the one just written this frame). No uniform here.
+        const presentLayout = this.presentPipeline.bindGroupLayout(0);
+        this.presentBindGroups = [0, 1].map((t) => presentLayout.createBindGroup({ samp: this.sampler, tFeedback: fbView[t] }));
     }
 
     update = () => {

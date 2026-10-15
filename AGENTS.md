@@ -13,7 +13,7 @@ Hand-rolled WebGPU engine. Vanilla JS, Vite, no framework, no TypeScript (ambien
 This file is the _why_; api-digest is the _what_. Keep method lists out of here.
 
 Each source directory has its own `CLAUDE.md` with that area's footguns, auto-loaded when you read files there:
-`src/core/` (Renderer, Transform, Camera, Mesh, RecordedGroup, Shader, UniformBuffer, PipelineCache, PerDrawBuffer, RenderPipeline, Geometry, ComputeShader, Texture, RenderTarget, `reflect/`, `primitives/`, `skin/`, ShaderReload) · `src/math/` (the `@math/functions` layer — `vec2`/`vec3`/`vec4`/`quat`/`mat3`/`mat4`, out param last; `wgpu-matrix` plus local overrides, imported from here, never `wgpu-matrix` directly, lint-enforced — under chainable `Float32Array`-subclass classes) · `src/modules/` (Orbit, Raycast, GUI, Animation, GLTFLoader, CubeMap, VideoTexture, `pbr/`, `gsplat/`) · `src/utils/IBLUtils/`.
+`src/core/` (Renderer, Transform, Camera, Mesh, RecordedGroup, Shader, UniformBuffer, PipelineCache, PerDrawBuffer, RenderPipeline, Geometry, ComputeShader, Texture, RenderTarget, `reflect/`, `primitives/`, `skin/`, ShaderReload) · `src/math/` (the `@math/functions` layer — `vec2`/`vec3`/`vec4`/`quat`/`mat3`/`mat4`, out param last; `wgpu-matrix` plus local overrides, imported from here, never `wgpu-matrix` directly, lint-enforced — under chainable `Float32Array`-subclass classes) · `src/modules/` (Orbit, Raycast, GUI, Animation, GLTFLoader, CubeMap, VideoTexture, `pbr/`, `gsplat/`, `text/` (MSDF text + SplitText-style reveals)) · `src/utils/IBLUtils/`.
 `src/utils/` is standalone helpers; `examples/` is runnable demos at the repo root.
 
 `examples/` covers shadows, skinning, PBR/IBL, render targets, compute particles, glTF. Anything overlapping those extends the existing path rather than starting a new one.
@@ -68,6 +68,7 @@ Keys live in the `views` map, gallery rows in the `items` array inside `renderLa
 ## Assets and external deps
 
 - `public/assets/` — KTX cubemaps, PBR textures, JSON rigs/animations. Plain `fetch('./assets/...')`.
+- `public/assets/fonts/` — MSDF text atlases. `npm run build:font` rebakes them with `msdf-atlas-gen` (msdfgen's atlas front-end; no prebuilt macOS binary — build steps in the `scripts/build-msdf-font.mjs` header; put it on PATH or set `MSDF_ATLAS_GEN`; exits 2 if absent). Other fonts: `node scripts/build-msdf-font.mjs <font.ttf> <outDir> [name]`. Fonts committed there must be redistributable and ship their licence.
 - `public/libktx_read.js` + `.wasm` — Khronos KTX reader, loaded as a global `<script>` in `index.html`; `initDevice` stashes it on `window.ktx`, ready once `renderer.ready` resolves.
 - `webgpu-utils` (pinned exactly, 2.1.1 — its bundled parser is part of the contract) — WGSL reflection, struct views and layout derivation under `src/core/reflect/`, plus `Geometry`'s vertex buffers, the `primitives` generators (`src/core/primitives/vertices.js`), and the mip/texture helpers behind `@utils/mipmap` / `@utils/textureFromSource`. Its parser rejects `block` as an identifier and typed integer const expressions (`const M: u32 = (1u << 19u) - 1u;`); `reflect()` bridges both on a parse-only copy, so only a raw `makeShaderDataDefinitions` call hits them. naga rejects `target`.
 - `wgpu-matrix` (pinned, 3.4.2) — behind `@math/functions` only (see `src/math/CLAUDE.md`).

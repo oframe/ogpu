@@ -26,6 +26,7 @@ import { FeedbackTrails } from '@examples/feedback/Feedback';
 import { MSAA } from '@examples/msaa/MSAA';
 import { CubeMapExample } from '@examples/cubemap/CubeMap';
 import { MultiCanvas } from '@examples/multicanvas/MultiCanvas';
+import { MSDFTextExample } from '@examples/msdftext/MSDFTextExample';
 import { Loader } from '@examples/Loader';
 //TODO: Post FX WebGPU way
 
@@ -56,6 +57,7 @@ const views = {
     msaa: () => new MSAA(),
     cubemap: () => new CubeMapExample(),
     multicanvas: () => new MultiCanvas(),
+    msdftext: () => new MSDFTextExample(),
     hellowebgpu: () => new HelloWebGPU(),
     triangle: () => new Triangle(),
 };
@@ -116,6 +118,8 @@ function renderLanding() {
         { section: 'Animation' },
         { view: 'skinning', label: 'Skinning (JSON)', folder: 'skinning' },
         { view: 'skinninggltf', label: 'Skinning (glTF)', folder: 'skinninggltf' },
+        { section: 'Text' },
+        { view: 'msdftext', label: 'MSDF Text', folder: 'msdftext' },
     ];
 
     const sourcePath = 'https://github.com/oframe/ogpu/tree/main/examples/';

@@ -50,6 +50,7 @@
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "validate:shaders": "node scripts/validate-shaders.mjs",
+        "build:font": "node scripts/build-msdf-font.mjs",
         "repomap": "node scripts/build-api-digest.mjs && node scripts/build-module-graph.mjs",
         "repomap:check": "npm run repomap && git diff --exit-code -- api-digest.md module-graph.json",
         "prepare": "git config core.hooksPath .githooks || true",

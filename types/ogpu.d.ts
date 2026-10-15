@@ -1830,6 +1830,173 @@ export class GaussianSplat extends Mesh {
 }
 
 // =============================================================================
+// @modules/text — MSDF text (msdf-atlas-gen atlases) + SplitText-style reveals.
+// =============================================================================
+
+export interface MSDFFontLoadOptions {
+    /** URL of the msdf-atlas-gen json, or the parsed object. */
+    json: string | object;
+    /** URL of the atlas png — decoded without premultiplied alpha. */
+    image: string;
+    label?: string;
+}
+
+export interface MSDFGlyph {
+    advance: number;
+    /** [left, bottom, right, top] in em, y up; null for blank glyphs (space). */
+    plane: [number, number, number, number] | null;
+    /** [u, v] at the quad's bottom-left then top-right; null for blank glyphs. */
+    uv: [number, number, number, number] | null;
+}
+
+export class MSDFFont {
+    /** Await `ready` before building an MSDFText on it (or use `MSDFFont.load`). */
+    constructor(gpu: GPU, options: { json: object; image: ImageBitmap; label?: string });
+    static load(gpu: GPU, options: MSDFFontLoadOptions): Promise<MSDFFont>;
+    type: 'msdf' | 'mtsdf' | 'sdf' | 'psdf';
+    pxRange: number;
+    /** Atlas pixels per em. */
+    emPx: number;
+    /** The distance-field margin around every glyph quad, in em. */
+    padEm: number;
+    metrics: {
+        emSize: number;
+        lineHeight: number;
+        ascender: number;
+        descender: number;
+        underlineY: number;
+        underlineThickness: number;
+    };
+    glyphs: Map<number, MSDFGlyph>;
+    texture: Texture;
+    sampler: GPUSampler;
+    ready: Promise<MSDFFont>;
+    glyph(codepoint: number): MSDFGlyph | undefined;
+    kerning(a: number, b: number): number;
+    destroy(): void;
+}
+
+export interface TextLayoutOptions {
+    /** World units per em. */
+    size?: number;
+    /** Wrap width in world units. */
+    width?: number;
+    /** In em; defaults to the font's. */
+    lineHeight?: number;
+    /** In em. */
+    letterSpacing?: number;
+    align?: 'left' | 'center' | 'right';
+    anchorX?: 'left' | 'center' | 'right';
+    anchorY?: 'top' | 'middle' | 'bottom' | 'baseline';
+}
+
+export type TextBox = [number, number, number, number];
+
+export interface TextLayout {
+    glyphs: {
+        rect: TextBox;
+        uv: TextBox;
+        char: number;
+        word: number;
+        line: number;
+        charBox: TextBox;
+        wordBox: TextBox;
+        lineBox: TextBox;
+    }[];
+    counts: { chars: number; words: number; lines: number };
+    bounds: TextBox;
+    width: number;
+    height: number;
+}
+
+export function layoutText(font: MSDFFont, text: string, options?: TextLayoutOptions): TextLayout;
+
+export type TextSplit = 'chars' | 'words' | 'lines';
+
+export interface TextRevealFrom {
+    /** em */
+    x?: number;
+    y?: number;
+    z?: number;
+    /** % of the stagger unit's own box (y up: -100 = one box below). */
+    xPercent?: number;
+    yPercent?: number;
+    /** degrees; `rotation` is z. */
+    rotation?: number;
+    rotationX?: number;
+    rotationY?: number;
+    rotationZ?: number;
+    scale?: number;
+    scaleX?: number;
+    scaleY?: number;
+    scaleZ?: number;
+    opacity?: number;
+    /** em, capped by the atlas pxRange. */
+    blur?: number;
+}
+
+export interface TextRevealOptions {
+    split?: TextSplit;
+    mask?: 'none' | TextSplit;
+    order?: 'start' | 'end' | 'center' | 'edges' | 'random';
+    ease?: 'none' | 'linear' | 'power1.out' | 'power2.out' | 'power3.out' | 'power4.out' | 'expo.out' | 'back.out' | 'sine.out' | 'circ.out' | 'power3.inOut' | 'expo.inOut' | 'elastic.out';
+    duration?: number;
+    stagger?: number;
+    delay?: number;
+    /** Pivot inside the unit box, 0..1. */
+    origin?: [number, number];
+    wipe?: 'left-to-right' | 'right-to-left' | 'bottom-to-top' | 'top-to-bottom' | [number, number] | null;
+    wipeSoftness?: number;
+    seed?: number;
+    from?: TextRevealFrom;
+}
+
+export const TEXT_PRESETS: Record<string, TextRevealOptions>;
+
+export interface MSDFTextOptions extends TextLayoutOptions {
+    font: MSDFFont;
+    text?: string;
+    color?: ArrayLike<number>;
+    /** em */
+    outline?: number;
+    outlineColor?: ArrayLike<number>;
+    depthTest?: boolean;
+    /** Variant of the shared text shader (same bindings); pass formats come from the pass. */
+    shader?: Shader;
+    label?: string;
+    renderOrder?: number;
+}
+
+export class MSDFText extends Mesh {
+    constructor(gpu: GPU, options: MSDFTextOptions);
+    gpu: GPU;
+    /** Per-text reveal + look uniforms (uColor, uOutline, …), bound at group(0). */
+    uniforms: UniformBuffer;
+    font: MSDFFont;
+    text: string;
+    layout: TextLayout;
+    layoutOptions: TextLayoutOptions;
+    glyphCount: number;
+    counts: { chars: number; words: number; lines: number };
+    /** Advance play()/reverse() from renderer.time at each draw. */
+    autoUpdate: boolean;
+    /** Seconds on the reveal timeline; negative while inside the delay. */
+    time: number;
+    totalDuration: number;
+    delay: number;
+    progress: number;
+    readonly playing: boolean;
+    set color(c: ArrayLike<number>);
+    setText(text: string, options?: TextLayoutOptions): this;
+    animate(preset: string | TextRevealOptions, overrides?: TextRevealOptions): this;
+    seek(time: number): this;
+    play(): Promise<void>;
+    reverse(): Promise<void>;
+    update(dt: number): this;
+    destroy(): void;
+}
+
+// =============================================================================
 // Utils (@utils/*)
 // =============================================================================
 
@@ -2066,6 +2233,21 @@ declare module '@modules/gsplat/GaussianSplat' {
 }
 declare module '@modules/gsplat/SplatLoader' {
     export { loadSplat, SplatData, SplatFormat };
+}
+declare module '@modules/text' {
+    export { MSDFFont, MSDFText, TEXT_PRESETS, layoutText };
+}
+declare module '@modules/text/MSDFFont' {
+    export { MSDFFont, MSDFFontLoadOptions, MSDFGlyph };
+}
+declare module '@modules/text/MSDFText' {
+    export { MSDFText, MSDFTextOptions };
+}
+declare module '@modules/text/layout' {
+    export { layoutText, TextLayout, TextLayoutOptions, TextBox };
+}
+declare module '@modules/text/presets' {
+    export { TEXT_PRESETS, TextRevealOptions, TextRevealFrom, TextSplit };
 }
 declare module '@utils/BufferUtils' {
     export { createStorageBuffer, createUniformBuffer, createBuffer, CreateBufferOptions };

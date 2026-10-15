@@ -357,6 +357,37 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/modules/gsplat/loaders/spz.js
 - fn `decodeSpz(buffer)`
 
+### src/modules/text/MSDFFont.js
+- **class MSDFFont**
+  - constructor(gpu, { json, image, label = 'msdf-font' })
+  - glyph(cp)
+  - kerning(a, b)
+  - destroy()
+
+### src/modules/text/MSDFText.js
+- **class MSDFText** extends Mesh
+  - constructor(gpu, { font, text = '', size = 1, width = Infinity, lineHeight, letterSpacing = 0, align …)
+  - setText(text, options = {})
+  - animate(preset, overrides = {})
+  - seek(time)
+  - play()
+  - reverse()
+  - update(dt)
+  - draw(args)
+  - destroy()
+
+### src/modules/text/index.js
+- re-export { MSDFFont } from './MSDFFont.js'
+- re-export { MSDFText } from './MSDFText.js'
+- re-export { TEXT_PRESETS } from './presets.js'
+- re-export { layoutText } from './layout.js'
+
+### src/modules/text/layout.js
+- fn `layoutText(font, text, { size = 1, width = Infinity, lineHeight = font.metrics.lineHeight, letterSpa…)`
+
+### src/modules/text/presets.js
+- const `TEXT_PRESETS`
+
 ## utils
 
 ### src/utils/BufferUtils.js
@@ -506,6 +537,15 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - displayBindGroup()
   - bindDisplay()
 
+### examples/msdftext/MSDFTextExample.js
+- **class MSDFTextExample**
+  - constructor()
+  - init()
+  - intro()
+  - initGUI()
+  - presetParams(name)
+  - replay(texts)
+
 ### examples/multicanvas/MultiCanvas.js
 - **class MultiCanvas**
   - constructor()
@@ -609,6 +649,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { KTXTexture } from './modules/KTXTexture.js'
 - re-export { GaussianSplat } from './modules/gsplat/GaussianSplat.js'
 - re-export { loadSplat } from './modules/gsplat/SplatLoader.js'
+- re-export { MSDFFont, MSDFText, TEXT_PRESETS, layoutText } from './modules/text/index.js'
 - re-export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js'
 - re-export { blit } from './utils/RenderUtils.js'
 - re-export { loadJSON, loadJSONAll } from './utils/JSONLoader.js'

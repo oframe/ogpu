@@ -123,7 +123,7 @@ The rest of Core:
 
 The **Math** component (`src/math/`) is a function layer (`@math/functions` — `vec2`, `vec3`, `vec4`, `quat`, `mat3`, `mat4`; out param last and optional; [`wgpu-matrix`](https://github.com/greggman/wgpu-matrix) plus a few local overrides) under chainable, THREE-style classes — `Vec2`–`Vec4`, `Quat`, `Mat3`/`Mat4`, `Euler`, `Color` — each a `Float32Array` subclass.
 
-**Modules** (`src/modules/`) are the optional higher-level pieces, kept out of Core to reduce bloat: `Orbit`, `Raycast`, `GUI`, `Animation`, `GLTFLoader`, `CubeMap`, `VideoTexture`, and a shader-only `pbr/` IBL library.
+**Modules** (`src/modules/`) are the optional higher-level pieces, kept out of Core to reduce bloat: `Orbit`, `Raycast`, `GUI`, `Animation`, `GLTFLoader`, `CubeMap`, `VideoTexture`, a shader-only `pbr/` IBL library, and `text/` (MSDF text from msdf-atlas-gen atlases, with SplitText-style reveals).
 
 **Utils** (`src/utils/`, alias `@utils`) are standalone helpers: `BufferUtils`, `RenderUtils` (`blit`), `mipmap` (render-pass mip chain), `textureFromSource` (image/bitmap upload), `IBLUtils`, `ktxutils`, `TimingHelper`, `JSONLoader`, the `Mat3`/`Mat4`/`Euler` helpers, and `wgslOverrides` (bakes `override` constants into `const` literals, since Safari has no pipeline-overridable constants).
 

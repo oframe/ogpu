@@ -22,6 +22,8 @@ export { VideoTexture } from './modules/VideoTexture.js';
 export { KTXTexture } from './modules/KTXTexture.js';
 export { GaussianSplat } from './modules/gsplat/GaussianSplat.js';
 export { loadSplat } from './modules/gsplat/SplatLoader.js';
+// msdf text (atlases baked by scripts/build-msdf-font.mjs) + SplitText-style reveals
+export { MSDFFont, MSDFText, TEXT_PRESETS, layoutText } from './modules/text/index.js';
 
 // --- utils ---
 export { createStorageBuffer, createUniformBuffer, createBuffer } from './utils/BufferUtils.js';

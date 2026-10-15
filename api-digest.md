@@ -47,8 +47,11 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - onBeforeRender(f)
   - onAfterRender(f)
   - updateDerived(needs = NEEDS_NORMAL | NEEDS_OBJECT)
-  - draw({ pass, passInfo, renderer, camera, cameraOffset })
-- fn `drawGeometry(pass, geometry)`
+  - draw({ pass, passInfo, renderer, camera, cameraOffset, bound })
+- **class BoundState**
+  - constructor()
+  - reset()
+- fn `drawGeometry(pass, geometry, bound)`
 
 ### src/core/PerDrawBuffer.js
 - **class PerDrawBuffer**

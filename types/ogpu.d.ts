@@ -994,7 +994,23 @@ export interface DrawArgs {
     camera?: Camera | null;
     /** Dynamic offset of this render()'s camera slot in the PerDrawBuffer. */
     cameraOffset: number;
+    /** What the encoder already has bound; repeated pipelines, groups and buffers are skipped. */
+    bound?: BoundState | null;
 }
+
+/** Pipeline, bind groups and vertex/index buffers already set on a pass or bundle encoder. Import via `@core/Mesh`. */
+export class BoundState {
+    pipeline: GPURenderPipeline | null;
+    groups: GPUBindGroup[];
+    vertex: GPUBuffer[];
+    index: GPUBuffer | null;
+    indexFormat: GPUIndexFormat | null;
+    /** Forget everything — after anything else encoded into the pass (executeBundles clears its state). */
+    reset(): this;
+}
+
+/** Set vertex/index buffers and issue the draw (indexed, indirect or plain); `bound` skips buffers already set. Import via `@core/Mesh`. */
+export function drawGeometry(pass: GPURenderPassEncoder | GPURenderBundleEncoder, geometry: Geometry, bound?: BoundState | null): void;
 
 export class Mesh extends Transform {
     /** `new Mesh(gpu, …)` (the legacy pipeline path) throws. */
@@ -1900,7 +1916,7 @@ declare module '@core/Camera' {
     export { Camera, CameraOptions };
 }
 declare module '@core/Mesh' {
-    export { Mesh, MeshOptions, MeshState, DrawArgs };
+    export { Mesh, MeshOptions, MeshState, DrawArgs, BoundState, drawGeometry };
 }
 declare module '@core/Shader' {
     export { Shader, ShaderOptions, ShaderResource, ENGINE_GROUP, NEEDS_NORMAL, NEEDS_OBJECT };

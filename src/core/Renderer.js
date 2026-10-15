@@ -4,6 +4,7 @@ import { NonNegativeRollingAverage } from '@utils/miscutils';
 import { getPromise } from '@utils/utils';
 import { PerDrawBuffer, CAMERA_SIZE, OBJECT_SIZE } from './PerDrawBuffer.js';
 import { PipelineCache } from './PipelineCache.js';
+import { BoundState } from './Mesh.js';
 import { TextureFormat, AlphaMode } from './GPUEnums.js';
 import { FullscreenTriangle } from './primitives/FullscreenTriangle.js';
 import { Quad } from './primitives/Quad.js';
@@ -872,7 +873,8 @@ export class Renderer {
 
             this.getRenderQueue({ scene, camera, frustumCull });
 
-            const args = { camera, pass, passInfo, renderer: this, cameraOffset };
+            // per render(): a callback may render() into another pass mid-loop
+            const args = { camera, pass, passInfo, renderer: this, cameraOffset, bound: new BoundState() };
             // A pass starts with the full-attachment scissor, so a scene without
             // scissors never calls setScissorRect. Once one is set it is sticky pass
             // state; nodes without one resolve to the full rect, which resets it.

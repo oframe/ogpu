@@ -96,8 +96,9 @@ export class Mesh extends Transform {
         this._derivedMask |= missing;
     }
 
-    // called by Renderer.render for every queued mesh, inside its pass
-    draw({ pass, passInfo, renderer, camera, cameraOffset }) {
+    // called by Renderer.render for every queued mesh, inside its pass. `bound`
+    // (optional) skips state the encoder already has.
+    draw({ pass, passInfo, renderer, camera, cameraOffset, bound }) {
         this.beforeRenderCallbacks.forEach((cb) => cb && cb({ mesh: this, camera }));
 
         const pipeline = renderer.pipelines.get(this, passInfo);
@@ -106,17 +107,21 @@ export class Mesh extends Transform {
         // uploads the dirty slots after the pass
         const objectOffset = renderer.perDraw.writeObject(this);
 
-        pass.setPipeline(pipeline);
+        if (!bound || bound.pipeline !== pipeline) {
+            pass.setPipeline(pipeline);
+            if (bound) bound.pipeline = pipeline;
+        }
         const groups = this._bindGroups;
-        pass.setBindGroup(0, groups[0] ?? renderer.emptyBindGroup);
+        setBindGroup(pass, bound, 0, groups[0] ?? renderer.emptyBindGroup);
         _offsets[0] = cameraOffset;
         _offsets[1] = objectOffset;
-        pass.setBindGroup(ENGINE_GROUP, renderer.engineBindGroup, _offsets); // after writeObject: it may grow the buffer
+        // after writeObject: it may grow the buffer (new bind group)
+        pass.setBindGroup(ENGINE_GROUP, renderer.engineBindGroup, _offsets);
         for (let i = 2; i < groups.length; i++) {
-            pass.setBindGroup(i, groups[i] ?? renderer.emptyBindGroup);
+            setBindGroup(pass, bound, i, groups[i] ?? renderer.emptyBindGroup);
         }
 
-        drawGeometry(pass, this.geometry);
+        drawGeometry(pass, this.geometry, bound);
 
         this.afterRenderCallbacks.forEach((cb) => cb && cb({ mesh: this, camera }));
     }
@@ -127,17 +132,54 @@ function deepFreeze(o) {
     return Object.freeze(o);
 }
 
-// vertex/instance/index binding + the draw call (indexed, indirect or plain)
-export function drawGeometry(pass, geometry) {
+// What a pass or bundle encoder already has bound, so draws skip repeated
+// pipelines, bind groups and buffers. reset() whenever anything else touches the
+// encoder — executeBundles clears a pass's state.
+export class BoundState {
+    constructor() {
+        this.groups = [];
+        this.vertex = [];
+        this.reset();
+    }
+
+    reset() {
+        this.pipeline = null;
+        this.groups.length = 0;
+        this.vertex.length = 0;
+        this.index = null;
+        this.indexFormat = null;
+        return this;
+    }
+}
+
+function setBindGroup(pass, bound, index, group) {
+    if (bound) {
+        if (bound.groups[index] === group) return;
+        bound.groups[index] = group;
+    }
+    pass.setBindGroup(index, group);
+}
+
+function setVertexBuffer(pass, bound, slot, buffer) {
+    if (bound) {
+        if (bound.vertex[slot] === buffer) return;
+        bound.vertex[slot] = buffer;
+    }
+    pass.setVertexBuffer(slot, buffer);
+}
+
+// vertex/instance/index binding + the draw call (indexed, indirect or plain);
+// `bound` (a BoundState) skips buffers already set
+export function drawGeometry(pass, geometry, bound) {
     const verts = geometry.nonInstancedVerts;
     const vertexBuffers = verts.buffers;
-    for (let i = 0; i < vertexBuffers.length; i++) pass.setVertexBuffer(i, vertexBuffers[i]);
+    for (let i = 0; i < vertexBuffers.length; i++) setVertexBuffer(pass, bound, i, vertexBuffers[i]);
 
     const instanced = geometry.hasInstancedAttributes;
     if (instanced) {
         const instanceBuffers = geometry.instancedVerts.buffers;
         for (let i = 0; i < instanceBuffers.length; i++) {
-            pass.setVertexBuffer(vertexBuffers.length + i, instanceBuffers[i]);
+            setVertexBuffer(pass, bound, vertexBuffers.length + i, instanceBuffers[i]);
         }
     }
 
@@ -145,7 +187,13 @@ export function drawGeometry(pass, geometry) {
     const instanceCount = instanced ? geometry.instancedVerts.numElements : 1;
 
     if (verts.indexBuffer) {
-        pass.setIndexBuffer(verts.indexBuffer, verts.indexFormat);
+        if (!bound || bound.index !== verts.indexBuffer || bound.indexFormat !== verts.indexFormat) {
+            pass.setIndexBuffer(verts.indexBuffer, verts.indexFormat);
+            if (bound) {
+                bound.index = verts.indexBuffer;
+                bound.indexFormat = verts.indexFormat;
+            }
+        }
         if (drawBuffer) pass.drawIndexedIndirect(drawBuffer, 0);
         else pass.drawIndexed(verts.numElements, instanceCount);
     } else if (drawBuffer) {

@@ -308,6 +308,14 @@ change:
 - After a device restore a mesh that never draws again still points at the old
   buffer (`_slotOwner`), keeping its CPU mirror alive; drawing it moves it over.
 
+**Redundant state is skipped.** `Renderer.render` hands every draw one
+`BoundState` per pass (a fresh one per `render()`, so a callback that renders
+into another pass mid-loop doesn't corrupt it), so a draw re-sets only the pipeline, bind groups and
+vertex/index buffers that differ from the previous draw's (group(1) is always
+set: its offsets differ). Scissor changes don't touch it. Anything that encodes
+into the pass between draws must `reset()` it — nothing in the engine does;
+callbacks get no pass.
+
 **Texture resize:** destroying/recreating a `Texture` invalidates its
 `GPUTextureView`s, so any bind group holding them is stale. Rebuild the affected
 group: `mesh.bindGroups[0] = shader.bindGroup(0, { …fresh views })`. For a

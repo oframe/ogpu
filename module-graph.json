@@ -2,7 +2,7 @@
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
     "nodes": 163,
-    "edges": 297,
+    "edges": 298,
     "modules": 109,
     "shaders": 48,
     "external": 6
@@ -53,7 +53,7 @@
       "inDegree": 4
     },
     {
-      "id": "src/utils/BufferUtils.js",
+      "id": "src/core/Mesh.js",
       "inDegree": 4
     }
   ],
@@ -523,7 +523,7 @@
     {
       "id": "src/core/Mesh.js",
       "type": "module",
-      "inDegree": 3,
+      "inDegree": 4,
       "outDegree": 3
     },
     {
@@ -632,7 +632,7 @@
       "id": "src/core/Renderer.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 9
+      "outDegree": 10
     },
     {
       "id": "src/core/RenderPipeline.js",
@@ -1573,6 +1573,10 @@
     {
       "from": "src/core/Renderer.js",
       "to": "src/core/GPUEnums.js"
+    },
+    {
+      "from": "src/core/Renderer.js",
+      "to": "src/core/Mesh.js"
     },
     {
       "from": "src/core/Renderer.js",

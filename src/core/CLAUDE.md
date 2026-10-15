@@ -39,7 +39,10 @@ dead device and is gone. Owners must rebuild them in a
 `renderer.addDeviceRestoredHandler(gpu => {...})` callback (returns an
 unsubscribe fn); the callback receives the fresh `gpu`. Without it the loop
 recovers and the canvas paints, but the scene is empty (each dead shader's
-pipeline is reported once by the cache). There's no automatic scene rebuild —
+pipeline is reported once by the cache, synchronously — `shader.device` isn't
+the renderer's — so no mesh draws with a dead shader's pipeline). A shader
+rebuilt in place while its geometry or bind groups are still the dead
+device's will draw and fail validation — rebuild all of them. There's no automatic scene rebuild —
 that boundary is deliberate. A Mesh holds no GPU objects, so it can survive:
 assign it a fresh `shader`, `geometry` and `bindGroups`.
 
@@ -64,8 +67,14 @@ device-loss recovery.
 preconditions (missing gpu/code/shader/geometry) THROW, and shader build failures rethrow
 with the shader label attached. A Mesh pipeline that can't be built (bad state enum, a
 vertex input the geometry lacks, async validation failure) is reported once by the
-PipelineCache, naming the mesh and the shader, and its draws are skipped — nothing
-throws mid-pass.
+PipelineCache, naming the mesh and the shader, and the draws of every mesh with that
+pipeline key are skipped — nothing throws mid-pass. The key retries when the shader is
+rebuilt (`version` moves), the state or geometry layout changes (a new key), or the
+cache is cleared. One gap remains: an async validation
+failure is known only when its error scope resolves, so draws encoded before then use
+the invalid pipeline (one frame or so); a failed key then bumps `generation`, which also
+re-encodes RecordedGroup bundles. A RecordedGroup leaves pipeline-less meshes out of its
+bundle (warned once per `record()`) and re-encodes as soon as one has a pipeline.
 
 ## Multiple canvases — `setContext`
 
@@ -363,7 +372,10 @@ re-encodes, against 6.9 ms for a live frame).
 - **Engine-side changes re-encode the same recording** without a `record()`:
   a replaced engine buffer (growth or device restore), a cleared pipeline cache, or a
   recorded mesh that came back with another slot (destroyed, or drawn by another
-  renderer). A bundle over a destroyed buffer can't replay at all.
+  renderer), a pipeline key failing asynchronously (`generation` bump), or a mesh
+  the bundle left out for lack of a pipeline getting one. A bundle over a destroyed
+  buffer can't replay at all. (A recovery by swapping shader/geometry still leaves
+  the group `stale` and warning, though it re-encodes and draws.)
 - **Never recorded** → warned once, its children are not drawn. Its subtree
   never enters the live queue either way, and an emptied group still replays
   its last recording — hide it or `record()` it empty.

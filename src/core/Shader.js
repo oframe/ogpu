@@ -76,6 +76,8 @@ export class Shader {
         const prevSize = this.uniforms?.size;
 
         this.code = code;
+        // the pipeline cache refuses a shader from another (lost) device
+        this.device = device;
         this.module = module;
         this.defs = defs;
         // struct of `var<uniform> uniforms`, if declared — feed it to UniformBuffer

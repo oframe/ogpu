@@ -8,7 +8,8 @@ import { BlendFactor } from './GPUEnums.js';
 // `state` objects are compared by identity: replace one (`mesh.state = glass`),
 // don't mutate it — Mesh freezes the object (and its `blending`) so a mutation
 // throws. A pipeline that can't be built is reported once (naming the mesh and
-// the shader) and its draws are skipped; nothing throws mid-pass.
+// the shader) and every mesh with that key skips its draws until the shader is
+// rebuilt (new `version`) or the cache is cleared; nothing throws mid-pass.
 
 const ALPHA_BLEND = {
     color: { srcFactor: BlendFactor.SRC_ALPHA, dstFactor: BlendFactor.ONE_MINUS_SRC_ALPHA },
@@ -79,6 +80,16 @@ function describeState(s) {
     return parts;
 }
 
+// A shader built on another device (one lost before a restore, and not rebuilt
+// in a deviceRestoredHandler) can't make a pipeline. Caught here, synchronously:
+// createRenderPipeline would hand back an invalid pipeline that every mesh with
+// the same key draws with until the validation error resolves.
+function checkDevice(mesh, device) {
+    if (mesh.shader.device !== device) {
+        throw new Error(`shader '${mesh.shader.label}' was built on another (lost) device — rebuild it in a deviceRestoredHandler`);
+    }
+}
+
 // every @location the vertex stage reads must come from the geometry
 function checkVertexInputs(mesh) {
     const provided = new Set();
@@ -98,7 +109,8 @@ export class PipelineCache {
         this.gpu = gpu;
         this.map = new Map();
         this._passIds = new Map();
-        // bumped by clear() (device restore): per-mesh memos from before are stale
+        // bumped by clear() (device restore) and by an async validation failure:
+        // per-mesh memos (and RecordedGroup bundles) from before are stale
         this.generation = 0;
     }
 
@@ -144,21 +156,25 @@ export class PipelineCache {
     _create(mesh, passInfo, key) {
         const { device } = this.gpu;
         let descriptor;
+        let pipeline = null;
         device.pushErrorScope('validation');
         try {
+            checkDevice(mesh, device);
             checkVertexInputs(mesh);
             descriptor = this.descriptor(mesh, passInfo);
-            return device.createRenderPipeline(descriptor);
+            pipeline = device.createRenderPipeline(descriptor);
+            return pipeline;
         } catch (error) {
             this._report(mesh, descriptor, error);
             return null;
         } finally {
-            const generation = this.generation;
             device.popErrorScope().then((error) => {
                 if (!error) return;
                 this._report(mesh, descriptor, error);
-                // invalid pipeline: later draws skip instead of invalidating the pass
-                if (generation === this.generation && this.map.has(key)) {
+                // invalid pipeline: later draws skip instead of invalidating the pass.
+                // Keyed on identity, not generation: a second key failing in the same
+                // frame must be nulled too, and clear() has already dropped the entry.
+                if (pipeline && this.map.get(key) === pipeline) {
                     this.map.set(key, null);
                     this.generation++;
                 }
@@ -172,14 +188,23 @@ export class PipelineCache {
         if (this.map.has(key)) return this.map.get(key);
         let descriptor;
         let pipeline;
+        // a device restore during the await makes the result foreign: drop it
+        const device = this.gpu.device;
         try {
+            checkDevice(mesh, device);
             checkVertexInputs(mesh);
             descriptor = this.descriptor(mesh, passInfo);
-            pipeline = await this.gpu.device.createRenderPipelineAsync(descriptor);
+            pipeline = await device.createRenderPipelineAsync(descriptor);
         } catch (error) {
-            this._report(mesh, descriptor, error);
+            if (this.gpu.device !== device) return null;
+            // reported once per key: later draws find the null and skip
+            if (!this.map.has(key)) {
+                this._report(mesh, descriptor, error);
+                this.map.set(key, null);
+            }
             return null;
         }
+        if (this.gpu.device !== device) return null;
         if (!this.map.has(key)) this.map.set(key, pipeline);
         return this.map.get(key);
     }

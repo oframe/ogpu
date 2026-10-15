@@ -69,6 +69,7 @@ export class RecordedGroup extends Transform {
         this._structure = this.structureVersion;
         this._bundles.clear();
         this._staleWarned = false;
+        this._skippedWarned = false;
         return this;
     }
 
@@ -118,12 +119,13 @@ export class RecordedGroup extends Transform {
 
     // Renderer: the bundle for this pass kind + camera slot, encoded on first use.
     // Re-encoded (same recorded list) when the engine buffer or the pipeline
-    // cache was replaced — a bundle over a destroyed buffer can't replay.
+    // cache was replaced — a bundle over a destroyed buffer can't replay — or when
+    // a mesh left out for lack of a pipeline has one now.
     _bundleFor(renderer, passInfo, cameraOffset) {
         const key = `${passInfo.key}|${cameraOffset}`;
         const perDraw = renderer.perDraw;
         let entry = this._bundles.get(key);
-        if (entry && entry.buffer === perDraw.buffer && entry.pipelines === renderer.pipelines.generation) {
+        if (entry && entry.buffer === perDraw.buffer && entry.pipelines === renderer.pipelines.generation && !pipelineArrived(renderer, passInfo, entry.skipped)) {
             if (this._bundles.size > 1) {
                 // least recently used goes first when the cap is hit
                 this._bundles.delete(key);
@@ -131,10 +133,12 @@ export class RecordedGroup extends Transform {
             }
             return entry.bundle;
         }
+        const skipped = [];
         entry = {
-            bundle: this._encode(renderer, passInfo, cameraOffset),
+            bundle: this._encode(renderer, passInfo, cameraOffset, skipped),
             buffer: perDraw.buffer,
             pipelines: renderer.pipelines.generation,
+            skipped: skipped.length ? skipped : null,
         };
         const bundles = this._bundles;
         bundles.delete(key);
@@ -144,7 +148,7 @@ export class RecordedGroup extends Transform {
         return entry.bundle;
     }
 
-    _encode(renderer, passInfo, cameraOffset) {
+    _encode(renderer, passInfo, cameraOffset, skipped) {
         const { device } = renderer.gpu;
         const perDraw = renderer.perDraw;
         const meshes = this._meshes;
@@ -163,7 +167,10 @@ export class RecordedGroup extends Transform {
         for (let i = 0; i < meshes.length; i++) {
             const mesh = meshes[i];
             const pipeline = renderer.pipelines.get(mesh, passInfo);
-            if (!pipeline) continue; // reported by the cache
+            if (!pipeline) {
+                skipped.push(mesh); // reported by the cache
+                continue;
+            }
             if (bound.pipeline !== pipeline) {
                 encoder.setPipeline(pipeline);
                 bound.pipeline = pipeline;
@@ -177,8 +184,19 @@ export class RecordedGroup extends Transform {
             }
             drawGeometry(encoder, mesh.geometry, bound);
         }
+        if (skipped.length && !this._skippedWarned) {
+            this._skippedWarned = true;
+            console.warn(`[recorded-group ${this.label}] ${skipped.length} recorded mesh(es) have no pipeline (reported by the pipeline cache) — left out of the bundle until one is available`);
+        }
         return encoder.finish({ label: `${this.label}-bundle` });
     }
+}
+
+// a mesh the bundle left out (no pipeline) has one now — e.g. its shader was rebuilt
+function pipelineArrived(renderer, passInfo, skipped) {
+    if (!skipped) return false;
+    for (let i = 0; i < skipped.length; i++) if (renderer.pipelines.get(skipped[i], passInfo)) return true;
+    return false;
 }
 
 function setGroup(encoder, bound, index, group) {

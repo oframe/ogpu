@@ -836,6 +836,8 @@ export class Shader {
     /** Reflected struct of `var<uniform> uniforms`, or undefined — feed it to UniformBuffer. */
     uniforms: ReflectedVariable | undefined;
     hasFragment: boolean;
+    /** The device this shader was built on; the pipeline cache refuses a shader from another (lost) device. */
+    device: GPUDevice;
     /** NEEDS_NORMAL | NEEDS_OBJECT: a text check of the user code for `normalMatrix` / `objectMatrix` (comments count). Meshes compute and write only these. */
     needs: number;
     pipelineLayout: GPUPipelineLayout;
@@ -889,7 +891,7 @@ export interface PassInfo {
 export class PipelineCache {
     constructor(gpu: GPU);
     gpu: GPU;
-    /** Bumped by clear() (device restore); per-mesh memos from before are stale. */
+    /** Bumped by clear() (device restore) and when a key fails validation asynchronously; per-mesh memos and RecordedGroup bundles from before are stale. */
     generation: number;
 
     passInfo(colorFormats: GPUTextureFormat[], depthFormat: GPUTextureFormat | null | undefined, sampleCount: number): PassInfo;

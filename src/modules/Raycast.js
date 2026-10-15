@@ -1,5 +1,5 @@
 // Port of OGL's Raycast (https://github.com/oframe/ogl) adapted to the
-// engine's chainable math wrappers and webgpu-utils geometry layout.
+// engine's chainable math wrappers and Geometry's attribute layout.
 //
 // Usage:
 //   const raycast = new Raycast();

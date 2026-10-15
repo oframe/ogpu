@@ -43,7 +43,7 @@ const isTypedArray = (a) => a && typeof a.length === 'number' && a.buffer instan
 // Missing keys are left untouched; unknown keys are ignored. webgpu-utils'
 // setStructuredView with the same semantics, kept local: the library's
 // (Object.entries per object, ArrayBuffer.isView checks) measured 1.9x slower
-// per UniformBuffer.set() of a small struct.
+// per StructView.set() of a small struct (UniformBuffer.set() 1.2x).
 export function setStructuredView(data, views) {
     if (data === undefined) return;
     if (isTypedArray(views)) {

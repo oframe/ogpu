@@ -1,11 +1,11 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 163,
-    "edges": 304,
+    "nodes": 164,
+    "edges": 307,
     "modules": 110,
     "shaders": 47,
-    "external": 6
+    "external": 7
   },
   "hubs": [
     {
@@ -485,6 +485,12 @@
       "outDegree": 0
     },
     {
+      "id": "pkg:wgpu-matrix",
+      "type": "external",
+      "inDegree": 6,
+      "outDegree": 0
+    },
+    {
       "id": "src/core/Camera.js",
       "type": "module",
       "inDegree": 2,
@@ -734,7 +740,7 @@
       "id": "src/math/functions/mat3.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 0
+      "outDegree": 1
     },
     {
       "id": "src/math/functions/mat4.js",
@@ -746,25 +752,25 @@
       "id": "src/math/functions/quat.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 2
+      "outDegree": 1
     },
     {
       "id": "src/math/functions/vec2.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 0
+      "outDegree": 1
     },
     {
       "id": "src/math/functions/vec3.js",
       "type": "module",
-      "inDegree": 3,
-      "outDegree": 0
+      "inDegree": 1,
+      "outDegree": 1
     },
     {
       "id": "src/math/functions/vec4.js",
       "type": "module",
-      "inDegree": 2,
-      "outDegree": 0
+      "inDegree": 1,
+      "outDegree": 1
     },
     {
       "id": "src/math/index.js",
@@ -1943,16 +1949,28 @@
       "to": "src/math/functions/vec4.js"
     },
     {
+      "from": "src/math/functions/mat3.js",
+      "to": "pkg:wgpu-matrix"
+    },
+    {
       "from": "src/math/functions/mat4.js",
-      "to": "src/math/functions/vec3.js"
+      "to": "pkg:wgpu-matrix"
     },
     {
       "from": "src/math/functions/quat.js",
-      "to": "src/math/functions/vec3.js"
+      "to": "pkg:wgpu-matrix"
     },
     {
-      "from": "src/math/functions/quat.js",
-      "to": "src/math/functions/vec4.js"
+      "from": "src/math/functions/vec2.js",
+      "to": "pkg:wgpu-matrix"
+    },
+    {
+      "from": "src/math/functions/vec3.js",
+      "to": "pkg:wgpu-matrix"
+    },
+    {
+      "from": "src/math/functions/vec4.js",
+      "to": "pkg:wgpu-matrix"
     },
     {
       "from": "src/math/index.js",

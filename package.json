@@ -62,7 +62,8 @@
     "dependencies": {
         "parse-exr": "^1.0.2",
         "tweakpane": "^4.0.5",
-        "webgpu-utils": "2.1.1"
+        "webgpu-utils": "2.1.1",
+        "wgpu-matrix": "3.4.2"
     },
     "prettier": {
         "arrowParens": "always",

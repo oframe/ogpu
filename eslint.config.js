@@ -49,6 +49,23 @@ export default [
             'no-unused-vars': ['warn', { args: 'none', ignoreRestSiblings: true }],
         },
     },
+    {
+        files: ['**/*.{js,mjs}'],
+        rules: {
+            // src/math wraps wgpu-matrix with local fixes (quat.rotationTo's 180° turn)
+            'no-restricted-imports': [
+                'error',
+                {
+                    paths: [{ name: 'wgpu-matrix', message: "Import from '@math/functions' (or '@math'); src/math holds the local fixes." }],
+                    patterns: [{ group: ['wgpu-matrix/*'], message: "Import from '@math/functions'." }],
+                },
+            ],
+        },
+    },
+    {
+        files: ['src/math/functions/*.js'],
+        rules: { 'no-restricted-imports': 'off' },
+    },
     // Disable ESLint stylistic rules that conflict with Prettier — keep last.
     prettier,
 ];

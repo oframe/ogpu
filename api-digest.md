@@ -799,105 +799,26 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - squaredDistance(v)
 
 ### src/math/functions/mat3.js
-- fn `set(v0, v1, v2, v3, v4, v5, v6, v7, v8, out)`
-- fn `copy(m, out)`
-- fn `identity(out)`
-- fn `fromMat4(m, out)`
-- fn `multiply(a, b, out)`
-- fn `inverse(m, out)`
-- fn `transpose(m, out)`
+- re-export { copy, fromMat4, identity, inverse, multiply, set, transpose } = mat3
 
 ### src/math/functions/mat4.js
-- fn `copy(m, out)`
-- fn `identity(out)`
-- fn `multiply(a, b, out)`
 - fn `inverse(m, out)`
-- fn `determinant(m)`
-- fn `transpose(m, out)`
-- fn `fromQuat(q, out)`
-- fn `translate(m, v, out)`
-- fn `scale(m, v, out)`
-- fn `rotateX(m, angle, out)`
-- fn `rotateY(m, angle, out)`
-- fn `rotateZ(m, angle, out)`
-- fn `getAxis(m, axis, out)`
-- fn `getTranslation(m, out)`
-- fn `getScaling(m, out)`
-- fn `perspective(fovy, aspect, near, far, out)`
-- fn `ortho(left, right, bottom, top, near, far, out)`
 - fn `lookAt(eye, target, up, out)`
 - fn `aim(position, target, up, out)`
+- re-export { copy, determinant, fromQuat, getAxis, getScaling, getTranslation, identity, multiply, ortho, perspective, rotateX, rotateY, rotateZ, scale, translate, transpose } = mat4
 
 ### src/math/functions/quat.js
-- fn `identity(out)`
-- fn `mul(a, b, out)`
-- fn `conjugate(q, out)`
-- fn `inverse(q, out)`
-- fn `normalize(q, out)`
-- fn `fromAxisAngle(axis, angle, out)`
-- fn `fromEuler(x, y, z, order, out)`
-- fn `fromMat(m, out)`
 - fn `rotationTo(a, b, out)`
-- fn `slerp(a, b, t, out)`
-- fn `rotateX(q, angle, out)`
-- fn `rotateY(q, angle, out)`
-- fn `rotateZ(q, angle, out)`
-- re-export { dot, length } from './vec4.js'
+- re-export { conjugate, dot, fromAxisAngle, fromEuler, fromMat, identity, inverse, length, mul, normalize, rotateX, rotateY, rotateZ, slerp } = quat
 
 ### src/math/functions/vec2.js
-- fn `add(a, b, out)`
-- fn `subtract(a, b, out)`
-- fn `multiply(a, b, out)`
-- fn `scale(v, k, out)`
-- fn `negate(v, out)`
-- fn `lerp(a, b, t, out)`
-- fn `normalize(v, out)`
-- fn `dot(a, b)`
-- fn `lengthSq(v)`
-- fn `length(v)`
-- fn `distance(a, b)`
+- re-export { add, distance, dot, length, lengthSq, lerp, multiply, negate, normalize, scale, subtract } = vec2
 
 ### src/math/functions/vec3.js
-- fn `add(a, b, out)`
-- fn `subtract(a, b, out)`
-- fn `multiply(a, b, out)`
-- fn `divide(a, b, out)`
-- fn `scale(v, k, out)`
-- fn `addScaled(a, b, k, out)`
-- fn `negate(v, out)`
-- fn `lerp(a, b, t, out)`
-- fn `min(a, b, out)`
-- fn `max(a, b, out)`
-- fn `normalize(v, out)`
-- fn `dot(a, b)`
-- fn `lengthSq(v)`
-- fn `length(v)`
-- fn `distanceSq(a, b)`
-- fn `distance(a, b)`
-- fn `cross(a, b, out)`
-- fn `angle(a, b)`
-- fn `transformMat4(v, m, out)`
-- fn `transformMat4Upper3x3(v, m, out)`
-- fn `transformMat3(v, m, out)`
-- fn `transformQuat(v, q, out)`
+- re-export { add, addScaled, angle, cross, distance, distanceSq, divide, dot, length, lengthSq, lerp, max, min, multiply, negate, normalize, scale, subtract, transformMat3, transformMat4, transformMat4Upper3x3, transformQuat } = vec3
 
 ### src/math/functions/vec4.js
-- fn `add(a, b, out)`
-- fn `subtract(a, b, out)`
-- fn `multiply(a, b, out)`
-- fn `scale(v, k, out)`
-- fn `addScaled(a, b, k, out)`
-- fn `negate(v, out)`
-- fn `lerp(a, b, t, out)`
-- fn `min(a, b, out)`
-- fn `max(a, b, out)`
-- fn `normalize(v, out)`
-- fn `dot(a, b)`
-- fn `lengthSq(v)`
-- fn `length(v)`
-- fn `distanceSq(a, b)`
-- fn `distance(a, b)`
-- fn `transformMat4(v, m, out)`
+- re-export { add, addScaled, distance, distanceSq, dot, length, lengthSq, lerp, max, min, multiply, negate, normalize, scale, subtract, transformMat4 } = vec4
 
 ### src/math/index.js
 - re-export { Vec2 } from './Vec2'

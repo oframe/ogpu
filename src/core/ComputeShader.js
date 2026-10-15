@@ -1,4 +1,4 @@
-import { makeShaderDataDefinitions, makeBindGroupLayoutDescriptors } from 'webgpu-utils';
+import { reflect, bindGroupLayoutDescriptors } from './reflect/index.js';
 import { registerShader } from './ShaderReload';
 import { applyOverrideConstants } from '@utils/wgslOverrides';
 
@@ -72,7 +72,7 @@ export class ComputeShader {
             code: bakedCode,
         });
 
-        this.defs = makeShaderDataDefinitions(bakedCode);
+        this.defs = reflect(bakedCode);
 
         const { entryPoints } = this.defs;
 
@@ -102,9 +102,13 @@ export class ComputeShader {
 
         if (!this._pipelineLayouts[key]) {
             const { device } = this.gpu;
-            const descriptors = makeBindGroupLayoutDescriptors(this.defs, {
-                compute: { entryPoint: key },
-            });
+            // no key (bindGroupLayout(0) on a one-kernel shader passes a number) → the
+            // first compute entry point, as the previous derivation did
+            const name = key === undefined ? Object.keys(this.defs.entryPoints).find((k) => this.defs.entryPoints[k].stage === GPUShaderStage.COMPUTE) : key;
+            if (!Object.hasOwn(this.defs.entryPoints, name)) {
+                throw new Error(`[compute-shader ${this.label}] no entry point '${name}'`);
+            }
+            const descriptors = bindGroupLayoutDescriptors(this.defs, [name]);
             const bindGroupLayouts = descriptors.map((d) => device.createBindGroupLayout(d));
             this._bindGroupLayouts[key] = bindGroupLayouts;
             this._pipelineLayouts[key] = device.createPipelineLayout({ bindGroupLayouts });

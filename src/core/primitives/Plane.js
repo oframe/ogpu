@@ -1,8 +1,8 @@
-import { primitives } from 'webgpu-utils';
+import { primitives } from './vertices.js';
 import { Geometry } from '../Geometry.js';
 
 /**
- * Plane geometry (XZ plane). Wraps webgpu-utils createPlaneVertices.
+ * Plane geometry (XZ plane). Wraps createPlaneVertices (./vertices.js).
  * @param {object} gpu OGPU gpu context (renderer.gpu)
  * @param {object} [opts]
  * @param {number} [opts.width=1]

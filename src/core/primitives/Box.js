@@ -1,8 +1,8 @@
-import { primitives } from 'webgpu-utils';
+import { primitives } from './vertices.js';
 import { Geometry } from '../Geometry.js';
 
 /**
- * Box geometry. Wraps webgpu-utils createCubeVertices.
+ * Box geometry. Wraps createCubeVertices (./vertices.js).
  * @param {object} gpu OGPU gpu context (renderer.gpu)
  * @param {object} [opts]
  * @param {number} [opts.size=1] edge length

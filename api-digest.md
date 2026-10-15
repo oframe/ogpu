@@ -143,6 +143,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { RenderTarget } from './RenderTarget.js'
 - re-export { Skin } from './skin/Skin.js'
 - re-export * from './GPUEnums.js'
+- re-export { StructView, makeStructuredView, reflect } from './reflect/index.js'
 
 ### src/core/primitives/Box.js
 - **class Box** extends Geometry
@@ -190,6 +191,34 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { Cone } from './Cone.js'
 - re-export { Quad } from './Quad.js'
 - re-export { FullscreenTriangle } from './FullscreenTriangle.js'
+
+### src/core/primitives/vertices.js
+- fn `createXYQuadVertices({ size: inSize = 2, xOffset = 0, yOffset = 0 } = {})`
+- fn `createPlaneVertices({ width = 1, depth = 1, subdivisionsWidth = 1, subdivisionsDepth = 1 } = {})`
+- fn `createSphereVertices({ radius = 1, subdivisionsAxis = 24, subdivisionsHeight = 12, startLatitudeInRadians = 0,…)`
+- fn `createCubeVertices({ size = 1 } = {})`
+- fn `createTruncatedConeVertices({ bottomRadius = 1, topRadius = 0, height = 1, radialSubdivisions = 24, verticalSubdivisi…)`
+- fn `createCylinderVertices({ radius = 1, height = 1, radialSubdivisions = 24, verticalSubdivisions = 1, topCap = tru…)`
+- fn `createTorusVertices({ radius = 1, thickness = 0.24, radialSubdivisions = 24, bodySubdivisions = 12, startAngl…)`
+- fn `createDiscVertices({ radius = 1, divisions = 24, stacks = 1, innerRadius = 0, stackPower = 1 } = {})`
+- const `primitives`
+
+### src/core/reflect/StructView.js
+- **class StructView**
+  - constructor(def, arrayBuffer, byteOffset = 0)
+- fn `setStructuredView(data, views)`
+- fn `makeStructuredView(def, arrayBuffer, byteOffset = 0)`
+
+### src/core/reflect/index.js
+- re-export { reflect } from './reflect.js'
+- re-export { StructView, makeStructuredView, setStructuredView } from './StructView.js'
+- re-export { bindGroupLayoutDescriptors } from './layout.js'
+
+### src/core/reflect/layout.js
+- fn `bindGroupLayoutDescriptors(defs, entryPoints, { skip = [] } = {})`
+
+### src/core/reflect/reflect.js
+- fn `reflect(code)`
 
 ### src/core/skin/Skin.js
 - **class Skin**
@@ -330,10 +359,20 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - fn `vkFormatToWebGPU(fmt)`
 - fn `glFormatToWebGPU(fmt)`
 
+### src/utils/mipmap.js
+- fn `numMipLevels(size, dimension)`
+- fn `generateMipmap(gpu, texture)`
+
 ### src/utils/miscutils.js
 - **class NonNegativeRollingAverage**
   - constructor(numSamples = 30)
   - addSample(v)
+
+### src/utils/textureFromSource.js
+- fn `createTextureFromSources(gpu, sources, options = {})`
+- fn `createTextureFromSource(gpu, source, options = {})`
+- fn `createTextureFromImages(gpu, urls, options = {})`
+- fn `createTextureFromImage(gpu, url, options = {})`
 
 ### src/utils/utils.js
 - fn `getPromise()`

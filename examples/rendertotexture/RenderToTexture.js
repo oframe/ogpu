@@ -1,5 +1,4 @@
-import { Box, Mesh, Renderer, RenderPipeline, Transform, RenderTarget, Camera, Orbit, blit, createUniformBuffer, TextureFormat } from 'ogpu';
-import { makeStructuredView } from 'webgpu-utils';
+import { Box, Mesh, Renderer, RenderPipeline, Transform, RenderTarget, Camera, Orbit, blit, createUniformBuffer, TextureFormat, makeStructuredView } from 'ogpu';
 
 import display from './display.wgsl?raw';
 import cubeShader from './cube.wgsl?raw';

@@ -1,5 +1,4 @@
-import { Camera, Renderer, Orbit, RenderPipeline, Mesh, Transform, Color, Texture, Plane, RenderTarget, createUniformBuffer, blit, TextureFormat } from 'ogpu';
-import { makeStructuredView } from 'webgpu-utils';
+import { Camera, Renderer, Orbit, RenderPipeline, Mesh, Transform, Color, Texture, Plane, RenderTarget, createUniformBuffer, blit, TextureFormat, makeStructuredView } from 'ogpu';
 
 import sceneShader from './scene.wgsl?raw';
 import feedbackShader from './feedback.wgsl?raw';

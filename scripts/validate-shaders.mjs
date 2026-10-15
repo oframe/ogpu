@@ -8,11 +8,15 @@
 //   node scripts/validate-shaders.mjs path/to/one.wgsl [more.wgsl ...]
 //
 // Exit 0 = all valid, 1 = a shader failed, 2 = naga not installed.
+//
+// A fragment that only compiles with a library prepended (the way its JS
+// concatenates it) names it with `// validate-prepend: ./lib.wgsl` lines; the
+// concatenation is what gets validated, so error line numbers are offset.
 
 import { spawnSync } from 'node:child_process';
-import { readdirSync, statSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join, relative } from 'node:path';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 
 // Scope is the parent of this script's directory — so in a monorepo, dropping this
 // in packages/foo/scripts/ validates only that package, at the root it validates all.
@@ -51,9 +55,28 @@ if (!NAGA) {
 
 const files = process.argv.slice(2).length ? process.argv.slice(2) : walk(ROOT).sort();
 
+const TMP = mkdtempSync(join(tmpdir(), 'validate-shaders-'));
+
+// Path naga should read: the file itself, or its prepends + itself in a temp copy.
+function nagaInput(file) {
+    const src = readFileSync(file, 'utf8');
+    const prepends = [...src.matchAll(/^\/\/ validate-prepend: (\S+)$/gm)].map((m) => m[1]);
+    if (!prepends.length) return file;
+    const parts = prepends.map((p) => readFileSync(resolve(dirname(file), p), 'utf8'));
+    // directives (`enable f16;`) must lead the module, ahead of the prepends
+    const directives = [];
+    const body = src.replace(/^[ \t]*(?:enable|requires|diagnostic)\b[^;\n]*;[ \t]*$/gm, (d) => {
+        directives.push(d.trim());
+        return '';
+    });
+    const out = join(TMP, basename(file));
+    writeFileSync(out, [...directives, ...parts, body].join('\n'));
+    return out;
+}
+
 let failed = 0;
 for (const file of files) {
-    const r = spawnSync(NAGA, [file], { encoding: 'utf8' });
+    const r = spawnSync(NAGA, [nagaInput(file)], { encoding: 'utf8' });
     const rel = relative(ROOT, file);
     if (r.status === 0) {
         console.log(`ok   ${rel}`);
@@ -65,5 +88,6 @@ for (const file of files) {
     }
 }
 
+rmSync(TMP, { recursive: true, force: true });
 console.log(`\n${files.length - failed}/${files.length} valid`);
 process.exit(failed ? 1 : 0);

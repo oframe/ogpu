@@ -159,11 +159,8 @@ export class VideoTexture {
         this._ensureTexture();
         if (!this.texture) return;
 
-        // `copyExternalImageToTexture` is the direct, zero-copy path for video frames.
-        // It accepts HTMLVideoElement as a source and internally calls
-        // `importExternalTexture` at the driver level, avoiding a round-trip through
-        // CPU memory. webgpu-utils' `copySourceToTexture` wraps this same call but
-        // adds array handling we don't need here, so we call the native API directly.
+        // A full GPU-side copy of the frame into our texture every tick (no CPU
+        // round-trip, but not zero-copy — importExternalTexture would be).
         this.gpu.device.queue.copyExternalImageToTexture({ source: this.video, flipY: this.flipY }, { texture: this.texture }, [this._videoWidth, this._videoHeight]);
     }
 

@@ -2,7 +2,7 @@
 // a Transform graph of Mesh nodes sharing a small pool of RenderPipelines.
 // Ref: https://toji.dev/webgpu-gltf-case-study/
 
-import { makeStructuredView } from 'webgpu-utils';
+import { makeStructuredView } from '@core/reflect/index.js';
 import { createUniformBuffer } from '@utils/BufferUtils';
 import { Vec3, Quat, Mat4 } from '@math';
 

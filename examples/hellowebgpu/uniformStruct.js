@@ -1,5 +1,4 @@
-import { createUniformBuffer } from 'ogpu';
-import { makeStructuredView } from 'webgpu-utils';
+import { createUniformBuffer, makeStructuredView } from 'ogpu';
 
 // Build a standalone single-struct uniform with its own GPU buffer from a
 // pipeline's reflected struct def (e.g. `pipeline.defs.uniforms.scaleUniform`).

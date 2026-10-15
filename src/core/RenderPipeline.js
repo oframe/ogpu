@@ -1,11 +1,11 @@
 let ID = 1;
 
-import { makeBindGroupLayoutDescriptors, makeShaderDataDefinitions } from 'webgpu-utils';
+import { reflect, bindGroupLayoutDescriptors } from './reflect/index.js';
 import { registerShader } from './ShaderReload';
 import { applyOverrideConstants } from '@utils/wgslOverrides';
 import { TextureFormat, BlendFactor } from './GPUEnums.js';
 
-// Wraps GPURenderPipeline: reflects raw WGSL (webgpu-utils) into bind-group layouts
+// Wraps GPURenderPipeline: reflects raw WGSL (@core/reflect) into bind-group layouts
 // and a compiled GPURenderPipeline. Does NOT own uniform buffers or bind groups —
 // those are per-mesh concerns managed by each Mesh instance.
 
@@ -76,7 +76,7 @@ export class RenderPipeline {
             code: bakedCode,
         });
 
-        this.defs = makeShaderDataDefinitions(bakedCode);
+        this.defs = reflect(bakedCode);
 
         let _targets = targets?.length > 0.0 ? targets : [{ format: this.gpu.presentationFormat }];
         let _blending = blending;
@@ -116,7 +116,7 @@ export class RenderPipeline {
 
         // Depth-only passes (e.g. shadow maps) ship a vertex-only module with
         // no `fs` entry point — omit the fragment stage so the pipeline has no
-        // color targets. webgpu-utils keys entry points by name in `defs`.
+        // color targets.
         if (this.defs.entryPoints?.fs) {
             pipelineDesc.fragment = {
                 entryPoint: 'fs',
@@ -125,7 +125,7 @@ export class RenderPipeline {
             };
         }
 
-        const descriptors = makeBindGroupLayoutDescriptors(this.defs, pipelineDesc);
+        const descriptors = bindGroupLayoutDescriptors(this.defs, pipelineDesc.fragment ? ['vs', 'fs'] : ['vs']);
 
         // uniforms live at group(0) binding(0) by engine convention — mark dynamic so
         // Mesh.draw can re-base the binding per draw into the shared per-draw buffer

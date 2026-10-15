@@ -1,8 +1,8 @@
-import { primitives } from 'webgpu-utils';
+import { primitives } from './vertices.js';
 import { Geometry } from '../Geometry.js';
 
 /**
- * (Truncated) cone geometry. Wraps webgpu-utils createTruncatedConeVertices.
+ * (Truncated) cone geometry. Wraps createTruncatedConeVertices (./vertices.js).
  * Default topRadius=0 gives a pointed cone; set it >0 for a truncated cone.
  * @param {object} gpu OGPU gpu context (renderer.gpu)
  * @param {object} [opts]

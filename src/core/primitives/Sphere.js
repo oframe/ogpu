@@ -1,8 +1,8 @@
-import { primitives } from 'webgpu-utils';
+import { primitives } from './vertices.js';
 import { Geometry } from '../Geometry.js';
 
 /**
- * Sphere geometry. Wraps webgpu-utils createSphereVertices.
+ * Sphere geometry. Wraps createSphereVertices (./vertices.js).
  * @param {object} gpu OGPU gpu context (renderer.gpu)
  * @param {object} [opts]
  * @param {number} [opts.radius=1] radius of the sphere

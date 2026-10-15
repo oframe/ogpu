@@ -1,10 +1,10 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 146,
-    "edges": 275,
-    "modules": 93,
-    "shaders": 46,
+    "nodes": 154,
+    "edges": 276,
+    "modules": 100,
+    "shaders": 47,
     "external": 7
   },
   "hubs": [
@@ -15,6 +15,14 @@
     {
       "id": "src/core/GPUEnums.js",
       "inDegree": 9
+    },
+    {
+      "id": "src/core/primitives/vertices.js",
+      "inDegree": 8
+    },
+    {
+      "id": "src/core/reflect/index.js",
+      "inDegree": 6
     },
     {
       "id": "src/core/Texture.js",
@@ -37,24 +45,16 @@
       "inDegree": 4
     },
     {
-      "id": "src/core/Mesh.js",
-      "inDegree": 3
+      "id": "src/core/RenderPipeline.js",
+      "inDegree": 4
     },
     {
-      "id": "src/core/RenderPipeline.js",
+      "id": "src/core/Mesh.js",
       "inDegree": 3
     },
     {
       "id": "src/utils/wgslOverrides.js",
       "inDegree": 3
-    },
-    {
-      "id": "examples/hellowebgpu/cube.wgsl",
-      "inDegree": 2
-    },
-    {
-      "id": "examples/hellowebgpu/uniformStruct.js",
-      "inDegree": 2
     }
   ],
   "nodes": [
@@ -104,7 +104,7 @@
       "id": "examples/feedback/Feedback.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 5
+      "outDegree": 4
     },
     {
       "id": "examples/feedback/feedback.wgsl",
@@ -170,7 +170,7 @@
       "id": "examples/hellowebgpu/uniformStruct.js",
       "type": "module",
       "inDegree": 2,
-      "outDegree": 2
+      "outDegree": 1
     },
     {
       "id": "examples/highmeshcount/HighMeshCount.js",
@@ -206,7 +206,7 @@
       "id": "examples/instancingpicking/InstancingPicking.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 4
+      "outDegree": 3
     },
     {
       "id": "examples/instancingpicking/picking.wgsl",
@@ -272,7 +272,7 @@
       "id": "examples/particles/Particles.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 4
+      "outDegree": 3
     },
     {
       "id": "examples/particles/particles.wgsl",
@@ -290,7 +290,7 @@
       "id": "examples/pbrshader/PBRShader.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 6
+      "outDegree": 5
     },
     {
       "id": "examples/pbrshader/probe.wgsl",
@@ -344,7 +344,7 @@
       "id": "examples/rendertotexture/RenderToTexture.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 4
+      "outDegree": 3
     },
     {
       "id": "examples/scenegraph/SceneGraph.js",
@@ -374,7 +374,7 @@
       "id": "examples/shadowmapping/Shadowmapping.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 4
+      "outDegree": 3
     },
     {
       "id": "examples/skinning/shadow.wgsl",
@@ -416,7 +416,7 @@
       "id": "examples/skinninggltf/SkinningGLTF.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 5
+      "outDegree": 4
     },
     {
       "id": "examples/sorttransparency/SortTransparency.js",
@@ -485,15 +485,15 @@
       "outDegree": 0
     },
     {
-      "id": "pkg:webgpu-utils",
-      "type": "external",
-      "inDegree": 23,
-      "outDegree": 0
-    },
-    {
       "id": "pkg:wgpu-matrix",
       "type": "external",
       "inDegree": 9,
+      "outDegree": 0
+    },
+    {
+      "id": "pkg:wgsl_reflect",
+      "type": "external",
+      "inDegree": 1,
       "outDegree": 0
     },
     {
@@ -512,7 +512,7 @@
       "id": "src/core/Geometry.js",
       "type": "module",
       "inDegree": 12,
-      "outDegree": 2
+      "outDegree": 1
     },
     {
       "id": "src/core/GPUEnums.js",
@@ -524,7 +524,7 @@
       "id": "src/core/index.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 14
+      "outDegree": 15
     },
     {
       "id": "src/core/Mesh.js",
@@ -599,6 +599,36 @@
       "outDegree": 2
     },
     {
+      "id": "src/core/primitives/vertices.js",
+      "type": "module",
+      "inDegree": 8,
+      "outDegree": 0
+    },
+    {
+      "id": "src/core/reflect/index.js",
+      "type": "module",
+      "inDegree": 6,
+      "outDegree": 3
+    },
+    {
+      "id": "src/core/reflect/layout.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
+      "id": "src/core/reflect/reflect.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 1
+    },
+    {
+      "id": "src/core/reflect/StructView.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
       "id": "src/core/Renderer.js",
       "type": "module",
       "inDegree": 1,
@@ -607,7 +637,7 @@
     {
       "id": "src/core/RenderPipeline.js",
       "type": "module",
-      "inDegree": 3,
+      "inDegree": 4,
       "outDegree": 4
     },
     {
@@ -866,7 +896,7 @@
       "id": "src/utils/IBLUtils/IBLUtils.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 12
+      "outDegree": 13
     },
     {
       "id": "src/utils/IBLUtils/unpackequirect.wgsl",
@@ -905,6 +935,18 @@
       "outDegree": 1
     },
     {
+      "id": "src/utils/mipmap.js",
+      "type": "module",
+      "inDegree": 2,
+      "outDegree": 3
+    },
+    {
+      "id": "src/utils/mipmap.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
       "id": "src/utils/miscutils.js",
       "type": "module",
       "inDegree": 1,
@@ -913,8 +955,14 @@
     {
       "id": "src/utils/RenderUtils.js",
       "type": "module",
-      "inDegree": 1,
+      "inDegree": 2,
       "outDegree": 0
+    },
+    {
+      "id": "src/utils/textureFromSource.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 1
     },
     {
       "id": "src/utils/TimingHelper.js",
@@ -977,10 +1025,6 @@
       "to": "pkg:ogpu"
     },
     {
-      "from": "examples/feedback/Feedback.js",
-      "to": "pkg:webgpu-utils"
-    },
-    {
       "from": "examples/frustumculling/FrustumCulling.js",
       "to": "examples/frustumculling/cameramarker.wgsl"
     },
@@ -1033,10 +1077,6 @@
       "to": "pkg:ogpu"
     },
     {
-      "from": "examples/hellowebgpu/uniformStruct.js",
-      "to": "pkg:webgpu-utils"
-    },
-    {
       "from": "examples/highmeshcount/HighMeshCount.js",
       "to": "examples/highmeshcount/highmeshcount.wgsl"
     },
@@ -1067,10 +1107,6 @@
     {
       "from": "examples/instancingpicking/InstancingPicking.js",
       "to": "pkg:ogpu"
-    },
-    {
-      "from": "examples/instancingpicking/InstancingPicking.js",
-      "to": "pkg:webgpu-utils"
     },
     {
       "from": "examples/ktx/KTX.js",
@@ -1125,10 +1161,6 @@
       "to": "pkg:ogpu"
     },
     {
-      "from": "examples/particles/Particles.js",
-      "to": "pkg:webgpu-utils"
-    },
-    {
       "from": "examples/pbrshader/PBRShader.js",
       "to": "examples/pbrshader/probe.wgsl"
     },
@@ -1143,10 +1175,6 @@
     {
       "from": "examples/pbrshader/PBRShader.js",
       "to": "pkg:tweakpane"
-    },
-    {
-      "from": "examples/pbrshader/PBRShader.js",
-      "to": "pkg:webgpu-utils"
     },
     {
       "from": "examples/pbrshader/PBRShader.js",
@@ -1181,10 +1209,6 @@
       "to": "pkg:ogpu"
     },
     {
-      "from": "examples/rendertotexture/RenderToTexture.js",
-      "to": "pkg:webgpu-utils"
-    },
-    {
       "from": "examples/scenegraph/SceneGraph.js",
       "to": "examples/scenegraph/scenegraph.wgsl"
     },
@@ -1203,10 +1227,6 @@
     {
       "from": "examples/shadowmapping/Shadowmapping.js",
       "to": "pkg:ogpu"
-    },
-    {
-      "from": "examples/shadowmapping/Shadowmapping.js",
-      "to": "pkg:webgpu-utils"
     },
     {
       "from": "examples/skinning/Skinning.js",
@@ -1235,10 +1255,6 @@
     {
       "from": "examples/skinninggltf/SkinningGLTF.js",
       "to": "pkg:ogpu"
-    },
-    {
-      "from": "examples/skinninggltf/SkinningGLTF.js",
-      "to": "pkg:webgpu-utils"
     },
     {
       "from": "examples/sorttransparency/SortTransparency.js",
@@ -1274,7 +1290,7 @@
     },
     {
       "from": "src/core/ComputeShader.js",
-      "to": "pkg:webgpu-utils"
+      "to": "src/core/reflect/index.js"
     },
     {
       "from": "src/core/ComputeShader.js",
@@ -1287,10 +1303,6 @@
     {
       "from": "src/core/Geometry.js",
       "to": "pkg:@math"
-    },
-    {
-      "from": "src/core/Geometry.js",
-      "to": "pkg:webgpu-utils"
     },
     {
       "from": "src/core/index.js",
@@ -1326,6 +1338,10 @@
     },
     {
       "from": "src/core/index.js",
+      "to": "src/core/reflect/index.js"
+    },
+    {
+      "from": "src/core/index.js",
       "to": "src/core/Renderer.js"
     },
     {
@@ -1354,7 +1370,7 @@
     },
     {
       "from": "src/core/Mesh.js",
-      "to": "pkg:webgpu-utils"
+      "to": "src/core/reflect/index.js"
     },
     {
       "from": "src/core/Mesh.js",
@@ -1362,35 +1378,35 @@
     },
     {
       "from": "src/core/primitives/Box.js",
-      "to": "pkg:webgpu-utils"
+      "to": "src/core/Geometry.js"
     },
     {
       "from": "src/core/primitives/Box.js",
-      "to": "src/core/Geometry.js"
-    },
-    {
-      "from": "src/core/primitives/Cone.js",
-      "to": "pkg:webgpu-utils"
+      "to": "src/core/primitives/vertices.js"
     },
     {
       "from": "src/core/primitives/Cone.js",
       "to": "src/core/Geometry.js"
     },
     {
-      "from": "src/core/primitives/Cylinder.js",
-      "to": "pkg:webgpu-utils"
+      "from": "src/core/primitives/Cone.js",
+      "to": "src/core/primitives/vertices.js"
     },
     {
       "from": "src/core/primitives/Cylinder.js",
       "to": "src/core/Geometry.js"
     },
     {
-      "from": "src/core/primitives/Disc.js",
-      "to": "pkg:webgpu-utils"
+      "from": "src/core/primitives/Cylinder.js",
+      "to": "src/core/primitives/vertices.js"
     },
     {
       "from": "src/core/primitives/Disc.js",
       "to": "src/core/Geometry.js"
+    },
+    {
+      "from": "src/core/primitives/Disc.js",
+      "to": "src/core/primitives/vertices.js"
     },
     {
       "from": "src/core/primitives/FullscreenTriangle.js",
@@ -1438,35 +1454,51 @@
     },
     {
       "from": "src/core/primitives/Plane.js",
-      "to": "pkg:webgpu-utils"
+      "to": "src/core/Geometry.js"
     },
     {
       "from": "src/core/primitives/Plane.js",
-      "to": "src/core/Geometry.js"
-    },
-    {
-      "from": "src/core/primitives/Quad.js",
-      "to": "pkg:webgpu-utils"
+      "to": "src/core/primitives/vertices.js"
     },
     {
       "from": "src/core/primitives/Quad.js",
       "to": "src/core/Geometry.js"
     },
     {
-      "from": "src/core/primitives/Sphere.js",
-      "to": "pkg:webgpu-utils"
+      "from": "src/core/primitives/Quad.js",
+      "to": "src/core/primitives/vertices.js"
     },
     {
       "from": "src/core/primitives/Sphere.js",
       "to": "src/core/Geometry.js"
     },
     {
-      "from": "src/core/primitives/Torus.js",
-      "to": "pkg:webgpu-utils"
+      "from": "src/core/primitives/Sphere.js",
+      "to": "src/core/primitives/vertices.js"
     },
     {
       "from": "src/core/primitives/Torus.js",
       "to": "src/core/Geometry.js"
+    },
+    {
+      "from": "src/core/primitives/Torus.js",
+      "to": "src/core/primitives/vertices.js"
+    },
+    {
+      "from": "src/core/reflect/index.js",
+      "to": "src/core/reflect/layout.js"
+    },
+    {
+      "from": "src/core/reflect/index.js",
+      "to": "src/core/reflect/reflect.js"
+    },
+    {
+      "from": "src/core/reflect/index.js",
+      "to": "src/core/reflect/StructView.js"
+    },
+    {
+      "from": "src/core/reflect/reflect.js",
+      "to": "pkg:wgsl_reflect"
     },
     {
       "from": "src/core/Renderer.js",
@@ -1502,11 +1534,11 @@
     },
     {
       "from": "src/core/RenderPipeline.js",
-      "to": "pkg:webgpu-utils"
+      "to": "src/core/GPUEnums.js"
     },
     {
       "from": "src/core/RenderPipeline.js",
-      "to": "src/core/GPUEnums.js"
+      "to": "src/core/reflect/index.js"
     },
     {
       "from": "src/core/RenderPipeline.js",
@@ -1550,7 +1582,7 @@
     },
     {
       "from": "src/core/Texture.js",
-      "to": "pkg:webgpu-utils"
+      "to": "src/utils/textureFromSource.js"
     },
     {
       "from": "src/core/Transform.js",
@@ -1834,10 +1866,6 @@
     },
     {
       "from": "src/modules/GLTFLoader.js",
-      "to": "pkg:webgpu-utils"
-    },
-    {
-      "from": "src/modules/GLTFLoader.js",
       "to": "src/core/Geometry.js"
     },
     {
@@ -1847,6 +1875,10 @@
     {
       "from": "src/modules/GLTFLoader.js",
       "to": "src/core/Mesh.js"
+    },
+    {
+      "from": "src/modules/GLTFLoader.js",
+      "to": "src/core/reflect/index.js"
     },
     {
       "from": "src/modules/GLTFLoader.js",
@@ -1986,15 +2018,15 @@
     },
     {
       "from": "src/utils/IBLUtils/IBLUtils.js",
-      "to": "pkg:webgpu-utils"
-    },
-    {
-      "from": "src/utils/IBLUtils/IBLUtils.js",
       "to": "src/core/ComputeShader.js"
     },
     {
       "from": "src/utils/IBLUtils/IBLUtils.js",
       "to": "src/core/GPUEnums.js"
+    },
+    {
+      "from": "src/utils/IBLUtils/IBLUtils.js",
+      "to": "src/core/reflect/index.js"
     },
     {
       "from": "src/utils/IBLUtils/IBLUtils.js",
@@ -2029,12 +2061,32 @@
       "to": "src/utils/ktxutils.js"
     },
     {
+      "from": "src/utils/IBLUtils/IBLUtils.js",
+      "to": "src/utils/mipmap.js"
+    },
+    {
       "from": "src/utils/Mat3Utils.js",
       "to": "pkg:wgpu-matrix"
     },
     {
       "from": "src/utils/Mat4Utils.js",
       "to": "pkg:wgpu-matrix"
+    },
+    {
+      "from": "src/utils/mipmap.js",
+      "to": "src/core/RenderPipeline.js"
+    },
+    {
+      "from": "src/utils/mipmap.js",
+      "to": "src/utils/mipmap.wgsl"
+    },
+    {
+      "from": "src/utils/mipmap.js",
+      "to": "src/utils/RenderUtils.js"
+    },
+    {
+      "from": "src/utils/textureFromSource.js",
+      "to": "src/utils/mipmap.js"
     }
   ]
 }

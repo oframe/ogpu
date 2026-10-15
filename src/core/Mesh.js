@@ -1,6 +1,6 @@
 import { Transform } from './Transform';
 import { Mat3, Mat4, Vec2 } from '@math';
-import { makeStructuredView } from 'webgpu-utils';
+import { makeStructuredView } from './reflect/index.js';
 
 const _res = /* @__PURE__ */ new Vec2();
 const _offsets = [0]; // reused dynamic-offset list for group(0)

@@ -1,4 +1,5 @@
-import { makeShaderDataDefinitions, makeStructuredView, generateMipmap } from 'webgpu-utils';
+import { generateMipmap } from '@utils/mipmap.js';
+import { reflect, makeStructuredView } from '@core/reflect/index.js';
 import parseExr from 'parse-exr';
 import { Texture } from '@core/Texture';
 import { ComputeShader } from '@core/ComputeShader';
@@ -161,7 +162,7 @@ function unpackToCube(gpu, { sourceTexture, faceSize, label, shader }) {
     const dest = createDestinationCube(gpu, { faceSize, mipLevels, label: `${label}-unpack` });
 
     const module = gpu.device.createShaderModule({ label: `${label}-unpack-module`, code: shader });
-    const defs = makeShaderDataDefinitions(shader);
+    const defs = reflect(shader);
     const uniformsView = makeStructuredView(defs.uniforms.uniforms);
 
     const pipeline = gpu.device.createComputePipeline({
@@ -217,7 +218,7 @@ function unpackToCube(gpu, { sourceTexture, faceSize, label, shader }) {
     gpu.device.queue.submit([encoder.finish()]);
 
     // Unpack only wrote mip 0; fill the rest so the prefilter's mip-based sampling works.
-    generateMipmap(gpu.device, dest);
+    generateMipmap(gpu, dest);
 
     return {
         texture: dest,
@@ -230,7 +231,7 @@ function prefilterCube(gpu, { sourceCube, faceSize, mipLevels, label }) {
     const dest = createDestinationCube(gpu, { faceSize, mipLevels, label });
 
     const module = gpu.device.createShaderModule({ label: `${label}-ggx-module`, code: ggx });
-    const defs = makeShaderDataDefinitions(ggx);
+    const defs = reflect(ggx);
     const uniformsView = makeStructuredView(defs.uniforms.uniforms);
 
     const pipeline = gpu.device.createComputePipeline({

@@ -1,5 +1,4 @@
 import { Pane } from 'tweakpane';
-import { makeStructuredView } from 'webgpu-utils';
 
 import pbr from '@modules/pbr/pbr.wgsl?raw';
 import probe from './probe.wgsl?raw';
@@ -23,6 +22,7 @@ import {
     loadJSON,
     createBrdfLUT,
     TextureFormat,
+    makeStructuredView,
 } from 'ogpu';
 
 export class PBRShader {

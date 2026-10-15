@@ -1,8 +1,8 @@
-import { primitives } from 'webgpu-utils';
+import { primitives } from './vertices.js';
 import { Geometry } from '../Geometry.js';
 
 /**
- * Disc geometry (flat ring/disc). Wraps webgpu-utils createDiscVertices.
+ * Disc geometry (flat ring/disc). Wraps createDiscVertices (./vertices.js).
  * @param {object} gpu - OGPU gpu context (renderer.gpu)
  * @param {object} [opts]
  * @param {number} [opts.radius=1] - Outer radius of the disc.

@@ -1,8 +1,7 @@
-import { Mesh, Renderer, RenderPipeline, Transform, Camera, Orbit, Plane, RenderTarget, Mat4, Geometry, Texture, loadJSON, createUniformBuffer, TextureFormat } from 'ogpu';
+import { Mesh, Renderer, RenderPipeline, Transform, Camera, Orbit, Plane, RenderTarget, Mat4, Geometry, Texture, loadJSON, createUniformBuffer, TextureFormat, makeStructuredView } from 'ogpu';
 
 import meshShader from './mesh.wgsl?raw';
 import shadow from './shadow.wgsl?raw';
-import { makeStructuredView } from 'webgpu-utils';
 
 export class Shadowmapping {
     constructor({ el = null } = {}) {

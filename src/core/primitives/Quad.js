@@ -1,8 +1,8 @@
-import { primitives } from 'webgpu-utils';
+import { primitives } from './vertices.js';
 import { Geometry } from '../Geometry.js';
 
 /**
- * XY quad geometry (screen-space / billboard). Wraps webgpu-utils createXYQuadVertices.
+ * XY quad geometry (screen-space / billboard). Wraps createXYQuadVertices (./vertices.js).
  * @param {object} gpu OGPU gpu context (renderer.gpu)
  * @param {object} [opts]
  * @param {number} [opts.size=2] quad size

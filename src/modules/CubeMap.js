@@ -5,11 +5,11 @@ import { Texture } from '@core/Texture.js';
  *
  * `src` is a list of 6 entries in WebGPU/D3D cube order:
  *   +X, -X, +Y, -Y, +Z, -Z
- * Each entry is either a URL string, or a decoded source webgpu-utils accepts
+ * Each entry is either a URL string, or a decoded source copyExternalImageToTexture accepts
  * (ImageBitmap, HTMLImageElement/-Canvas, OffscreenCanvas, VideoFrame).
  *
- * Thin wrapper over webgpu-utils' image-to-texture helpers — they fetch,
- * decode, upload, and optionally build mips. Async: `await cubemap.ready`
+ * Thin wrapper over @utils/textureFromSource — it fetches,
+ * decodes, uploads, and optionally builds mips. Async: `await cubemap.ready`
  * before sampling. Bind via `cubemap.view` (a `dimension: 'cube'` view),
  * sampled in WGSL as `texture_cube<f32>`.
  */

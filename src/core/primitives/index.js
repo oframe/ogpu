@@ -1,5 +1,5 @@
-// Primitive geometry classes — `Geometry` subclasses wrapping webgpu-utils'
-// primitive generators with named-option ergonomics:
+// Primitive geometry classes — `Geometry` subclasses wrapping the vertex
+// generators in ./vertices.js with named-option ergonomics:
 //
 //   import { Box, Sphere } from '@core/primitives';
 //   const geo = new Sphere(gpu, { radius: 0.8 });

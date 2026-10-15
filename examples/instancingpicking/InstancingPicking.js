@@ -1,5 +1,4 @@
-import { Camera, Renderer, Orbit, Raycast, RenderPipeline, Mesh, Transform, Box, ComputeShader, createStorageBuffer, createUniformBuffer } from 'ogpu';
-import { makeStructuredView } from 'webgpu-utils';
+import { Camera, Renderer, Orbit, Raycast, RenderPipeline, Mesh, Transform, Box, ComputeShader, createStorageBuffer, createUniformBuffer, makeStructuredView } from 'ogpu';
 
 import picking from './picking.wgsl?raw';
 import instances from './instances.wgsl?raw';

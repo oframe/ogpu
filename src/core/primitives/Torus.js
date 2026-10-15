@@ -1,8 +1,8 @@
-import { primitives } from 'webgpu-utils';
+import { primitives } from './vertices.js';
 import { Geometry } from '../Geometry.js';
 
 /**
- * Torus geometry. Wraps webgpu-utils createTorusVertices.
+ * Torus geometry. Wraps createTorusVertices (./vertices.js).
  * @param {object} gpu OGPU gpu context (renderer.gpu)
  * @param {object} [opts]
  * @param {number} [opts.radius=1] distance from the center of the tube to the center of the torus

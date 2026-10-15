@@ -17,8 +17,8 @@ import {
     loadSphericalHarmonics,
     createBrdfLUT,
     TextureFormat,
+    makeStructuredView,
 } from 'ogpu';
-import { makeStructuredView } from 'webgpu-utils';
 
 import skinnedmesh from './skinnedmesh.wgsl?raw';
 import shadowCasterShader from './shadowcaster.wgsl?raw';

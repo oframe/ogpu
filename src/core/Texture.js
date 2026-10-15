@@ -1,4 +1,4 @@
-import { createTextureFromImages, createTextureFromSources, createTextureFromImage, createTextureFromSource } from 'webgpu-utils';
+import { createTextureFromImages, createTextureFromSources, createTextureFromImage, createTextureFromSource } from '@utils/textureFromSource.js';
 
 let TEXTURE_ID = 1;
 
@@ -43,22 +43,21 @@ export class Texture {
                 dimension: isCubeMap ? 'cube' : dimension,
                 label: this.label,
             };
-            const device = gpu.device;
             const srcArray = Array.isArray(src) ? src : [src];
             const isUrl = typeof srcArray[0] === 'string';
 
             let loadPromise;
             if (isUrl) {
                 if (srcArray.length === 1) {
-                    loadPromise = createTextureFromImage(device, srcArray[0], opts);
+                    loadPromise = createTextureFromImage(gpu, srcArray[0], opts);
                 } else {
-                    loadPromise = createTextureFromImages(device, srcArray, opts);
+                    loadPromise = createTextureFromImages(gpu, srcArray, opts);
                 }
             } else {
                 if (srcArray.length === 1) {
-                    loadPromise = Promise.resolve(createTextureFromSource(device, srcArray[0], opts));
+                    loadPromise = Promise.resolve(createTextureFromSource(gpu, srcArray[0], opts));
                 } else {
-                    loadPromise = Promise.resolve(createTextureFromSources(device, srcArray, opts));
+                    loadPromise = Promise.resolve(createTextureFromSources(gpu, srcArray, opts));
                 }
             }
 

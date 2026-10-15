@@ -1,8 +1,7 @@
-import { Camera, Renderer, Transform, Orbit, createStorageBuffer, ComputeShader, createUniformBuffer, Geometry, RenderPipeline, Mesh, Quad, GUI } from 'ogpu';
+import { Camera, Renderer, Transform, Orbit, createStorageBuffer, ComputeShader, createUniformBuffer, Geometry, RenderPipeline, Mesh, Quad, GUI, makeStructuredView } from 'ogpu';
 
 import sim from './sim.wgsl?raw';
 import particles from './particles.wgsl?raw';
-import { makeStructuredView } from 'webgpu-utils';
 
 export class Particles {
     constructor() {

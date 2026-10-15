@@ -1,4 +1,4 @@
-import { Renderer, Camera, Transform, Orbit, GLTFLoader, createUniformBuffer, loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from 'ogpu';
+import { Renderer, Camera, Transform, Orbit, GLTFLoader, createBuffer, loadIBLCubeMap, loadSphericalHarmonics, createBrdfLUT } from 'ogpu';
 
 import pbr from '@modules/pbr/pbr.wgsl?raw';
 
@@ -67,9 +67,10 @@ export class GLTF {
         });
 
         const shArray = await loadSphericalHarmonics(shUrl);
-        const shBuffer = createUniformBuffer(this.gpu, {
+        const shBuffer = createBuffer(this.gpu, {
             label: 'gltf-sh-constants-buffer',
             size: shArray.byteLength,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
         this.gpu.device.queue.writeBuffer(shBuffer, 0, shArray);
 

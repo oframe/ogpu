@@ -1,4 +1,4 @@
-import { Box, Mesh, Shader, Renderer, RenderPipeline, Transform, RenderTarget, Camera, Orbit, blit, createUniformBuffer, TextureFormat, makeStructuredView } from 'ogpu';
+import { Box, Mesh, Shader, Renderer, RenderPipeline, Transform, RenderTarget, Camera, Orbit, blit, UniformBuffer, TextureFormat } from 'ogpu';
 
 import display from './display.wgsl?raw';
 import cubeShader from './cube.wgsl?raw';
@@ -41,12 +41,8 @@ export class RenderToTexture {
             addressModeV: 'clamp-to-edge',
         });
 
-        // binding 0 is unused by the fragment shader but the layout still needs
-        // a buffer bound there (group(0)/binding(0) is the engine's dynamic slot).
-        this.displayUniforms = createUniformBuffer(this.gpu, {
-            label: 'display-uniforms',
-            size: makeStructuredView(this.displayPipeline.defs.uniforms.uniforms).arrayBuffer.byteLength,
-        });
+        // display.wgsl reads uniforms.resolution; never written here, so it stays zero
+        this.displayUniforms = new UniformBuffer(this.gpu, this.displayPipeline.defs.uniforms.uniforms, undefined, { label: 'display-uniforms' });
 
         this.displayBindGroup = this.buildDisplayBindGroup();
     }

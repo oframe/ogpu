@@ -1,4 +1,4 @@
-import { Camera, Renderer, Orbit, Raycast, Shader, Mesh, Transform, Box, ComputeShader, createStorageBuffer, createUniformBuffer, makeStructuredView } from 'ogpu';
+import { Camera, Renderer, Orbit, Raycast, Shader, Mesh, Transform, Box, ComputeShader, createStorageBuffer, UniformBuffer } from 'ogpu';
 
 import picking from './picking.wgsl?raw';
 import instances from './instances.wgsl?raw';
@@ -60,15 +60,11 @@ export class InstancingPicking {
         this.pickKernel = this.compute.findKernel('pick');
         this.threadGroups = Math.ceil(NUM / 64);
 
-        this.pickUniforms = makeStructuredView(this.compute.defs.uniforms.uniforms);
-        this.pickUniformBuffer = createUniformBuffer(this.gpu, {
-            label: 'pick-uniforms',
-            size: this.pickUniforms.arrayBuffer.byteLength,
-        });
+        this.pickUniforms = new UniformBuffer(this.gpu, this.compute.defs.uniforms.uniforms, undefined, { label: 'pick-uniforms' });
 
         this.pickBindGroup = this.compute.bindGroupLayout('pick', 0).createBindGroup(
             {
-                uniforms: this.pickUniformBuffer,
+                uniforms: this.pickUniforms,
                 offsets: this.offsetBuffer,
                 randoms: this.randomBuffer,
                 hits: this.hitsBuffer,
@@ -110,7 +106,6 @@ export class InstancingPicking {
             rayDir: [d.x, d.y, d.z],
             halfSize: BOX_SIZE / 2,
         });
-        this.gpu.device.queue.writeBuffer(this.pickUniformBuffer, 0, this.pickUniforms.arrayBuffer);
 
         const encoder = this.gpu.device.createCommandEncoder({ label: 'pick-encoder' });
         const pass = encoder.beginComputePass({ label: 'pick-pass' });

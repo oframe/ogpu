@@ -6,7 +6,7 @@ import { Shader } from '@core/Shader';
 import { UniformBuffer } from '@core/UniformBuffer';
 import { ComputeShader } from '@core/ComputeShader';
 import { Mat4 } from '@math';
-import { createStorageBuffer, createUniformBuffer } from '@utils/BufferUtils';
+import { createStorageBuffer } from '@utils/BufferUtils';
 import { BlendFactor } from '@core/GPUEnums.js';
 
 import defaultShaderCode from './gsplat.wgsl?raw';
@@ -235,14 +235,6 @@ export class GaussianSplat extends Mesh {
 
         this._label = label;
 
-        // ── Per-frame sort uniforms buffer (written every sort() call) ─────────
-        // struct SortUniforms { modelViewMatrix: mat4x4f, count: u32, paddedCount: u32 }
-        // 16*4 + 4 + 4 = 72 bytes, padded to 80 by WGSL alignment rules.
-        this._sortUniformsBuffer = createUniformBuffer(gpu, {
-            label: `${label}-sort-uniforms`,
-            size: 80, // mat4x4f(64) + u32(4) + u32(4) + padding(8) = 80
-        });
-
         // ── Pre-bake all bitonic step parameters ──────────────────────────────
         // Total steps S = L*(L+1)/2 where L = log2(paddedCount).
         // Each step occupies a 256-byte-aligned slot in one shared buffer.
@@ -343,7 +335,7 @@ export class GaussianSplat extends Mesh {
             this._indicesFrontBuffer,
             this._keysBufferB,
             this._indicesBufferB,
-            this._sortUniformsBuffer,
+            this._sortUniforms,
             this._stepParamsBuffer,
             this._histogramsBuffer,
             this._radixParamsBuffer,
@@ -394,6 +386,9 @@ export class GaussianSplat extends Mesh {
             constants: { WORKGROUP_SIZE: ws },
         });
 
+        // per-sort uniforms (struct SortUniforms): count/paddedCount fixed, modelViewMatrix per sort()
+        this._sortUniforms ??= new UniformBuffer(gpu, this._sortCompute.defs.uniforms.sortUniforms, { count, paddedCount: this._paddedCount }, { label: `${label}-sort-uniforms` });
+
         // ── Per-step bitonic bind groups ───────────────────────────────────────
         // Unified WGSL binding layout:
         //   @binding(0) keys         (read_write) — shared by both kernels
@@ -425,7 +420,7 @@ export class GaussianSplat extends Mesh {
                 keys: this._keysBuffer,
                 indices: this._indicesBuffer,
                 positions: this._positionsBuffer,
-                sortUniforms: this._sortUniformsBuffer,
+                sortUniforms: this._sortUniforms,
             },
             { label: 'compute-keys' }
         );
@@ -633,21 +628,9 @@ export class GaussianSplat extends Mesh {
 
     // ── Shared sort plumbing ──────────────────────────────────────────────────
 
-    // struct SortUniforms layout (WGSL std140-like, explicit):
-    //   offset  0: modelViewMatrix mat4x4f  (64 bytes)
-    //   offset 64: count           u32       (4 bytes)
-    //   offset 68: paddedCount     u32       (4 bytes)
-    //   padding to 80 bytes
     _writeSortUniforms(mv) {
-        const sortData = new ArrayBuffer(80);
-        const sortF32 = new Float32Array(sortData);
-        const sortU32 = new Uint32Array(sortData);
-
-        sortF32.set(mv, 0); // 16 floats at offset 0
-        sortU32[16] = this._count; // u32 at offset 64 (index 16)
-        sortU32[17] = this._paddedCount; // u32 at offset 68 (index 17)
-
-        this.gpu.device.queue.writeBuffer(this._sortUniformsBuffer, 0, sortData);
+        this._sortUniforms.views.modelViewMatrix.set(mv);
+        this._sortUniforms.upload();
     }
 
     // Bracket the sort pass with timestamps when supported. Skip a frame's

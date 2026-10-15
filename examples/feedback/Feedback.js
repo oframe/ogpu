@@ -1,21 +1,4 @@
-import {
-    Camera,
-    Renderer,
-    Orbit,
-    RenderPipeline,
-    Shader,
-    UniformBuffer,
-    Mesh,
-    Transform,
-    Color,
-    Texture,
-    Plane,
-    RenderTarget,
-    createUniformBuffer,
-    blit,
-    TextureFormat,
-    makeStructuredView,
-} from 'ogpu';
+import { Camera, Renderer, Orbit, RenderPipeline, Shader, UniformBuffer, Mesh, Transform, Color, Texture, Plane, RenderTarget, blit, TextureFormat } from 'ogpu';
 
 import sceneShader from './scene.wgsl?raw';
 import feedbackShader from './feedback.wgsl?raw';
@@ -122,10 +105,7 @@ export class FeedbackTrails {
         });
 
         // feedback's uniform at binding 0: uDecay drives trail length. present has no uniform at all (see present.wgsl).
-        this.feedbackUniforms = makeStructuredView(this.feedbackPipeline.defs.uniforms.uniforms);
-        this.feedbackUniformBuffer = createUniformBuffer(this.gpu, { label: 'feedback-uniforms', size: this.feedbackUniforms.arrayBuffer.byteLength });
-        this.feedbackUniforms.set({ uDecay: 0.993 });
-        this.gpu.device.queue.writeBuffer(this.feedbackUniformBuffer, 0, this.feedbackUniforms.arrayBuffer);
+        this.feedbackUniforms = new UniformBuffer(this.gpu, this.feedbackPipeline.defs.uniforms.uniforms, { uDecay: 0.993 }, { label: 'feedback-uniforms' });
 
         this.allocFeedbackTextures(this.gpu.canvas.width, this.gpu.canvas.height);
     }
@@ -148,7 +128,7 @@ export class FeedbackTrails {
 
         // slot t writes fb[t] and samples fb[1-t] as the previous frame
         const feedbackLayout = this.feedbackPipeline.bindGroupLayout(0);
-        this.feedbackBindGroups = [0, 1].map((t) => feedbackLayout.createBindGroup({ uniforms: this.feedbackUniformBuffer, samp: this.sampler, tScene: sceneView, tPrev: fbView[1 - t] }));
+        this.feedbackBindGroups = [0, 1].map((t) => feedbackLayout.createBindGroup({ uniforms: this.feedbackUniforms, samp: this.sampler, tScene: sceneView, tPrev: fbView[1 - t] }));
 
         // present slot t shows fb[t] (the one just written this frame). No uniform here.
         const presentLayout = this.presentPipeline.bindGroupLayout(0);

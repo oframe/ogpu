@@ -1,4 +1,4 @@
-import { Renderer, Camera, Orbit, Transform, Mesh, Geometry, Texture, Shader, ComputeShader, Vec3, createStorageBuffer, createUniformBuffer, Cone, loadJSON } from 'ogpu';
+import { Renderer, Camera, Orbit, Transform, Mesh, Geometry, Texture, Shader, ComputeShader, Vec3, createStorageBuffer, UniformBuffer, Cone, loadJSON } from 'ogpu';
 
 import fieldShader from './field.wgsl?raw';
 import cameraMarkerShader from './cameramarker.wgsl?raw';
@@ -140,13 +140,9 @@ export class ComputeFrustumCulling {
     }
 
     _initCull() {
-        // cull uniform: 6 planes (vec4) + count. 96 + padding = 112 bytes.
-        this.cullData = new ArrayBuffer(112);
-        this.cullF32 = new Float32Array(this.cullData);
-        new Uint32Array(this.cullData)[24] = NUM; // count at byte offset 96
-        this.cullUniform = createUniformBuffer(this.gpu, { label: 'cull-uniform', size: 112 });
-
         this.cull = new ComputeShader(this.gpu, { label: 'cull-shader', code: cullShader });
+        // CullUniforms: 6 planes (vec4) + count; the planes are rewritten every cull
+        this.cullUniform = new UniformBuffer(this.gpu, this.cull.defs.uniforms.u, { count: NUM }, { label: 'cull-uniform' });
         this.cullKernel = this.cull.findKernel('cull');
         this.cullBindGroup = this.cull.bindGroupLayout('cull', 0).createBindGroup(
             {
@@ -201,14 +197,15 @@ export class ComputeFrustumCulling {
     }
 
     _runCull() {
+        const planes = this.cullUniform.views.planes;
         for (let i = 0; i < 6; i++) {
             const p = this.frustumCamera.frustum[i];
-            this.cullF32[i * 4 + 0] = p.x;
-            this.cullF32[i * 4 + 1] = p.y;
-            this.cullF32[i * 4 + 2] = p.z;
-            this.cullF32[i * 4 + 3] = p.constant;
+            planes[i * 4 + 0] = p.x;
+            planes[i * 4 + 1] = p.y;
+            planes[i * 4 + 2] = p.z;
+            planes[i * 4 + 3] = p.constant;
         }
-        this.gpu.device.queue.writeBuffer(this.cullUniform, 0, this.cullData);
+        this.cullUniform.upload();
 
         // reset instanceCount to 0 (keep vertexCount); the cull pass atomic-adds.
         this.gpu.device.queue.writeBuffer(this.argsBuffer, 4, new Uint32Array([0]));

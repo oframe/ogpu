@@ -1,10 +1,10 @@
 import { generateMipmap } from '@utils/mipmap.js';
-import { reflect, makeStructuredView } from '@core/reflect/index.js';
+import { reflect } from '@core/reflect/index.js';
 import parseExr from 'parse-exr';
 import { Texture } from '@core/Texture';
 import { ComputeShader } from '@core/ComputeShader';
 import { TextureFormat } from '@core/GPUEnums.js';
-import { createUniformBuffer } from '../BufferUtils';
+import { UniformBuffer } from '@core/UniformBuffer';
 import { parseKTXHeader } from '../ktxutils';
 import { loadJSON } from '../JSONLoader';
 
@@ -159,7 +159,6 @@ function unpackToCube(gpu, { sourceTexture, faceSize, label, shader }) {
 
     const module = gpu.device.createShaderModule({ label: `${label}-unpack-module`, code: shader });
     const defs = reflect(shader);
-    const uniformsView = makeStructuredView(defs.uniforms.uniforms);
 
     const pipeline = gpu.device.createComputePipeline({
         label: `${label}-unpack-pipeline`,
@@ -183,23 +182,15 @@ function unpackToCube(gpu, { sourceTexture, faceSize, label, shader }) {
     const uniformBuffers = [];
 
     for (let face = 0; face < 6; face++) {
-        uniformsView.set({
-            resolution: faceSize,
-            faceIndex: face,
-        });
-
-        const uBuf = createUniformBuffer(gpu, {
-            label: `${label}-unpack-uniforms-face-${face}`,
-            size: uniformsView.arrayBuffer.byteLength,
-        });
-        gpu.device.queue.writeBuffer(uBuf, 0, uniformsView.arrayBuffer);
+        // one buffer per face: writes land before the submit, so a shared one would be last-write-wins
+        const uBuf = new UniformBuffer(gpu, defs.uniforms.uniforms, { resolution: faceSize, faceIndex: face }, { label: `${label}-unpack-uniforms-face-${face}` });
         uniformBuffers.push(uBuf);
 
         const bindGroup = gpu.device.createBindGroup({
             label: `${label}-unpack-bg-face-${face}`,
             layout: pipeline.getBindGroupLayout(0),
             entries: [
-                { binding: 0, resource: { buffer: uBuf } },
+                { binding: 0, resource: { buffer: uBuf.buffer } },
                 { binding: 1, resource: sourceView },
                 { binding: 2, resource: makeFaceMipView(dest, face, 0) },
                 { binding: 3, resource: sampler },
@@ -228,7 +219,6 @@ function prefilterCube(gpu, { sourceCube, faceSize, mipLevels, label }) {
 
     const module = gpu.device.createShaderModule({ label: `${label}-ggx-module`, code: ggx });
     const defs = reflect(ggx);
-    const uniformsView = makeStructuredView(defs.uniforms.uniforms);
 
     const pipeline = gpu.device.createComputePipeline({
         label: `${label}-ggx-pipeline`,
@@ -258,26 +248,19 @@ function prefilterCube(gpu, { sourceCube, faceSize, mipLevels, label }) {
         const roughness = mipLevels > 1 ? mip / (mipLevels - 1) : 0;
 
         for (let face = 0; face < 6; face++) {
-            uniformsView.set({
-                resolution: mipSize,
-                sourceResolution: faceSize,
-                roughness,
-                mipLevel: mip,
-                faceIndex: face,
-            });
-
-            const uBuf = createUniformBuffer(gpu, {
-                label: `${label}-ggx-uniforms-mip-${mip}-face-${face}`,
-                size: uniformsView.arrayBuffer.byteLength,
-            });
-            gpu.device.queue.writeBuffer(uBuf, 0, uniformsView.arrayBuffer);
+            const uBuf = new UniformBuffer(
+                gpu,
+                defs.uniforms.uniforms,
+                { resolution: mipSize, sourceResolution: faceSize, roughness, mipLevel: mip, faceIndex: face },
+                { label: `${label}-ggx-uniforms-mip-${mip}-face-${face}` }
+            );
             uniformBuffers.push(uBuf);
 
             const bindGroup = gpu.device.createBindGroup({
                 label: `${label}-ggx-bg-mip-${mip}-face-${face}`,
                 layout: pipeline.getBindGroupLayout(0),
                 entries: [
-                    { binding: 0, resource: { buffer: uBuf } },
+                    { binding: 0, resource: { buffer: uBuf.buffer } },
                     { binding: 1, resource: sourceView },
                     { binding: 2, resource: makeFaceMipView(dest, face, mip) },
                     { binding: 3, resource: sampler },

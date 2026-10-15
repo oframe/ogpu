@@ -17,7 +17,7 @@ import {
     Sphere,
     Plane,
     Texture,
-    createUniformBuffer,
+    createBuffer,
     loadIBLCubeMap,
     loadSphericalHarmonics,
     loadJSON,
@@ -331,9 +331,10 @@ export class PBRShader {
         });
 
         const shArray = await loadSphericalHarmonics(shUrl);
-        const shBuffer = createUniformBuffer(this.gpu, {
+        const shBuffer = createBuffer(this.gpu, {
             label: 'sh-constants-buffer',
             size: shArray.byteLength,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
         this.gpu.device.queue.writeBuffer(shBuffer, 0, shArray);
 

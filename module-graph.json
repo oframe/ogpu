@@ -33,6 +33,10 @@
       "inDegree": 7
     },
     {
+      "id": "src/core/UniformBuffer.js",
+      "inDegree": 7
+    },
+    {
       "id": "src/utils/webgpu-utils.js",
       "inDegree": 7
     },
@@ -42,10 +46,6 @@
     },
     {
       "id": "src/core/Transform.js",
-      "inDegree": 6
-    },
-    {
-      "id": "src/core/UniformBuffer.js",
       "inDegree": 6
     },
     {
@@ -709,7 +709,7 @@
     {
       "id": "src/core/UniformBuffer.js",
       "type": "module",
-      "inDegree": 6,
+      "inDegree": 7,
       "outDegree": 1
     },
     {
@@ -991,7 +991,7 @@
     {
       "id": "src/utils/BufferUtils.js",
       "type": "module",
-      "inDegree": 4,
+      "inDegree": 3,
       "outDegree": 0
     },
     {
@@ -2384,11 +2384,11 @@
     },
     {
       "from": "src/utils/IBLUtils/IBLUtils.js",
-      "to": "src/modules/pbr/brdflut.wgsl"
+      "to": "src/core/UniformBuffer.js"
     },
     {
       "from": "src/utils/IBLUtils/IBLUtils.js",
-      "to": "src/utils/BufferUtils.js"
+      "to": "src/modules/pbr/brdflut.wgsl"
     },
     {
       "from": "src/utils/IBLUtils/IBLUtils.js",

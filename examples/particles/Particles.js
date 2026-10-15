@@ -1,4 +1,4 @@
-import { Camera, Renderer, Transform, Orbit, createStorageBuffer, ComputeShader, createUniformBuffer, Geometry, Shader, Mesh, Quad, GUI, makeStructuredView } from 'ogpu';
+import { Camera, Renderer, Transform, Orbit, createStorageBuffer, ComputeShader, UniformBuffer, Geometry, Shader, Mesh, Quad, GUI } from 'ogpu';
 
 import sim from './sim.wgsl?raw';
 import particles from './particles.wgsl?raw';
@@ -65,50 +65,31 @@ export class Particles {
             code: sim,
         });
 
-        this.simUniforms = makeStructuredView(this.computeShader.defs.uniforms.uniforms);
+        const { uniforms } = this.computeShader.defs;
 
-        this.simUniforms.set({
-            time: 0,
-            uDt: 0,
-        });
+        this.simUniforms = new UniformBuffer(this.gpu, uniforms.uniforms, { time: 0, uDt: 0 }, { label: 'sim-uniforms' });
 
-        this.simUniformBuffer = createUniformBuffer(this.gpu, {
-            label: 'sim-uniform-buffer',
-            size: this.simUniforms.arrayBuffer.byteLength,
-        });
+        this.velocityUniforms = new UniformBuffer(
+            this.gpu,
+            uniforms.velocityUniforms,
+            {
+                uSpatialFreq: 0.443,
+                uTemporalFreq: 0.15,
+                uAmp: 0.5,
+                uIntertia: 1.3,
+                uConstraintRadius: 1.0,
+            },
+            { label: 'velocity-uniforms' }
+        );
 
-        this.gpu.device.queue.writeBuffer(this.simUniformBuffer, 0, this.simUniforms.arrayBuffer);
-
-        this.velocityUniforms = makeStructuredView(this.computeShader.defs.uniforms.velocityUniforms);
-
-        this.velocityUniforms.set({
-            uSpatialFreq: 0.443,
-            uTemporalFreq: 0.15,
-            uAmp: 0.5,
-            uIntertia: 1.3,
-            uConstraintRadius: 1.0,
-        });
-
-        this.velocityUniformBuffer = createUniformBuffer(this.gpu, {
-            label: 'velocity-uniform-buffer',
-            size: this.velocityUniforms.arrayBuffer.byteLength,
-        });
-
-        this.gpu.device.queue.writeBuffer(this.velocityUniformBuffer, 0, this.velocityUniforms.arrayBuffer);
-
-        // noise params live in velocityUniforms; GUI edits push through to the GPU buffer
-        const noiseTarget = {
-            uniforms: this.velocityUniforms,
-            uniformBuffer: this.velocityUniformBuffer,
-            gpu: this.gpu,
-        };
+        // noise params live in velocityUniforms; GUI edits upload on change
         this.gui = new GUI({ title: 'particles' });
         const noise = this.gui.folder('noise');
-        noise.uniform(noiseTarget, 'uSpatialFreq', { label: 'spatialFreq', min: 0, max: 2, step: 0.001 });
-        noise.uniform(noiseTarget, 'uTemporalFreq', { label: 'temporalFreq', min: 0, max: 1, step: 0.001 });
-        noise.uniform(noiseTarget, 'uAmp', { label: 'amp', min: 0, max: 2, step: 0.001 });
-        noise.uniform(noiseTarget, 'uIntertia', { label: 'intertia', min: 0, max: 5, step: 0.001 });
-        noise.uniform(noiseTarget, 'uConstraintRadius', { label: 'constraintRadius', min: 0, max: 3, step: 0.001 });
+        noise.uniform(this.velocityUniforms, 'uSpatialFreq', { label: 'spatialFreq', min: 0, max: 2, step: 0.001 });
+        noise.uniform(this.velocityUniforms, 'uTemporalFreq', { label: 'temporalFreq', min: 0, max: 1, step: 0.001 });
+        noise.uniform(this.velocityUniforms, 'uAmp', { label: 'amp', min: 0, max: 2, step: 0.001 });
+        noise.uniform(this.velocityUniforms, 'uIntertia', { label: 'intertia', min: 0, max: 5, step: 0.001 });
+        noise.uniform(this.velocityUniforms, 'uConstraintRadius', { label: 'constraintRadius', min: 0, max: 3, step: 0.001 });
 
         /**
          * this example is intentionally verbose to demonstrate how to ping-pong
@@ -130,8 +111,8 @@ export class Particles {
         this.simBindGroups = pingPong.map(([read, write], i) =>
             this.computeShader.bindGroupLayout('simulate', 0).createBindGroup(
                 {
-                    uniforms: this.simUniformBuffer,
-                    velocityUniforms: this.velocityUniformBuffer,
+                    uniforms: this.simUniforms,
+                    velocityUniforms: this.velocityUniforms,
                     velocityData: this.velocityBuffer,
                     positionDataRead: read,
                     positionDataWrite: write,
@@ -193,8 +174,6 @@ export class Particles {
             time: this.renderer.time,
             uDt: this.renderer.deltaTime,
         });
-
-        this.gpu.device.queue.writeBuffer(this.simUniformBuffer, 0, this.simUniforms.arrayBuffer);
 
         this.computeShader.dispatch(encoder, {
             pass,

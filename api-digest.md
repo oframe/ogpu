@@ -42,18 +42,34 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 
 ### src/core/Mesh.js
 - **class Mesh** extends Transform
-  - constructor(gpu, { label = 'basic mesh', pipeline, geometry, bindGroups, manualRender = false, render…)
+  - constructor(options = {}, legacyOptions)
   - onBeforeRender(f)
   - onAfterRender(f)
-  - draw({ camera = null, pass, time = 0, resolution = null } = {})
+  - updateDerived()
+  - draw(args)
+- fn `drawGeometry(pass, geometry)`
 
 ### src/core/PerDrawBuffer.js
 - **class PerDrawBuffer**
   - constructor(gpu, { label = 'per-draw-uniforms', size = 1 << 20 } = {})
   - alloc(byteLength)
   - write(bytes)
+  - writeCamera(camera, time, width, height)
+  - writeObject(mesh, camera)
   - flush()
   - reset()
+- const `CAMERA_SIZE`, `OBJECT_SIZE`
+
+### src/core/PipelineCache.js
+- **class PipelineCache**
+  - constructor(gpu)
+  - passInfo(colorFormats, depthFormat, sampleCount)
+  - compileAsync(mesh, passInfo)
+  - key(mesh, passInfo)
+  - descriptor(mesh, passInfo)
+  - describe(mesh, passInfo, s = resolveState(mesh.state))
+  - clear()
+- fn `resolveState(state)`
 
 ### src/core/RenderPipeline.js
 - **class RenderPipeline**
@@ -100,7 +116,18 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - getRenderQueue({ scene, camera, sort = true, frustumCull = true } = {})
   - setContext(canvas = null, options)
   - contextFor(canvas, { transparent, format } = {})
+  - compile({ scene, target = null } = {})
   - render({ scene, camera, target = null, loadOp = 'clear', storeOp = 'store', depthLoadOp = 'clear…)
+
+### src/core/Shader.js
+- **class Shader**
+  - constructor(gpu, { label = 'shader', code, constants = {} } = {})
+  - build(code)
+  - bindGroupLayout(group = 0)
+  - bindGroup(group, resources, { label } = {})
+  - reload(code)
+  - destroy()
+- const `ENGINE_GROUP`
 
 ### src/core/ShaderReload.js
 - fn `registerShader(instance)`
@@ -129,6 +156,12 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - rotateZ(angle)
   - getEuler(out = new Euler())
 
+### src/core/UniformBuffer.js
+- **class UniformBuffer**
+  - constructor(gpu, struct, values, { label = 'uniforms', usage = 0 } = {})
+  - upload()
+  - destroy()
+
 ### src/core/index.js
 - re-export { Renderer } from './Renderer.js'
 - re-export { Transform } from './Transform.js'
@@ -136,6 +169,9 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { Mesh } from './Mesh.js'
 - re-export { Geometry } from './Geometry.js'
 - re-export { Box, Sphere, Plane, Torus, Cylinder, Disc, Cone, Quad, FullscreenTriangle } from './primitives/index.js'
+- re-export { Shader } from './Shader.js'
+- re-export { UniformBuffer } from './UniformBuffer.js'
+- re-export { PipelineCache } from './PipelineCache.js'
 - re-export { RenderPipeline } from './RenderPipeline.js'
 - re-export { PerDrawBuffer } from './PerDrawBuffer.js'
 - re-export { ComputeShader } from './ComputeShader.js'
@@ -144,6 +180,10 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { Skin } from './skin/Skin.js'
 - re-export * from './GPUEnums.js'
 - re-export { StructView, makeStructuredView, reflect } from './reflect/index.js'
+
+### src/core/legacyMesh.js
+- fn `initLegacyMesh(mesh, gpu, { label, pipeline, geometry, bindGroups })`
+- fn `drawLegacyMesh(mesh, { camera = null, pass, time = 0, resolution = null } = {})`
 
 ### src/core/primitives/Box.js
 - **class Box** extends Geometry
@@ -426,9 +466,6 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - **class HelloWebGPU**
   - constructor()
   - init()
-
-### examples/hellowebgpu/uniformStruct.js
-- fn `makeUniformStruct(gpu, def, values, label)`
 
 ### examples/highmeshcount/HighMeshCount.js
 - **class HighMeshCount**

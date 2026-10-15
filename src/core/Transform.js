@@ -14,6 +14,9 @@ export class Transform {
 
         this.matrixAutoUpdate = true;
         this.worldMatrixNeedsUpdate = false;
+        // bumped whenever worldMatrix is recomputed — the only place it's written;
+        // Mesh caches normalMatrix/objectMatrix against it
+        this.worldVersion = 0;
         // last composed position/quaternion/scale — updateMatrix skips the compose
         // (and the world multiply it would trigger) when unchanged. NaN seeds
         // guarantee the first compose.
@@ -56,6 +59,7 @@ export class Transform {
             if (this.parent === null) this.worldMatrix.copy(this.matrix);
             else this.worldMatrix.copy(this.parent.worldMatrix).multiply(this.matrix);
             this.worldMatrixNeedsUpdate = false;
+            this.worldVersion++;
             force = true;
         }
 

@@ -1,7 +1,6 @@
-import { Transform, RenderPipeline, Mesh, Box } from 'ogpu';
+import { Transform, Shader, UniformBuffer, Mesh, Box } from 'ogpu';
 
 import cubeShader from './cube.wgsl?raw';
-import { makeUniformStruct } from './uniformStruct.js';
 
 export class BoxMesh extends Transform {
     constructor(gpu) {
@@ -11,32 +10,18 @@ export class BoxMesh extends Transform {
 
         const geometry = new Box(this.gpu);
 
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: 'simple-rendering',
-            code: cubeShader,
-            vertexBuffers: geometry.bufferLayouts,
-            cullMode: 'back',
-        });
+        const shader = new Shader(this.gpu, { label: 'simple-rendering', code: cubeShader });
 
-        // scale + alpha live in their own uniform structs/buffers, bound at
-        // binding 1 and 2 of this pipeline's group(0).
-        this.scaleStruct = makeUniformStruct(this.gpu, pipeline.defs.uniforms.scaleUniform, { scale: 1 }, 'box-scale');
-        this.alphaStruct = makeUniformStruct(this.gpu, pipeline.defs.uniforms.alphaUniform, { alpha: 1 }, 'box-alpha');
+        // scale + alpha live in their own uniform structs/buffers, bound by WGSL name
+        this.scaleStruct = new UniformBuffer(this.gpu, shader.defs.uniforms.scaleUniform, { scale: 1 }, { label: 'box-scale' });
+        this.alphaStruct = new UniformBuffer(this.gpu, shader.defs.uniforms.alphaUniform, { alpha: 1 }, { label: 'box-alpha' });
 
-        this.mesh = new Mesh(this.gpu, {
+        this.mesh = new Mesh({
             label: 'box-mesh',
-            pipeline,
             geometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: pipeline.bindGroupLayout(0),
-                    entries: [
-                        { binding: 0, resource: uniformResource },
-                        { binding: 1, resource: { buffer: this.scaleStruct.uniformBuffer } },
-                        { binding: 2, resource: { buffer: this.alphaStruct.uniformBuffer } },
-                    ],
-                }),
-            ],
+            shader,
+            state: { cullMode: 'back' },
+            bindGroups: [shader.bindGroup(0, { scaleUniform: this.scaleStruct, alphaUniform: this.alphaStruct })],
         });
 
         this.mesh.setParent(this);

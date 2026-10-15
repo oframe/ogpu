@@ -2,7 +2,8 @@ import { Vec3 } from '@math';
 import { TimingHelper } from '@utils/TimingHelper';
 import { NonNegativeRollingAverage } from '@utils/miscutils';
 import { getPromise } from '@utils/utils';
-import { PerDrawBuffer } from './PerDrawBuffer.js';
+import { PerDrawBuffer, CAMERA_SIZE, OBJECT_SIZE } from './PerDrawBuffer.js';
+import { PipelineCache } from './PipelineCache.js';
 import { TextureFormat, AlphaMode } from './GPUEnums.js';
 import { FullscreenTriangle } from './primitives/FullscreenTriangle.js';
 import { Quad } from './primitives/Quad.js';
@@ -179,7 +180,7 @@ export class Renderer {
 
         this._configureContext(device);
 
-        this.perDraw = new PerDrawBuffer(this.gpu, { size: this.perDrawSize });
+        this._createEngineResources();
 
         this.isReady = true;
         this._initialized = true;
@@ -248,8 +249,9 @@ export class Renderer {
 
         // Same story: the old PerDrawBuffer's GPUBuffer died with the device.
         // Drop the reference (no destroy — same rationale as depth texture
-        // above) and remake against the fresh gpu.
-        this.perDraw = new PerDrawBuffer(this.gpu, { size: this.perDrawSize });
+        // above) and remake it, the engine group and the pipeline cache against
+        // the fresh gpu. App code rebuilds its Shaders in deviceRestoredHandlers.
+        this._createEngineResources();
 
         this.isReady = true;
         this._deviceLost = false;
@@ -258,6 +260,43 @@ export class Renderer {
 
         this._startLoop();
         console.log('[webgpu] device restored');
+    }
+
+    // Engine-owned GPU state for Mesh draws: the PerDrawBuffer, the fixed group(1)
+    // layout + bind group over it (camera slice at binding 0, object slice at
+    // binding 1, both dynamic), the shared empty group, and the pipeline cache.
+    // Runs on boot and on every device restore.
+    _createEngineResources() {
+        const { device } = this.gpu;
+        this.perDraw = new PerDrawBuffer(this.gpu, { size: this.perDrawSize });
+
+        const visibility = GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
+        this.engineLayout = device.createBindGroupLayout({
+            label: 'engine-layout',
+            entries: [
+                { binding: 0, visibility, buffer: { hasDynamicOffset: true, minBindingSize: CAMERA_SIZE } },
+                { binding: 1, visibility, buffer: { hasDynamicOffset: true, minBindingSize: OBJECT_SIZE } },
+            ],
+        });
+        this.engineBindGroup = device.createBindGroup({
+            label: 'engine-bind-group',
+            layout: this.engineLayout,
+            entries: [
+                { binding: 0, resource: { buffer: this.perDraw.buffer, size: CAMERA_SIZE } },
+                { binding: 1, resource: { buffer: this.perDraw.buffer, size: OBJECT_SIZE } },
+            ],
+        });
+
+        this.emptyLayout = device.createBindGroupLayout({ label: 'empty-layout', entries: [] });
+        this.emptyBindGroup = device.createBindGroup({ label: 'empty-bind-group', layout: this.emptyLayout, entries: [] });
+
+        // one cache for the renderer's life; clear() invalidates every mesh memo
+        if (this.pipelines) {
+            this.pipelines.gpu = this.gpu;
+            this.pipelines.clear();
+        } else {
+            this.pipelines = new PipelineCache(this.gpu);
+        }
     }
 
     // Single-owner RAF loop. Idempotent: if a loop is already live this is a
@@ -410,6 +449,8 @@ export class Renderer {
         this.depthTexture = this._depthView = null;
         this.perDraw?.buffer?.destroy();
         this.perDraw = null;
+        this.pipelines?.clear();
+        this.engineBindGroup = this.emptyBindGroup = null;
 
         // reason 'destroyed' — _onDeviceLost deliberately doesn't recover from
         // it, and the _destroyed guard above silences the loss report
@@ -510,7 +551,7 @@ export class Renderer {
     // Array.prototype.sort is stable, so ties keep scene-traversal order.
     sortOpaque(a, b) {
         if (a.renderOrder !== b.renderOrder) return a.renderOrder - b.renderOrder;
-        if (a.pipeline.id !== b.pipeline.id) return a.pipeline.id - b.pipeline.id;
+        if (a._sortId !== b._sortId) return a._sortId - b._sortId;
         return a.zDepth - b.zDepth;
     }
 
@@ -521,7 +562,7 @@ export class Renderer {
 
     sortUI(a, b) {
         if (a.renderOrder !== b.renderOrder) return a.renderOrder - b.renderOrder;
-        return a.pipeline.id - b.pipeline.id;
+        return a._sortId - b._sortId;
     }
 
     // Build the frame draw list: skip invisible/manual/non-drawable, frustum-cull,
@@ -547,9 +588,13 @@ export class Renderer {
             const ui = []; // depthTest false
 
             this.renderQueue.forEach((node) => {
-                if (!node.pipeline.transparent) {
+                // transitional: legacy meshes carry these on their pipeline
+                const state = node.state ?? node.pipeline;
+                const depthTest = state.depthTest !== false;
+                node._sortId = node.shader?.id ?? node.pipeline?.id ?? 0;
+                if (!state.transparent) {
                     opaque.push(node);
-                } else if (node.pipeline.depthTest) {
+                } else if (depthTest) {
                     transparent.push(node);
                 } else {
                     ui.push(node);
@@ -560,7 +605,7 @@ export class Renderer {
                 // z-depth for depth-aware sorting: opaque tiebreak, transparent
                 // far-to-near WITHIN each renderOrder group — so it's computed
                 // regardless of renderOrder (only UI/depthTest-off skips it)
-                if (!node.pipeline.depthTest || !camera) return;
+                if (!depthTest || !camera) return;
 
                 node.worldMatrix.getTranslation(tempVec3);
                 tempVec3.applyMat4(camera.projectionViewMatrix);
@@ -718,6 +763,40 @@ export class Renderer {
         return renderPassDescriptor;
     }
 
+    // Formats + sample count of the pass a render() opens — the pipeline cache
+    // keys on these, so a mesh drawn into a target, an MSAA target or the canvas
+    // gets a matching pipeline. Mirrors _targetPassDescriptor / _canvasPassDescriptor.
+    _targetPassInfo(target) {
+        const formats = [];
+        target.textures.forEach((texture) => {
+            if (!texture.isDestroyed) formats.push(texture.format);
+        });
+        return this.pipelines.passInfo(formats, target.depthTexture ? target.depthTexture.format : null, target.sampleCount ?? 1);
+    }
+
+    // The canvas currently bound (setContext swaps this.gpu and the depth texture
+    // with it), so a second canvas with its own format gets its own pipelines.
+    // Depth follows what _canvasPassDescriptor attached; compile() runs before the
+    // depth texture exists and passes the format it will have.
+    _canvasPassInfo(depthFormat = this.depthTexture?.format ?? null) {
+        return this.pipelines.passInfo([this.gpu.presentationFormat], depthFormat, 1);
+    }
+
+    // Warm-up: compile every Mesh pipeline `scene` needs for `target` (or the
+    // canvas) with createRenderPipelineAsync, so the first draw doesn't stall.
+    // Optional — without it, pipelines compile synchronously on first draw.
+    compile({ scene, target = null } = {}) {
+        if (!this.isReady) return Promise.resolve();
+        const passInfo = target ? this._targetPassInfo(target) : this._canvasPassInfo(this.depth ? TextureFormat.DEPTH24PLUS : null);
+        const pending = [];
+        scene.traverse((node) => {
+            if (node.shader && node.geometry && !node._legacy) {
+                pending.push(this.pipelines.compileAsync(node, passInfo));
+            }
+        });
+        return Promise.all(pending).then(() => {});
+    }
+
     // Draw scene from camera into `target` (RenderTarget/MRT) or the canvas bound
     // by setContext (the default one unless you bound another). Pass an external
     // `encoder` to chain into a larger submit — then render does NOT
@@ -768,14 +847,23 @@ export class Renderer {
             const ops = { loadOp, storeOp, depthLoadOp, depthStoreOp };
             const renderPassDescriptor = target ? this._targetPassDescriptor(target, ops) : this._canvasPassDescriptor(ops);
 
+            // after the descriptor: it may (re)create the bound canvas's depth texture
+            const passInfo = target ? this._targetPassInfo(target) : this._canvasPassInfo();
+            const width = target ? target.width : this.gpu.canvas.width;
+            const height = target ? target.height : this.gpu.canvas.height;
+            // one camera slice per pass; every draw in it shares the offset (-1 on
+            // overflow: Mesh draws are skipped, the pass still runs)
+            const cameraOffset = this.perDraw.writeCamera(camera, this.time, width, height);
+
             const _encoder = encoder || this.gpu.device.createCommandEncoder({ label: 'renderer-encoder' });
             const pass = timing ? this.timingHelper.beginRenderPass(_encoder, renderPassDescriptor) : _encoder.beginRenderPass(renderPassDescriptor);
 
             this.getRenderQueue({ scene, camera, frustumCull });
 
-            const resolution = target ? [target.width, target.height] : [this.gpu.canvas.width, this.gpu.canvas.height];
+            // time/resolution feed legacy meshes; the rest is the Mesh engine path
+            const args = { camera, pass, passInfo, renderer: this, cameraOffset, time: this.time, resolution: [width, height] };
             this.renderQueue?.forEach?.((node) => {
-                node.draw({ camera, pass, time: this.time, resolution });
+                node.draw(args);
             });
 
             pass.end();

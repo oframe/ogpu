@@ -1,9 +1,8 @@
-import { Camera, Renderer, Orbit, GUI, RenderPipeline, Mesh, Transform, Box } from 'ogpu';
+import { Camera, Renderer, Orbit, GUI, Shader, UniformBuffer, Mesh, Transform, Box } from 'ogpu';
 
 import cubeShader from './cube.wgsl?raw';
 
 import { BoxMesh } from './BoxMesh.js';
-import { makeUniformStruct } from './uniformStruct.js';
 
 export class HelloWebGPU {
     constructor() {
@@ -37,40 +36,24 @@ export class HelloWebGPU {
         this.box.position.y = -1.0;
 
         const geometry = new Box(this.gpu);
+        const shader = new Shader(this.gpu, { label: 'third-box-shader', code: cubeShader });
+        const glass = { transparent: true, depthWrite: false };
 
-        const boxRenderPipeline = new RenderPipeline(this.gpu, {
-            label: 'third-box-pipeline',
-            code: cubeShader,
-            vertexBuffers: geometry.bufferLayouts,
-            depthTest: true,
-            depthWrite: false,
-            transparent: true,
-        });
+        const scaleDef = shader.defs.uniforms.scaleUniform;
+        const alphaDef = shader.defs.uniforms.alphaUniform;
 
-        const scaleDef = boxRenderPipeline.defs.uniforms.scaleUniform;
-        const alphaDef = boxRenderPipeline.defs.uniforms.alphaUniform;
+        // each mesh owns its own scale + alpha UniformBuffers, bound by WGSL name
+        const scaleAlpha = (scale, alpha) => [shader.bindGroup(0, { scaleUniform: scale, alphaUniform: alpha })];
 
-        // each mesh owns its own scale + alpha uniform structs, bound at
-        // binding 1 / 2 alongside the mesh's standard uniforms at binding 0.
-        const scaleAlphaEntries = (uniformResource, scale, alpha) => [
-            { binding: 0, resource: uniformResource },
-            { binding: 1, resource: { buffer: scale.uniformBuffer } },
-            { binding: 2, resource: { buffer: alpha.uniformBuffer } },
-        ];
+        this.secondScale = new UniformBuffer(this.gpu, scaleDef, { scale: 1 }, { label: 'second-scale' });
+        this.secondAlpha = new UniformBuffer(this.gpu, alphaDef, { alpha: 1 }, { label: 'second-alpha' });
 
-        this.secondScale = makeUniformStruct(this.gpu, scaleDef, { scale: 1 }, 'second-scale');
-        this.secondAlpha = makeUniformStruct(this.gpu, alphaDef, { alpha: 1 }, 'second-alpha');
-
-        this.secondBox = new Mesh(this.gpu, {
+        this.secondBox = new Mesh({
             label: 'second-webgpu-box',
-            pipeline: boxRenderPipeline,
             geometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: boxRenderPipeline.bindGroupLayout(0),
-                    entries: scaleAlphaEntries(uniformResource, this.secondScale, this.secondAlpha),
-                }),
-            ],
+            shader,
+            state: glass,
+            bindGroups: scaleAlpha(this.secondScale, this.secondAlpha),
         });
 
         this.secondBox.setParent(this.scene);
@@ -78,30 +61,30 @@ export class HelloWebGPU {
         this.secondBox.position.y = -1.0;
         this.secondBox.position.z = 0;
 
-        this.thirdScale = makeUniformStruct(this.gpu, scaleDef, { scale: 0.5 }, 'third-scale');
-        this.thirdAlpha = makeUniformStruct(this.gpu, alphaDef, { alpha: 0.5 }, 'third-alpha');
+        this.thirdScale = new UniformBuffer(this.gpu, scaleDef, { scale: 0.5 }, { label: 'third-scale' });
+        this.thirdAlpha = new UniformBuffer(this.gpu, alphaDef, { alpha: 0.5 }, { label: 'third-alpha' });
 
-        this.thirdBox = new Mesh(this.gpu, {
+        this.thirdBox = new Mesh({
             label: 'third-webgpu-box',
-            pipeline: boxRenderPipeline,
             geometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: boxRenderPipeline.bindGroupLayout(0),
-                    entries: scaleAlphaEntries(uniformResource, this.thirdScale, this.thirdAlpha),
-                }),
-            ],
+            shader,
+            state: glass,
+            bindGroups: scaleAlpha(this.thirdScale, this.thirdAlpha),
         });
 
         this.thirdBox.setParent(this.scene);
         this.thirdBox.position.x = 0.0;
         this.thirdBox.position.y = 1.0;
 
-        this.params = { rotate: true, speed: 1.0 };
+        this.params = { rotate: true, speed: 1.0, glass: true };
 
         this.gui = new GUI({ title: 'hello webgpu' });
         this.gui.add(this.params, 'rotate');
         this.gui.add(this.params, 'speed', { min: 0, max: 5, step: 0.01 });
+        // a state swap selects another cached pipeline; the shader-owned bind group stays valid
+        this.gui.add(this.params, 'glass').on('change', ({ value }) => {
+            this.thirdBox.state = value ? glass : {};
+        });
         this.gui.uniform(this.thirdScale, 'scale', { min: 0, max: 2, step: 0.01 });
         this.gui.uniform(this.thirdAlpha, 'alpha', { min: 0, max: 1, step: 0.01 });
 

@@ -1,10 +1,10 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 154,
-    "edges": 276,
-    "modules": 100,
-    "shaders": 47,
+    "nodes": 158,
+    "edges": 289,
+    "modules": 103,
+    "shaders": 48,
     "external": 7
   },
   "hubs": [
@@ -14,7 +14,7 @@
     },
     {
       "id": "src/core/GPUEnums.js",
-      "inDegree": 9
+      "inDegree": 10
     },
     {
       "id": "src/core/primitives/vertices.js",
@@ -22,7 +22,7 @@
     },
     {
       "id": "src/core/reflect/index.js",
-      "inDegree": 6
+      "inDegree": 7
     },
     {
       "id": "src/core/Texture.js",
@@ -49,11 +49,11 @@
       "inDegree": 4
     },
     {
-      "id": "src/core/Mesh.js",
-      "inDegree": 3
+      "id": "src/utils/wgslOverrides.js",
+      "inDegree": 4
     },
     {
-      "id": "src/utils/wgslOverrides.js",
+      "id": "src/core/Mesh.js",
       "inDegree": 3
     }
   ],
@@ -152,7 +152,7 @@
       "id": "examples/hellowebgpu/BoxMesh.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 3
+      "outDegree": 2
     },
     {
       "id": "examples/hellowebgpu/cube.wgsl",
@@ -164,13 +164,7 @@
       "id": "examples/hellowebgpu/HelloWebGPU.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 4
-    },
-    {
-      "id": "examples/hellowebgpu/uniformStruct.js",
-      "type": "module",
-      "inDegree": 2,
-      "outDegree": 1
+      "outDegree": 3
     },
     {
       "id": "examples/highmeshcount/HighMeshCount.js",
@@ -463,13 +457,13 @@
     {
       "id": "pkg:@math",
       "type": "external",
-      "inDegree": 11,
+      "inDegree": 13,
       "outDegree": 0
     },
     {
       "id": "pkg:ogpu",
       "type": "external",
-      "inDegree": 28,
+      "inDegree": 27,
       "outDegree": 0
     },
     {
@@ -509,6 +503,12 @@
       "outDegree": 3
     },
     {
+      "id": "src/core/engine.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
       "id": "src/core/Geometry.js",
       "type": "module",
       "inDegree": 12,
@@ -517,26 +517,38 @@
     {
       "id": "src/core/GPUEnums.js",
       "type": "module",
-      "inDegree": 9,
+      "inDegree": 10,
       "outDegree": 0
     },
     {
       "id": "src/core/index.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 15
+      "outDegree": 18
+    },
+    {
+      "id": "src/core/legacyMesh.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 2
     },
     {
       "id": "src/core/Mesh.js",
       "type": "module",
       "inDegree": 3,
-      "outDegree": 3
+      "outDegree": 4
     },
     {
       "id": "src/core/PerDrawBuffer.js",
       "type": "module",
       "inDegree": 2,
-      "outDegree": 0
+      "outDegree": 1
+    },
+    {
+      "id": "src/core/PipelineCache.js",
+      "type": "module",
+      "inDegree": 2,
+      "outDegree": 1
     },
     {
       "id": "src/core/primitives/Box.js",
@@ -607,7 +619,7 @@
     {
       "id": "src/core/reflect/index.js",
       "type": "module",
-      "inDegree": 6,
+      "inDegree": 7,
       "outDegree": 3
     },
     {
@@ -625,14 +637,14 @@
     {
       "id": "src/core/reflect/StructView.js",
       "type": "module",
-      "inDegree": 1,
+      "inDegree": 2,
       "outDegree": 0
     },
     {
       "id": "src/core/Renderer.js",
       "type": "module",
       "inDegree": 1,
-      "outDegree": 8
+      "outDegree": 9
     },
     {
       "id": "src/core/RenderPipeline.js",
@@ -647,9 +659,15 @@
       "outDegree": 2
     },
     {
-      "id": "src/core/ShaderReload.js",
+      "id": "src/core/Shader.js",
       "type": "module",
       "inDegree": 2,
+      "outDegree": 5
+    },
+    {
+      "id": "src/core/ShaderReload.js",
+      "type": "module",
+      "inDegree": 3,
       "outDegree": 1
     },
     {
@@ -674,6 +692,12 @@
       "id": "src/core/Transform.js",
       "type": "module",
       "inDegree": 5,
+      "outDegree": 1
+    },
+    {
+      "id": "src/core/UniformBuffer.js",
+      "type": "module",
+      "inDegree": 3,
       "outDegree": 1
     },
     {
@@ -830,7 +854,7 @@
       "id": "src/modules/GUI.js",
       "type": "module",
       "inDegree": 2,
-      "outDegree": 1
+      "outDegree": 2
     },
     {
       "id": "src/modules/KTXTexture.js",
@@ -979,7 +1003,7 @@
     {
       "id": "src/utils/wgslOverrides.js",
       "type": "module",
-      "inDegree": 3,
+      "inDegree": 4,
       "outDegree": 0
     }
   ],
@@ -1050,10 +1074,6 @@
     },
     {
       "from": "examples/hellowebgpu/BoxMesh.js",
-      "to": "examples/hellowebgpu/uniformStruct.js"
-    },
-    {
-      "from": "examples/hellowebgpu/BoxMesh.js",
       "to": "pkg:ogpu"
     },
     {
@@ -1066,14 +1086,6 @@
     },
     {
       "from": "examples/hellowebgpu/HelloWebGPU.js",
-      "to": "examples/hellowebgpu/uniformStruct.js"
-    },
-    {
-      "from": "examples/hellowebgpu/HelloWebGPU.js",
-      "to": "pkg:ogpu"
-    },
-    {
-      "from": "examples/hellowebgpu/uniformStruct.js",
       "to": "pkg:ogpu"
     },
     {
@@ -1334,6 +1346,10 @@
     },
     {
       "from": "src/core/index.js",
+      "to": "src/core/PipelineCache.js"
+    },
+    {
+      "from": "src/core/index.js",
       "to": "src/core/primitives/index.js"
     },
     {
@@ -1354,6 +1370,10 @@
     },
     {
       "from": "src/core/index.js",
+      "to": "src/core/Shader.js"
+    },
+    {
+      "from": "src/core/index.js",
       "to": "src/core/skin/Skin.js"
     },
     {
@@ -1365,16 +1385,40 @@
       "to": "src/core/Transform.js"
     },
     {
+      "from": "src/core/index.js",
+      "to": "src/core/UniformBuffer.js"
+    },
+    {
+      "from": "src/core/legacyMesh.js",
+      "to": "pkg:@math"
+    },
+    {
+      "from": "src/core/legacyMesh.js",
+      "to": "src/core/reflect/index.js"
+    },
+    {
       "from": "src/core/Mesh.js",
       "to": "pkg:@math"
     },
     {
       "from": "src/core/Mesh.js",
-      "to": "src/core/reflect/index.js"
+      "to": "src/core/legacyMesh.js"
+    },
+    {
+      "from": "src/core/Mesh.js",
+      "to": "src/core/Shader.js"
     },
     {
       "from": "src/core/Mesh.js",
       "to": "src/core/Transform.js"
+    },
+    {
+      "from": "src/core/PerDrawBuffer.js",
+      "to": "pkg:@math"
+    },
+    {
+      "from": "src/core/PipelineCache.js",
+      "to": "src/core/GPUEnums.js"
     },
     {
       "from": "src/core/primitives/Box.js",
@@ -1514,6 +1558,10 @@
     },
     {
       "from": "src/core/Renderer.js",
+      "to": "src/core/PipelineCache.js"
+    },
+    {
+      "from": "src/core/Renderer.js",
       "to": "src/core/primitives/FullscreenTriangle.js"
     },
     {
@@ -1557,6 +1605,26 @@
       "to": "src/core/Texture.js"
     },
     {
+      "from": "src/core/Shader.js",
+      "to": "src/core/engine.wgsl"
+    },
+    {
+      "from": "src/core/Shader.js",
+      "to": "src/core/reflect/index.js"
+    },
+    {
+      "from": "src/core/Shader.js",
+      "to": "src/core/ShaderReload.js"
+    },
+    {
+      "from": "src/core/Shader.js",
+      "to": "src/core/UniformBuffer.js"
+    },
+    {
+      "from": "src/core/Shader.js",
+      "to": "src/utils/wgslOverrides.js"
+    },
+    {
       "from": "src/core/ShaderReload.js",
       "to": "src/core/x.wgsl"
     },
@@ -1587,6 +1655,10 @@
     {
       "from": "src/core/Transform.js",
       "to": "pkg:@math"
+    },
+    {
+      "from": "src/core/UniformBuffer.js",
+      "to": "src/core/reflect/StructView.js"
     },
     {
       "from": "src/index.js",
@@ -1987,6 +2059,10 @@
     {
       "from": "src/modules/GUI.js",
       "to": "pkg:tweakpane"
+    },
+    {
+      "from": "src/modules/GUI.js",
+      "to": "src/core/UniformBuffer.js"
     },
     {
       "from": "src/modules/KTXTexture.js",

@@ -1,90 +1,74 @@
 import { Transform } from './Transform';
-import { Mat3, Mat4, Vec2 } from '@math';
-import { makeStructuredView } from './reflect/index.js';
+import { Mat3, Mat4 } from '@math';
+import { ENGINE_GROUP } from './Shader.js';
+import { initLegacyMesh, drawLegacyMesh } from './legacyMesh.js';
 
-const _res = /* @__PURE__ */ new Vec2();
-const _offsets = [0]; // reused dynamic-offset list for group(0)
+const NO_STATE = Object.freeze({});
+const _offsets = [0, 0]; // group(1) dynamic offsets: camera slice, object slice
 
-// the per-frame uniforms draw() writes by name — see the near-miss check below
-const STANDARD_UNIFORMS = ['projectionMatrix', 'viewMatrix', 'modelMatrix', 'modelViewMatrix', 'objectMatrix', 'normalMatrix', 'cameraPosition', 'cameraQuaternion', 'resolution', 'time'];
-
-// stub for shaders that declare no `uniforms` var (vertex-pulled/hardcoded
-// geometry) — draw() still reads .views/.set/.arrayBuffer
-const NO_UNIFORMS = { views: {}, arrayBuffer: new ArrayBuffer(0), set() {} };
-
-function editDistance(a, b) {
-    const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
-    for (let j = 0; j <= b.length; j++) d[0][j] = j;
-    for (let i = 1; i <= a.length; i++) {
-        for (let j = 1; j <= b.length; j++) {
-            d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
-        }
-    }
-    return d[a.length][b.length];
-}
-
-// Renderable node: owns a structured uniform view + bind groups, binds a pipeline +
-// geometry, and issues the draw call (writes the standard per-frame uniforms). The
-// uniform buffer itself is NOT mesh-owned — every draw allocates a fresh slice of
-// the renderer's shared `PerDrawBuffer` and re-bases group(0) via a dynamic offset.
-//
-// `bindGroups` is REQUIRED — either a `GPUBindGroup[]` array or a factory
-// `(uniformResource) => GPUBindGroup[]`. The factory form receives a slice
-// descriptor (`{buffer, offset: 0, size: structSize}`) into the shared per-draw
-// buffer so group(0) can bind it at binding 0. This lets a single pipeline be
-// shared across many meshes without their per-object uniforms stomping each other.
+// Renderable node: geometry + Shader + plain `state` + bind groups. Holds no GPU
+// objects of its own — the renderer derives the GPURenderPipeline from
+// (shader, state, geometry layout, pass formats) and binds its engine group at
+// group(1) (camera + object slices of the shared PerDrawBuffer). `geometry`,
+// `shader`, `state` and `bindGroups` are all swappable; bind groups belong to
+// the shader, so a new shader needs new bind groups.
 export class Mesh extends Transform {
-    constructor(gpu, { label = 'basic mesh', pipeline, geometry, bindGroups, manualRender = false, renderOrder = 0, frustumCulled = true } = {}) {
+    constructor(options = {}, legacyOptions) {
         super();
 
-        if (!gpu) throw new Error(`[mesh ${label}] no webgpu context (gpu) provided`);
-        if (!pipeline) throw new Error(`[mesh ${label}] no pipeline provided`);
-        if (!geometry) throw new Error(`[mesh ${label}] no geometry provided`);
+        // transitional: Mesh(gpu, { pipeline, … })
+        const legacy = !!options.device;
+        const { label = 'mesh', geometry, shader, state = NO_STATE, bindGroups = [], manualRender = false, renderOrder = 0, frustumCulled = true } = legacy ? legacyOptions : options;
 
         this.label = label;
-        this.gpu = gpu;
         this.visible = true;
         this.manualRender = manualRender;
         this.renderOrder = renderOrder;
         this.frustumCulled = frustumCulled;
-
-        this.pipeline = pipeline;
-        // Mesh owns the geometry. the pipeline only carries the vertex *layout*
-        // (its `vertexBuffers`); many geometries sharing that layout can run
-        // through one pipeline — they just bind different buffers per-draw.
-        this.geometry = geometry;
-        this.modelViewMatrix = new Mat4();
-        this.normalMatrix = new Mat3();
-        this.objectMatrix = new Mat4();
-
-        // Each mesh owns a structured uniform view, built from the pipeline's
-        // reflected uniforms struct. bind groups are supplied by the caller (array
-        // or factory). Shaders without a `uniforms` var get the inert stub.
-        this.uniforms = pipeline.defs.uniforms?.uniforms ? makeStructuredView(pipeline.defs.uniforms.uniforms) : NO_UNIFORMS;
-        this.structSize = this.uniforms.arrayBuffer.byteLength;
-        // byte view handed to perDraw.write each draw — cached, not rebuilt per draw
-        this._bytes = new Uint8Array(this.uniforms.arrayBuffer);
-
-        // A misnamed standard uniform is silently skipped at draw time — flag
-        // likely typos once, at construction. u-prefixed names (uTime) are a
-        // deliberate custom-uniform convention, not near-misses.
-        for (const name of Object.keys(this.uniforms.views)) {
-            if (STANDARD_UNIFORMS.includes(name) || /^u[A-Z]/.test(name)) continue;
-            const near = STANDARD_UNIFORMS.find((s) => (s.length >= 8 || name.toLowerCase() === s.toLowerCase()) && editDistance(name.toLowerCase(), s.toLowerCase()) <= 2);
-            if (near) console.warn(`[mesh ${label}] uniform '${name}' looks like a misspelling of standard uniform '${near}' — it will never be auto-written`);
-        }
-        // slice descriptor for group(0) binding(0): the shared buffer, struct-sized,
-        // re-based per draw via dynamic offset
-        this.uniformResource = {
-            buffer: gpu.renderer.perDraw.buffer,
-            offset: 0,
-            size: this.structSize,
-        };
-        this.bindGroups = typeof bindGroups === 'function' ? bindGroups(this.uniformResource) : bindGroups;
-        this._defs = pipeline.defs;
-
         this.beforeRenderCallbacks = new Set();
         this.afterRenderCallbacks = new Set();
+
+        if (legacy) {
+            this._legacy = true;
+            initLegacyMesh(this, options, { ...legacyOptions, label });
+            return;
+        }
+
+        if (!geometry) throw new Error(`[mesh ${label}] no geometry provided`);
+        if (!shader) throw new Error(`[mesh ${label}] no shader provided`);
+
+        this.geometry = geometry;
+        this.shader = shader;
+        this.state = state;
+        this.bindGroups = bindGroups;
+
+        // depend on worldMatrix only — recomputed when Transform.worldVersion moves
+        this.normalMatrix = new Mat3();
+        this.objectMatrix = new Mat4();
+        this._derivedVersion = -1;
+    }
+
+    get state() {
+        return this._state;
+    }
+
+    // frozen: the pipeline cache compares states by identity, so a mutation would
+    // be silently ignored — replace the object instead
+    set state(state) {
+        if (!state) state = NO_STATE;
+        if (state.blending) deepFreeze(state.blending);
+        this._state = Object.freeze(state);
+    }
+
+    get bindGroups() {
+        return this._bindGroups;
+    }
+
+    set bindGroups(groups) {
+        if (groups[ENGINE_GROUP] && !this._legacy) {
+            throw new Error(`[mesh ${this.label}] bindGroups[1] must be empty — group(1) is the engine's`);
+        }
+        this._bindGroups = groups;
     }
 
     onBeforeRender(f) {
@@ -97,117 +81,72 @@ export class Mesh extends Transform {
         return this;
     }
 
-    draw({ camera = null, pass, time = 0, resolution = null } = {}) {
-        // Hot-reload guard: pipeline.defs is swapped on each reload. Rebuild the
-        // structured view from the new defs, preserving values when the byte
-        // length is unchanged, else update the slice size and warn (bind groups
-        // still reference the old size and must be recreated).
-        if (this._defs !== this.pipeline.defs) {
-            const nextDef = this.pipeline.defs.uniforms?.uniforms;
-            const next = nextDef ? makeStructuredView(nextDef) : NO_UNIFORMS;
-            if (this.uniforms.arrayBuffer.byteLength === next.arrayBuffer.byteLength) {
-                new Uint8Array(next.arrayBuffer).set(new Uint8Array(this.uniforms.arrayBuffer));
-            } else {
-                this.structSize = next.arrayBuffer.byteLength;
-                this.uniformResource.size = this.structSize;
-                console.warn(`[hot] ${this.label}: uniform layout changed — bind groups must be recreated`);
-            }
-            this.uniforms = next;
-            this._bytes = new Uint8Array(next.arrayBuffer);
-            this._defs = this.pipeline.defs;
-        }
+    updateDerived() {
+        if (this._derivedVersion === this.worldVersion) return;
+        this.normalMatrix.fromNormalMatrix(this.worldMatrix);
+        this.objectMatrix.copy(this.worldMatrix).invert();
+        this._derivedVersion = this.worldVersion;
+    }
 
-        // Shaders declare only the subset of standard uniforms they use, so a
-        // given view may be undefined — optional-chain the writes so missing
-        // ones are skipped (matches the old behaviour where wgpu-matrix
-        // silently discarded writes to a missing target).
-        const views = this.uniforms.views;
-
-        // Derived matrices are computed only when the shader declares them —
-        // so mesh.modelViewMatrix / normalMatrix / objectMatrix are stale for
-        // shaders that don't read them.
-        if (camera) {
-            views.projectionMatrix?.set(camera.projectionMatrix);
-            views.cameraPosition?.set(camera.worldPosition);
-            views.viewMatrix?.set(camera.viewMatrix);
-
-            if (views.modelViewMatrix) {
-                this.modelViewMatrix.copy(camera.viewMatrix).multiply(this.worldMatrix);
-                views.modelViewMatrix.set(this.modelViewMatrix);
-            }
-            if (views.normalMatrix) {
-                this.normalMatrix.fromNormalMatrix(this.worldMatrix);
-                views.normalMatrix.set(this.normalMatrix);
-            }
-            views.cameraQuaternion?.set(camera.worldQuaternion ?? camera.quaternion);
-        }
-
-        views.modelMatrix?.set(this.worldMatrix);
-        if (views.objectMatrix) {
-            this.objectMatrix.copy(this.worldMatrix).invert();
-            views.objectMatrix.set(this.objectMatrix);
-        }
+    draw(args) {
+        if (this._legacy) return drawLegacyMesh(this, args);
+        const { pass, passInfo, renderer, camera, cameraOffset } = args;
 
         this.beforeRenderCallbacks.forEach((cb) => cb && cb({ mesh: this, camera }));
 
-        // scalar views are length-1 typed arrays — same as uniforms.set({ time }),
-        // minus the per-draw object literal
-        views.resolution?.set(_res.set(resolution?.[0] ?? this.gpu.canvas.width, resolution?.[1] ?? this.gpu.canvas.height));
-        if (views.time) views.time[0] = time;
+        const pipeline = renderer.pipelines.get(this, passInfo);
+        if (!pipeline || cameraOffset < 0) return; // reported by the cache / buffer overflow
+        this.updateDerived();
+        // object slice lands in the CPU mirror; Renderer.render uploads the
+        // frame's slices in one writeBuffer after the pass
+        const objectOffset = renderer.perDraw.writeObject(this, camera);
+        if (objectOffset < 0) return; // per-draw buffer full: drop the draw, keep the pass valid
 
-        // a shader that never reads its uniforms has no binding(0) in the reflected
-        // layout — no slice to alloc, and group 0 must bind without a dynamic offset.
-        // The slice lands in the CPU mirror; Renderer.render uploads the frame's
-        // slices in one writeBuffer after the pass.
-        const dynamic = this.pipeline.hasDynamicUniform;
-        const offset = dynamic ? this.gpu.renderer.perDraw.write(this._bytes) : 0;
-        if (offset < 0) return; // per-draw buffer full: drop this draw, keep the pass valid
-
-        // No redundant-bind dedup — external pass.setPipeline calls on a
-        // shared pass desync an expando cache; upgrade path is a renderer-owned per-pass cache
-        // if profiling ever shows redundant setPipeline calls matter.
-        pass.setPipeline(this.pipeline.pipeline);
-
-        this.bindGroups.forEach((bindGroup, i) => {
-            if (i === 0 && dynamic) {
-                _offsets[0] = offset;
-                pass.setBindGroup(0, bindGroup, _offsets);
-            } else {
-                pass.setBindGroup(i, bindGroup);
-            }
-        });
-
-        let bindingOffset = 0;
-
-        this.geometry.nonInstancedVerts.buffers.forEach((buffer, i) => {
-            pass.setVertexBuffer(i, buffer);
-            bindingOffset++;
-        });
-
-        if (this.geometry.hasInstancedAttributes) {
-            this.geometry.instancedVerts.buffers.forEach((buffer, i) => {
-                pass.setVertexBuffer(bindingOffset + i, buffer);
-            });
+        pass.setPipeline(pipeline);
+        const groups = this._bindGroups;
+        pass.setBindGroup(0, groups[0] ?? renderer.emptyBindGroup);
+        _offsets[0] = cameraOffset;
+        _offsets[1] = objectOffset;
+        pass.setBindGroup(ENGINE_GROUP, renderer.engineBindGroup, _offsets);
+        for (let i = 2; i < groups.length; i++) {
+            pass.setBindGroup(i, groups[i] ?? renderer.emptyBindGroup);
         }
 
-        const drawBuffer = this.geometry.drawBuffer;
-        const instanceCount = this.geometry.hasInstancedAttributes ? this.geometry.instancedVerts.numElements : 1;
-
-        if (this.geometry.nonInstancedVerts.indexBuffer) {
-            pass.setIndexBuffer(this.geometry.nonInstancedVerts.indexBuffer, this.geometry.nonInstancedVerts.indexFormat);
-            if (drawBuffer) {
-                pass.drawIndexedIndirect(drawBuffer, 0);
-            } else {
-                pass.drawIndexed(this.geometry.nonInstancedVerts.numElements, instanceCount);
-            }
-        } else {
-            if (drawBuffer) {
-                pass.drawIndirect(drawBuffer, 0);
-            } else {
-                pass.draw(this.geometry.nonInstancedVerts.numElements, instanceCount);
-            }
-        }
+        drawGeometry(pass, this.geometry);
 
         this.afterRenderCallbacks.forEach((cb) => cb && cb({ mesh: this, camera }));
+    }
+}
+
+function deepFreeze(o) {
+    for (const v of Object.values(o)) if (v && typeof v === 'object') deepFreeze(v);
+    return Object.freeze(o);
+}
+
+// vertex/instance/index binding + the draw call (indexed, indirect or plain)
+export function drawGeometry(pass, geometry) {
+    const verts = geometry.nonInstancedVerts;
+    const vertexBuffers = verts.buffers;
+    for (let i = 0; i < vertexBuffers.length; i++) pass.setVertexBuffer(i, vertexBuffers[i]);
+
+    const instanced = geometry.hasInstancedAttributes;
+    if (instanced) {
+        const instanceBuffers = geometry.instancedVerts.buffers;
+        for (let i = 0; i < instanceBuffers.length; i++) {
+            pass.setVertexBuffer(vertexBuffers.length + i, instanceBuffers[i]);
+        }
+    }
+
+    const drawBuffer = geometry.drawBuffer;
+    const instanceCount = instanced ? geometry.instancedVerts.numElements : 1;
+
+    if (verts.indexBuffer) {
+        pass.setIndexBuffer(verts.indexBuffer, verts.indexFormat);
+        if (drawBuffer) pass.drawIndexedIndirect(drawBuffer, 0);
+        else pass.drawIndexed(verts.numElements, instanceCount);
+    } else if (drawBuffer) {
+        pass.drawIndirect(drawBuffer, 0);
+    } else {
+        pass.draw(verts.numElements, instanceCount);
     }
 }

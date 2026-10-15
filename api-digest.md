@@ -118,6 +118,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - contextFor(canvas, { transparent, format } = {})
   - compile({ scene, target = null } = {})
   - render({ scene, camera, target = null, loadOp = 'clear', storeOp = 'store', depthLoadOp = 'clear…)
+  - resolveScissor(node, targetWidth, targetHeight, out = {})
 
 ### src/core/Shader.js
 - **class Shader**

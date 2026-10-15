@@ -515,12 +515,24 @@ export const mat4: {
 // @core/Transform — scene-graph node. Everything renderable extends this.
 // =============================================================================
 
+export interface ScissorRect {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
 export class Transform {
     constructor();
     parent: Transform | null;
     children: Transform[];
     visible: boolean;
     label?: string;
+    /**
+     * Scissor rect in attachment pixels (device px on the canvas, texels on a RenderTarget), origin
+     * top-left. Intersected with every ancestor's; a draw clipped to nothing is skipped. Default null.
+     */
+    scissor: ScissorRect | null;
 
     matrix: Mat4;
     worldMatrix: Mat4;
@@ -1353,6 +1365,8 @@ export class Renderer {
      * canvas) asynchronously so the first draw doesn't stall. Optional.
      */
     compile(options: { scene: Transform; target?: RenderTarget | null }): Promise<void>;
+    /** `node.scissor` intersected with its ancestors' and clamped to the target; null when empty. Fills `out` if given. */
+    resolveScissor(node: Transform, targetWidth: number, targetHeight: number, out?: ScissorRect): ScissorRect | null;
     render(options: RenderOptions): void;
     /** Bind another canvas for exactly the next render(); null restores now. */
     setContext(canvas?: HTMLCanvasElement | null, options?: CanvasContextOptions): void;

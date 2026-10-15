@@ -8,6 +8,10 @@ export class Transform {
         this.parent = null;
         this.children = [];
         this.visible = true;
+        // { x, y, width, height } in attachment pixels (device px on the canvas,
+        // texels on a RenderTarget), origin top-left. Intersected with every
+        // ancestor's; a draw clipped to nothing is skipped. See Renderer.resolveScissor.
+        this.scissor = null;
 
         this.matrix = new Mat4();
         this.worldMatrix = new Mat4();

@@ -8,6 +8,8 @@ import { TextureFormat, AlphaMode } from './GPUEnums.js';
 import { FullscreenTriangle } from './primitives/FullscreenTriangle.js';
 import { Quad } from './primitives/Quad.js';
 
+const _scissor = { x: 0, y: 0, width: 0, height: 0 }; // reused per draw, consumed immediately
+
 const tempVec3 = /* @__PURE__ */ new Vec3(0, 0, 0);
 
 export class Renderer {
@@ -860,9 +862,22 @@ export class Renderer {
             this.getRenderQueue({ scene, camera, frustumCull });
 
             const args = { camera, pass, passInfo, renderer: this, cameraOffset };
-            this.renderQueue?.forEach?.((node) => {
+            // A pass starts with the full-attachment scissor, so a scene without
+            // scissors never calls setScissorRect. Once one is set it is sticky pass
+            // state; nodes without one resolve to the full rect, which resets it.
+            let sx = 0, sy = 0, sw = width, sh = height; // prettier-ignore
+            for (const node of this.renderQueue ?? []) {
+                const rect = this.resolveScissor(node, width, height, _scissor);
+                if (!rect) continue; // clipped to nothing: skip the draw (and its per-draw slice)
+                if (rect.x !== sx || rect.y !== sy || rect.width !== sw || rect.height !== sh) {
+                    pass.setScissorRect(rect.x, rect.y, rect.width, rect.height);
+                    sx = rect.x;
+                    sy = rect.y;
+                    sw = rect.width;
+                    sh = rect.height;
+                }
                 node.draw(args);
-            });
+            }
 
             pass.end();
 
@@ -886,6 +901,40 @@ export class Renderer {
         } finally {
             this.setContext(null);
         }
+    }
+
+    // Intersection of `node.scissor` and every ancestor's, clamped to the target
+    // (attachment pixels, origin top-left). Returns `out` (default: a new object)
+    // filled with { x, y, width, height }, or null when the result is empty.
+    // A scissor with a non-finite field is ignored, with a one-time warning.
+    resolveScissor(node, targetWidth, targetHeight, out = {}) {
+        let x0 = 0;
+        let y0 = 0;
+        let x1 = targetWidth;
+        let y1 = targetHeight;
+
+        for (let n = node; n; n = n.parent) {
+            const s = n.scissor;
+            if (!s) continue;
+            if (!(Number.isFinite(s.x) && Number.isFinite(s.y) && Number.isFinite(s.width) && Number.isFinite(s.height))) {
+                if (!this._badScissorWarned) {
+                    this._badScissorWarned = true;
+                    console.warn('[renderer] ignoring a scissor with a non-finite field', s);
+                }
+                continue;
+            }
+            x0 = Math.max(x0, Math.round(s.x));
+            y0 = Math.max(y0, Math.round(s.y));
+            x1 = Math.min(x1, Math.round(s.x + s.width));
+            y1 = Math.min(y1, Math.round(s.y + s.height));
+        }
+
+        if (x1 <= x0 || y1 <= y0) return null;
+        out.x = x0;
+        out.y = y0;
+        out.width = x1 - x0;
+        out.height = y1 - y0;
+        return out;
     }
 
     update = (time) => {

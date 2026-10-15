@@ -197,6 +197,18 @@ this (`frustumCulled = false` on skinned nodes). `Geometry.computeBoundingSphere
 computes from `this.attributes.position`; for storage-buffer-positioned meshes
 you must pass `{data, stride}` explicitly.
 
+## Scissor — per node, attachment pixels
+
+`node.scissor = { x, y, width, height }` clips that node and its whole subtree;
+nested scissors intersect (`Renderer.resolveScissor`), and a draw clipped to
+nothing is skipped before `draw()`. Units are **attachment pixels**: device px on
+the canvas (multiply CSS px by `renderer.dpr`), texels on a RenderTarget, origin
+top-left. Values are rounded and clamped to the target, so an oversized rect is
+safe; a non-finite field makes that scissor ignored (one warning). Scissor is
+sticky pass state: the renderer only calls `setScissorRect` when the resolved
+rect changes, so a scene without scissors costs no extra calls. It applies to
+`render()` only, not to `blit`/fullscreen passes, which set their own state.
+
 ## Mesh / Shader / state — who owns what
 
 `Shader` = module + reflected interface (`defs`, `uniforms` struct,

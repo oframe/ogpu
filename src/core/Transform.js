@@ -21,6 +21,9 @@ export class Transform {
         // bumped whenever worldMatrix is recomputed — the only place it's written;
         // Mesh caches normalMatrix/objectMatrix against it
         this.worldVersion = 0;
+        // bumped on this node and every ancestor when a child is added or
+        // removed anywhere below — RecordedGroup.stale compares it
+        this.structureVersion = 0;
         // last composed position/quaternion/scale — updateMatrix skips the compose
         // (and the world multiply it would trigger) when unchanged. NaN seeds
         // guarantee the first compose.
@@ -48,13 +51,24 @@ export class Transform {
     }
 
     addChild(child, notifyChild = true) {
-        if (!~this.children.indexOf(child)) this.children.push(child);
+        if (!~this.children.indexOf(child)) {
+            this.children.push(child);
+            this._structureChanged();
+        }
         if (notifyChild) child.setParent(this, false);
     }
 
     removeChild(child, notifyChild = true) {
-        if (~this.children.indexOf(child)) this.children.splice(this.children.indexOf(child), 1);
+        const i = this.children.indexOf(child);
+        if (~i) {
+            this.children.splice(i, 1);
+            this._structureChanged();
+        }
         if (notifyChild) child.setParent(null, false);
+    }
+
+    _structureChanged() {
+        for (let node = this; node; node = node.parent) node.structureVersion++;
     }
 
     updateMatrixWorld(force) {

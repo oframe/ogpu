@@ -1,12 +1,17 @@
-import { Camera, Renderer, Shader, Mesh, Transform, Box } from 'ogpu';
+import { Camera, Renderer, Shader, Mesh, Transform, Box, RecordedGroup } from 'ogpu';
 import { GUI } from '@modules/GUI';
 
 import highMeshCountShader from './highmeshcount.wgsl?raw';
 
 // One shader, one shared box geometry, no per-mesh resources — engine uniforms only.
-// Stress test for high draw-call counts; mesh count is live-tunable.
+// Stress test for high draw-call counts; mesh count is live-tunable. `mode`
+// (`?mode=recorded`) puts the meshes in a RecordedGroup: one render bundle replays
+// them, so render() skips the per-mesh draw encoding — but the group isn't
+// frustum culled, so every mesh is drawn.
 export class HighMeshCount {
     count = 1000;
+    mode = new URLSearchParams(location.search).get('mode') === 'recorded' ? 'recorded' : 'live';
+    animate = true;
 
     constructor() {
         this.init();
@@ -29,6 +34,10 @@ export class HighMeshCount {
         });
 
         this.scene = new Transform();
+        this.group = new RecordedGroup({ label: 'high-mesh-count-group' });
+        this.group.setParent(this.scene);
+        // the meshes live under one holder, so switching mode reparents one node
+        this.holder = new Transform();
         this.geometry = new Box(this.gpu);
 
         this.shader = new Shader(this.gpu, { label: 'high-mesh-count-shader', code: highMeshCountShader });
@@ -39,6 +48,8 @@ export class HighMeshCount {
         const gui = new GUI({ title: 'high-mesh-count' });
         gui.add(this, 'count', { min: 1, max: 50000, step: 1, label: 'mesh-count' });
         gui.button('set-mesh-count', () => this.setMeshCount(this.count));
+        gui.add(this, 'mode', { options: { live: 'live', recorded: 'recorded' } }).on('change', (e) => this.setMode(e.value));
+        gui.add(this, 'animate');
 
         addEventListener('resize', this.handleResize);
         setTimeout(this.handleResize, 150);
@@ -49,11 +60,10 @@ export class HighMeshCount {
     setMeshCount(count) {
         count = parseInt(count) || 1000;
 
-        for (const mesh of this.meshes) {
-            this.scene.removeChild(mesh);
-            mesh.destroy(); // frees its engine slot
-        }
+        for (const mesh of this.meshes) mesh.destroy(); // frees its engine slot
         this.meshes = [];
+        this.holder.setParent(null);
+        this.holder = new Transform();
 
         for (let i = 0; i < count; i++) {
             const mesh = new Mesh({
@@ -64,11 +74,20 @@ export class HighMeshCount {
 
             mesh.position.set(-100 + Math.random() * 200, -100 + Math.random() * 200, -100 + Math.random() * 200);
             mesh.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
-            mesh.setParent(this.scene);
+            mesh.setParent(this.holder);
             this.meshes.push(mesh);
         }
 
         this.count = count;
+        this.setMode(this.mode);
+    }
+
+    setMode(mode) {
+        this.mode = mode;
+        this.holder.setParent(mode === 'recorded' ? this.group : this.scene);
+        this.group.visible = mode === 'recorded';
+        // the recording is explicit: capture the new children (or none, in live mode)
+        this.group.record();
     }
 
     update = () => {
@@ -76,9 +95,11 @@ export class HighMeshCount {
         this.camera.position.set(Math.sin(time) * 180, 80, Math.cos(time) * 180);
         this.camera.lookAt([0, 0, 0]);
 
-        for (const mesh of this.meshes) {
-            mesh.rotation.x += 0.01;
-            mesh.rotation.y += 0.01;
+        if (this.animate) {
+            for (const mesh of this.meshes) {
+                mesh.rotation.x += 0.01;
+                mesh.rotation.y += 0.01;
+            }
         }
 
         this.renderer.render({ scene: this.scene, camera: this.camera });

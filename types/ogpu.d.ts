@@ -540,6 +540,8 @@ export class Transform {
     worldMatrixNeedsUpdate: boolean;
     /** Bumped whenever worldMatrix is recomputed; Mesh caches normal/object matrices against it. */
     worldVersion: number;
+    /** Bumped on this node and every ancestor when a child is added or removed below. */
+    structureVersion: number;
 
     position: Vec3;
     quaternion: Quat;
@@ -1044,6 +1046,23 @@ export class Mesh extends Transform {
     /** Make the `needs` matrices (default: both) current for this worldVersion. */
     updateDerived(needs?: number): void;
     draw(args: DrawArgs): void;
+}
+
+// =============================================================================
+// @core/RecordedGroup — a Transform whose Mesh descendants replay from a
+// GPURenderBundle recorded by record(). See src/core/CLAUDE.md for when it fits.
+// =============================================================================
+
+export class RecordedGroup extends Transform {
+    constructor(options?: { label?: string });
+    label: string;
+    readonly isRecordedGroup: true;
+    /** True once record() has run. Never recorded → the renderer skips it (warned once). */
+    readonly recorded: boolean;
+    /** Snapshot the visible descendant meshes now; bundles re-encode lazily per pass kind. */
+    record(): this;
+    /** Child set, visible, shader/version, state, geometry, bindGroups or drawBuffer/drawBufferOffset changed since record(). O(descendants). */
+    readonly stale: boolean;
 }
 
 // =============================================================================
@@ -1918,6 +1937,9 @@ declare module '@core/Transform' {
 }
 declare module '@core/Camera' {
     export { Camera, CameraOptions };
+}
+declare module '@core/RecordedGroup' {
+    export { RecordedGroup };
 }
 declare module '@core/Mesh' {
     export { Mesh, MeshOptions, MeshState, DrawArgs, BoundState, drawGeometry };

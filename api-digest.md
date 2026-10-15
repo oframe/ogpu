@@ -75,6 +75,11 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - clear()
 - fn `resolveState(state)`
 
+### src/core/RecordedGroup.js
+- **class RecordedGroup** extends Transform
+  - constructor({ label = 'recorded-group' } = {})
+  - record()
+
 ### src/core/RenderPipeline.js
 - **class RenderPipeline**
   - constructor(gpu, { label = 'rendering', code = ``, vertexBuffers = [], targets, depthTest = true, dep…)
@@ -172,6 +177,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { Transform } from './Transform.js'
 - re-export { Camera } from './Camera.js'
 - re-export { Mesh } from './Mesh.js'
+- re-export { RecordedGroup } from './RecordedGroup.js'
 - re-export { Geometry } from './Geometry.js'
 - re-export { Box, Sphere, Plane, Torus, Cylinder, Disc, Cone, Quad, FullscreenTriangle } from './primitives/index.js'
 - re-export { Shader } from './Shader.js'
@@ -473,6 +479,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - constructor()
   - init()
   - setMeshCount(count)
+  - setMode(mode)
 
 ### examples/instancing/Instancing.js
 - **class Instancing**

@@ -326,6 +326,72 @@ group: `mesh.bindGroups[0] = shader.bindGroup(0, { …fresh views })`. For a
 per-frame ping-pong, prebuild the variants and swap the slot:
 `mesh.bindGroups[0] = variants[t % 2]`.
 
+## RecordedGroup — recorded draws, replayed
+
+`RecordedGroup` (a `Transform`) draws its Mesh descendants from a
+`GPURenderBundle` instead of one by one. `group.record()` is the only moment the
+draw list is captured: it snapshots the visible meshes, sorted by shader, state,
+geometry and first bind group, and the renderer encodes one bundle per pass kind
+(formats + sample count + camera slot) on first use. Nothing re-records on its
+own.
+
+**When it fits** — a large opaque set whose draw list is fixed: scenery, a
+city block, thousands of props. Children may still move: each keeps its fixed
+engine slot, rewritten when its `worldVersion` moves, and the bundle reads it
+through an offset frozen at encode time. Measured on
+`highmeshcount` (10000 meshes, recorded vs live): `render()` CPU 5.80 → 0.79 ms
+static, 5.90 → 0.74 ms orbiting, 10.8 → 7.9 ms with every child moving; frame
+wall −64% static (−26% at 1000 meshes). GPU time rises (+60%) because the
+group draws all 10000 where the culled live path drew 5780.
+
+**When it doesn't** — anything the renderer decides per frame: frustum culling
+(a group draws everything it recorded), transparent sorting (the replay runs
+before every live draw, in record order), `renderOrder`, `onBeforeRender`, or
+content whose shader / `state` / geometry / bind groups swap often (each swap
+needs a `record()`: 10000 meshes measured 2 ms to record plus 4.4 ms for the frame that
+re-encodes, against 6.9 ms for a live frame).
+
+- **What a camera move costs:** one camera slot. The object block holds no
+  camera data (0.11.0), so a moving camera rewrites nothing per child.
+- **`stale`** is true when the child set, a `visible`, a shader (or its hot
+  reload `version`), `state`, `geometry`, `bindGroups` (array or entries), or a
+  geometry's `drawBuffer` / `drawBufferOffset` changed since `record()` (not
+  `manualRender`, `renderOrder`, `frustumCulled`, callbacks or a child scissor
+  set later — the replay ignores those anyway). It walks
+  the whole recording (O(descendants)), so sample it. A stale group keeps
+  replaying what it recorded and warns once; you decide when to `record()`.
+- **Engine-side changes re-encode the same recording** without a `record()`:
+  a replaced engine buffer (growth or device restore), a cleared pipeline cache, or a
+  recorded mesh that came back with another slot (destroyed, or drawn by another
+  renderer). A bundle over a destroyed buffer can't replay at all.
+- **Never recorded** → warned once, its children are not drawn. Its subtree
+  never enters the live queue either way, and an emptied group still replays
+  its last recording — hide it or `record()` it empty.
+- A RecordedGroup inside another is just part of the outer recording: the
+  queue walk stops at the outer group, so the inner one's `record()` is unused.
+- The recording holds its meshes strongly: a child removed and dropped is not
+  collected (nor its slot freed) until the next `record()`.
+- `record()` warns once when it captures a transparent, depth-test-off,
+  `renderOrder`'d or callback mesh: the replay ignores all of that.
+- Bundles are kept per pass kind + camera slot (the 16 most recently used per
+  group; a group drawn in more passes per frame re-encodes every frame). Driving
+  `render()` outside `Renderer.update` without `perDraw.reset()` moves the camera
+  slot every call, so every frame re-encodes — reset once per frame.
+- **GPU culling still works:** a mesh whose geometry draws indirectly
+  (`drawBuffer` + `drawBufferOffset`) is recorded as `drawIndexedIndirect` /
+  `drawIndirect`, so a compute pass rewriting the args each frame changes what
+  the bundle draws without re-recording. Moving `drawBufferOffset` or swapping
+  `drawBuffer` makes the group stale. Instance counts of non-indirect instanced
+  geometry are baked at encode.
+- **Scissor:** a bundle can't set one; executeBundles keeps the pass's scissor
+  (only pipeline, bind groups and buffers are reset after it). Each group replays
+  under its own resolved scissor (`resolveScissor(group)`), and a group clipped
+  to nothing is skipped. A child's own `scissor` can't apply inside a recording —
+  `record()` warns once; keep such a child outside the group.
+- **Lower level:** `group._bundleFor(renderer, passInfo, cameraOffset)` is what
+  `render()` calls; a custom pass should go through `render({ encoder })`
+  instead.
+
 ## RenderPipeline — fullscreen passes and direct draws
 
 `RenderPipeline` is for passes with fixed geometry and a fixed target

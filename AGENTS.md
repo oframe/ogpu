@@ -13,7 +13,7 @@ Hand-rolled WebGPU engine. Vanilla JS, Vite, no framework, no TypeScript (ambien
 This file is the _why_; api-digest is the _what_. Keep method lists out of here.
 
 Each source directory has its own `CLAUDE.md` with that area's footguns, auto-loaded when you read files there:
-`src/core/` (Renderer, Transform, Camera, Mesh, Shader, UniformBuffer, PipelineCache, PerDrawBuffer, RenderPipeline, Geometry, ComputeShader, Texture, RenderTarget, `reflect/`, `primitives/`, `skin/`, ShaderReload) · `src/math/` (in-house, no dependency: the `@math/functions` layer — `vec2`/`vec3`/`vec4`/`quat`/`mat3`/`mat4`, out param last — under chainable `Float32Array`-subclass classes) · `src/modules/` (Orbit, Raycast, GUI, Animation, GLTFLoader, CubeMap, VideoTexture, `pbr/`, `gsplat/`) · `src/utils/IBLUtils/`.
+`src/core/` (Renderer, Transform, Camera, Mesh, RecordedGroup, Shader, UniformBuffer, PipelineCache, PerDrawBuffer, RenderPipeline, Geometry, ComputeShader, Texture, RenderTarget, `reflect/`, `primitives/`, `skin/`, ShaderReload) · `src/math/` (in-house, no dependency: the `@math/functions` layer — `vec2`/`vec3`/`vec4`/`quat`/`mat3`/`mat4`, out param last — under chainable `Float32Array`-subclass classes) · `src/modules/` (Orbit, Raycast, GUI, Animation, GLTFLoader, CubeMap, VideoTexture, `pbr/`, `gsplat/`) · `src/utils/IBLUtils/`.
 `src/utils/` is standalone helpers; `examples/` is runnable demos at the repo root.
 
 `examples/` covers shadows, skinning, PBR/IBL, render targets, compute particles, glTF. Anything overlapping those extends the existing path rather than starting a new one.
@@ -25,6 +25,8 @@ Each source directory has its own `CLAUDE.md` with that area's footguns, auto-lo
 - **A Mesh is geometry + Shader + `state` + bind groups; the renderer derives the pipeline.** `new Mesh({ geometry, shader, state, bindGroups })` takes no `gpu` and owns no GPU objects. `state` is a plain object, frozen on assignment — replace it, don't mutate it. `renderer.pipelines` builds each pipeline on first draw from (shader + version, state, `geometry.layoutKey`, the pass's formats + sample count), so target formats are never declared; `renderer.compile({ scene, target })` pre-warms. Bind groups belong to the shader (`shader.bindGroup(0, { uniforms, tMap })`, by WGSL name): a shader swap needs new ones, a state/geometry swap doesn't. Custom values go in a `UniformBuffer` whose `set()` uploads immediately — shared by every pass in a submit, so per-view values need one buffer + bind group per view. Details in `src/core/CLAUDE.md`.
 
 `Renderer.render` takes an optional external `encoder` to chain passes into one submit, and `target` selects a `RenderTarget`'s attachments over the bound canvas swapchain.
+
+**Recorded draws:** a `RecordedGroup` (src/core) replays its static subtree from a render bundle — the when-to/when-not rule and the `stale` + `record()` contract are in `src/core/CLAUDE.md`. Use it for large fixed opaque sets; never for CPU-culled, sorted-transparent or frequently swapped content.
 
 ## Coding conventions
 

@@ -41,6 +41,10 @@ export class Renderer {
         // every context this renderer configured (extra canvases) — released in destroy()
         this._contexts = new Set();
         this.ready = getPromise();
+        this._groups = []; // RecordedGroups met by the last getRenderQueue
+        this._bundles = [];
+        this._bundleRects = []; // resolved scissor per entry of _bundles
+        this._oneBundle = [null];
         this.isReady = false;
         // first initDevice() runs init() (one-time canvas/handler setup); later
         // re-acquisitions run _restore() instead.
@@ -466,6 +470,7 @@ export class Renderer {
         this.perDraw = null;
         this.pipelines?.clear();
         this._engineBindGroup = this.emptyBindGroup = null;
+        this._groups.length = this._bundles.length = 0;
 
         // reason 'destroyed' — _onDeviceLost deliberately doesn't recover from
         // it, and the _destroyed guard above silences the loss report
@@ -588,8 +593,16 @@ export class Renderer {
         const cull = frustumCull && !!camera;
         if (cull) camera.updateFrustum();
 
+        const groups = this._groups;
+        groups.length = 0;
+
         scene.traverse((node) => {
             if (!node.visible) return true;
+            // drawn from its bundle; its subtree never enters the live queue
+            if (node.isRecordedGroup) {
+                groups.push(node);
+                return true;
+            }
             if (node.manualRender) return;
             if (!node.draw) return;
             if (cull && node.frustumCulled && !camera.frustumIntersectsMesh(node)) return;
@@ -777,6 +790,40 @@ export class Renderer {
         return renderPassDescriptor;
     }
 
+    // Bundles of the RecordedGroups the queue walk met: refresh their children's
+    // slots (only moved ones write), encode per pass kind on first use. A group
+    // never recorded is skipped (warned once); a stale one still replays.
+    _recordedBundles(passInfo, cameraOffset, width, height) {
+        const bundles = this._bundles;
+        const rects = this._bundleRects;
+        bundles.length = 0;
+        const groups = this._groups;
+        for (let i = 0; i < groups.length; i++) {
+            const group = groups[i];
+            // a bundle can't set the scissor: it replays under the group's own
+            // resolved rect, and a group clipped to nothing is skipped
+            const r = (rects[bundles.length] ??= { x: 0, y: 0, width: 0, height: 0 });
+            if (!this.resolveScissor(group, width, height, r)) continue;
+            if (!group.recorded) {
+                if (!group._unrecordedWarned) {
+                    group._unrecordedWarned = true;
+                    console.warn(`[renderer] RecordedGroup '${group.label}' was never recorded — call record(); its children are not drawn`);
+                }
+                continue;
+            }
+            group._writeSlots(this.perDraw);
+            // stale is O(descendants): sampled, it only feeds a warning
+            if (!group._staleWarned && (group._staleTick = (group._staleTick + 1) % 30) === 0) {
+                if (group.stale) {
+                    group._staleWarned = true;
+                    console.warn(`[renderer] RecordedGroup '${group.label}' is stale (children changed since record()) — replaying the old recording; call record()`);
+                }
+            }
+            bundles.push(group._bundleFor(this, passInfo, cameraOffset));
+        }
+        return bundles;
+    }
+
     // Formats + sample count of the pass a render() opens — the pipeline cache
     // keys on these, so a mesh drawn into a target, an MSAA target or the canvas
     // gets a matching pipeline. Mirrors _targetPassDescriptor / _canvasPassDescriptor.
@@ -868,10 +915,12 @@ export class Renderer {
             // the frame's next camera slot; every draw in the pass shares it
             const cameraOffset = this.perDraw.writeCamera(camera, this.time, width, height);
 
+            // before the pass opens: slot acquisition may grow the engine buffer
+            this.getRenderQueue({ scene, camera, frustumCull });
+            const bundles = this._recordedBundles(passInfo, cameraOffset, width, height);
+
             const _encoder = encoder || this.gpu.device.createCommandEncoder({ label: 'renderer-encoder' });
             const pass = timing ? this.timingHelper.beginRenderPass(_encoder, renderPassDescriptor) : _encoder.beginRenderPass(renderPassDescriptor);
-
-            this.getRenderQueue({ scene, camera, frustumCull });
 
             // per render(): a callback may render() into another pass mid-loop
             const args = { camera, pass, passInfo, renderer: this, cameraOffset, bound: new BoundState() };
@@ -879,6 +928,31 @@ export class Renderer {
             // scissors never calls setScissorRect. Once one is set it is sticky pass
             // state; nodes without one resolve to the full rect, which resets it.
             let sx = 0, sy = 0, sw = width, sh = height; // prettier-ignore
+            // recorded groups replay first, ahead of every live draw, each under
+            // its resolved scissor; when none is scissored they share one executeBundles
+            // (which leaves the pass with nothing bound — `bound` starts empty anyway)
+            let scissored = false;
+            for (let i = 0; i < bundles.length; i++) {
+                const r = this._bundleRects[i];
+                if (r.x || r.y || r.width !== width || r.height !== height) scissored = true;
+            }
+            if (bundles.length && !scissored) pass.executeBundles(bundles);
+            else if (bundles.length) {
+                const one = this._oneBundle;
+                for (let i = 0; i < bundles.length; i++) {
+                    const r = this._bundleRects[i];
+                    if (r.x !== sx || r.y !== sy || r.width !== sw || r.height !== sh) {
+                        pass.setScissorRect(r.x, r.y, r.width, r.height);
+                        sx = r.x;
+                        sy = r.y;
+                        sw = r.width;
+                        sh = r.height;
+                    }
+                    one[0] = bundles[i];
+                    pass.executeBundles(one);
+                }
+                one[0] = null;
+            }
             for (const node of this.renderQueue ?? []) {
                 const rect = this.resolveScissor(node, width, height, _scissor);
                 if (!rect) continue; // clipped to nothing: skip the draw

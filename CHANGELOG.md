@@ -1,5 +1,59 @@
 # Changelog
 
+## 0.10.0
+
+The math library is in-house: a function layer written from scratch replaces `wgpu-matrix`, and
+ogpu has no math dependency. The classes' API is unchanged. Ported from dgpu 0.9.0 + 0.9.1.
+
+### Added
+
+- **`@math/functions`** — `vec2`, `vec3`, `vec4`, `quat`, `mat3`, `mat4` namespaces of plain
+  functions (`import { mat4, vec3 } from '@math/functions'`, also re-exported from `@math` and
+  `ogpu`). Same signatures and semantics as the wgpu-matrix 3.x functions ogpu used: out param
+  last and optional (a `Float32Array` is allocated when it's omitted), always returned, and it
+  may alias any input. Column-major, mat3 padded to 12 floats, perspective/ortho depth in
+  [0, 1] (`far = Infinity` supported). Only the 90 functions ogpu calls exist — dgpu's
+  `mat4.create`, `mat4.invert` and `vec3.sub` are left out.
+- Fixed-size ops are written out per lane: each of vec2/vec3/vec4 spells out its componentwise
+  ops, and the identities, `perspective`/`ortho`, `mat3.copy`, `mat4.copy` and the
+  `translate`/`rotateX|Y|Z` column copies write each lane instead of using `fill`/`set` (dgpu
+  measured a shared loop 1.1–1.7× slower, 2–5× at mixed-type call sites, and `fill`/`set`
+  1.3–3×). `mat4.scale`/`getScaling` keep their 3-iteration loops. Hot paths allocate nothing.
+
+### Changed
+
+- `Vec2`–`Vec4`, `Quat`, `Mat3`, `Mat4`, `Euler`, `Mat3Utils` and `Mat4Utils` sit on the
+  function layer. Outputs match wgpu-matrix 3.4.2 bit for bit on Float32Array, Float64Array
+  and plain-array inputs, except `determinant` (≤ 1.9e-14 relative, floored at 1), with
+  Float64 inputs `inverse` (≤ 1.2e-13), and the `rotationTo` fix below; class methods match
+  the old classes the same way. Screenshots of every example match the 0.9.0 baseline. CPU
+  on `highmeshcount` is unchanged
+  within noise: `render()` 0.502 → 0.502 ms at 1000 meshes and 7.99 → 8.05 ms at 10000 static,
+  0.665 → 0.664 / 8.86 → 8.67 ms with every mesh moving (mean of three interleaved page loads,
+  best of 7 each).
+- `mat3.copy` / `mat3.identity` also write the padding slots 3/7/11 (copied / zeroed).
+  `mat3.copy` reads exactly 12 floats: a shorter source leaves NaN in the missing slots.
+- A plain-array `out` works at any length (lanes are written by index).
+
+### Fixed
+
+- **`quat.rotationTo` / `Quat.setFromUnitVectors` with antiparallel vectors** (dot < -0.999999)
+  return a real 180° turn `(axis, 0)`, axis = normalize(x̂ × a), or ŷ × a when a is near ±x̂.
+  wgpu-matrix 3.4.2 returned the degenerate `(0, 0, 0, cos(π/2))`, which acts as no rotation.
+
+### Removed
+
+- **`wgpu-matrix`** (dependency and imports).
+
+### Migration
+
+1. `import { mat4, vec3 } from 'wgpu-matrix'` → `import { mat4, vec3 } from 'ogpu'` (examples) or
+   `from '@math/functions'` (inside `src/`). Call sites don't change.
+2. Only the functions ogpu uses exist. A missing one (`mat4.rotation`, `vec3.clamp`, …) means
+   adding it to `src/math/functions/` with the same out-last contract.
+3. Never take `subarray()` or a partial `slice(a, b)` of a math class instance — species
+   construction returns a fresh full-size instance, not a view (see `src/math/CLAUDE.md`).
+
 ## 0.9.0
 
 Meshes hold a Shader, a plain `state` object and bind groups; the renderer derives their

@@ -35,7 +35,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 
 ### src/core/Geometry.js
 - **class Geometry**
-  - constructor(gpu, { data, instancedData, interleave = false, drawBuffer = null, usage = 0 } = {})
+  - constructor(gpu, { data, instancedData, interleave = false, drawBuffer = null, drawBufferOffset = 0, …)
   - computeBoundingBox(attr = this._positionAttr())
   - computeBoundingSphere(attr = this._positionAttr())
   - destroy()

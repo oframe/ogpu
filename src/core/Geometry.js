@@ -5,13 +5,16 @@ export class Geometry {
     // usage: extra GPUBufferUsage flags OR'd into every vertex/instance buffer.
     // They're created VERTEX-only, so runtime updates via queue.writeBuffer
     // need `usage: GPUBufferUsage.COPY_DST` here.
-    constructor(gpu, { data, instancedData, interleave = false, drawBuffer = null, usage = 0 } = {}) {
+    constructor(gpu, { data, instancedData, interleave = false, drawBuffer = null, drawBufferOffset = 0, usage = 0 } = {}) {
         if (!data) {
             throw new Error('Geometry: `data` attribute arrays are required — drawBuffer-only geometry without vertex data is not supported');
         }
 
         this.attributes = data;
         this.drawBuffer = drawBuffer;
+        // Byte offset of this geometry's args inside `drawBuffer` — non-zero when
+        // several geometries share one buffer of packed indirect args.
+        this.drawBufferOffset = drawBufferOffset;
 
         this.nonInstancedVerts = createBuffers(gpu.device, data, { usage });
 

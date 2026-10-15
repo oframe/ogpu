@@ -184,6 +184,7 @@ export function drawGeometry(pass, geometry, bound) {
     }
 
     const drawBuffer = geometry.drawBuffer;
+    const drawOffset = geometry.drawBufferOffset ?? 0;
     const instanceCount = instanced ? geometry.instancedVerts.numElements : 1;
 
     if (verts.indexBuffer) {
@@ -194,10 +195,10 @@ export function drawGeometry(pass, geometry, bound) {
                 bound.indexFormat = verts.indexFormat;
             }
         }
-        if (drawBuffer) pass.drawIndexedIndirect(drawBuffer, 0);
+        if (drawBuffer) pass.drawIndexedIndirect(drawBuffer, drawOffset);
         else pass.drawIndexed(verts.numElements, instanceCount);
     } else if (drawBuffer) {
-        pass.drawIndirect(drawBuffer, 0);
+        pass.drawIndirect(drawBuffer, drawOffset);
     } else {
         pass.draw(verts.numElements, instanceCount);
     }

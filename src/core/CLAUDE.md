@@ -196,6 +196,10 @@ key, so geometries with equal layouts share pipelines; every `@location` the
 shader's `vs` reads must be in that layout or the cache reports the mesh and
 skips it.
 
+Indirect draws: `geometry.drawBuffer` holds the args and `drawBufferOffset`
+(bytes, default 0) says where this geometry's args start, so several geometries can
+share one packed args buffer (a GPU culling pass writing one set per bucket).
+
 ## Frustum culling exclusions
 
 `Camera.frustumIntersectsMesh` skips auto-cull (returns `true`) for any

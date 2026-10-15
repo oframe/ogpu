@@ -636,6 +636,8 @@ export interface GeometryOptions {
     interleave?: boolean;
     /** GPUBuffer for drawIndirect / drawIndexedIndirect (indirect instance count). */
     drawBuffer?: GPUBuffer | null;
+    /** Byte offset of this geometry's args inside `drawBuffer` (default 0; a multiple of 4) — for packed indirect args shared by several geometries. */
+    drawBufferOffset?: number;
     /**
      * Extra GPUBufferUsage flags OR'd into every vertex/instance buffer.
      * They are created VERTEX-only — pass GPUBufferUsage.COPY_DST
@@ -648,6 +650,8 @@ export class Geometry {
     constructor(gpu: GPU, options: GeometryOptions);
     attributes: GeometryData;
     drawBuffer: GPUBuffer | null;
+    /** Byte offset of the indirect args inside `drawBuffer`. */
+    drawBufferOffset: number;
     /** `{ buffers, bufferLayouts, indexBuffer?, indexFormat?, numElements… }`. */
     nonInstancedVerts: any;
     /** Same shape as `nonInstancedVerts`; `{}` when not instanced. */

@@ -102,7 +102,14 @@ intent, newer versions, changelog).
   untyped form folds). OGPU's `reflect()` bridges both on a parse-only copy, so
   only a raw `makeShaderDataDefinitions` call hits them.
 - Struct views: f16 scalars are `Uint16Array` (raw bits), f16 vectors/matrices
-  `Float16Array` (values) — the module references `Float16Array` at load.
+  `Float16Array` (values) — the module references `Float16Array` at load, so
+  OGPU imports it only through `@utils/webgpu-utils`, which installs a
+  `Uint16Array`-subclass stub where it's missing (Chrome/Edge < 135) just for
+  the library's load and deletes it after. There, f16 vector/matrix views hold
+  raw bits and plain-number 16float texture data is truncated and wrapped to uint16 (both
+  warned once). Never import `'webgpu-utils'` directly (lint-enforced), and
+  re-check the library's `Float16Array` reads (all module-scope in 2.1.1) on any
+  version bump.
 
 ## The two highest-traffic areas
 

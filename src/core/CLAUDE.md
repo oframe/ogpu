@@ -438,27 +438,39 @@ through to the default — resolution keys on `Object.keys(...).length`, and the
 descriptor must wrap the result under a `depthStencil:` key (spreading the bare
 object lands its keys at the top level where WebGPU silently ignores them).
 
-## Reflection — `./reflect` on wgsl_reflect
+## Reflection — `./reflect` over webgpu-utils
 
-Shader, RenderPipeline and ComputeShader all reflect through `./reflect`:
-`reflect(code)` returns the defs every caller reads (`uniforms`, `storages`,
-`textures`, `samplers`, `storageTextures`, `externalTextures`, `structs`,
-`entryPoints[name].resources/inputs`), `StructView`/`makeStructuredView` lay a
-reflected type out over an ArrayBuffer, and `bindGroupLayoutDescriptors`
-derives layouts. Traps:
+Shader, RenderPipeline and ComputeShader all reflect through `./reflect`.
+`reflect(code)` is webgpu-utils' `makeShaderDataDefinitions` (pinned 2.1.1, its
+bundled wgsl_reflect) plus `inputs` on every entry point — the @location
+parameters, scanned from the source on first read (only PipelineCache's
+vertex-input check reads them). `StructView`/`makeStructuredView` lay a
+reflected type out over an ArrayBuffer (`makeTypedArrayViews`, with a local
+`setStructuredView`: the library's measured 1.9× slower per `set()`), and
+`bindGroupLayoutDescriptors(defs, names, { skip })` derives layouts (one entry
+point per stage). Traps:
 
-- wgsl_reflect rejects `block` as an identifier (naga and Tint accept it).
-  `reflect` renames it in the parser's copy only and restores reflected names;
-  add any other parser-only reserved word to `PARSER_RESERVED`. naga, in turn,
-  rejects `target` — `validate:shaders` passing doesn't prove the parser is
-  happy, and vice versa.
+- The parser rejects `block` as an identifier and typed integer const
+  expressions (`const M: u32 = (1u << 19u) - 1u;` → "Invalid cast from f32 to
+  u32"). Both are bridged on a parse-only, comment-free copy (`block` renamed,
+  then restored in every reflected name; the const loses its type). Anything
+  else the parser rejects throws at Shader / RenderPipeline / ComputeShader
+  construction with the label attached. naga, in turn, rejects `target` —
+  `validate:shaders` passing doesn't prove the parser is happy, and vice versa.
 - Layouts hold only the resources an entry point uses (visibility = union of
-  the stages that use them). wgsl_reflect 1.6 follows calls and switch-case
-  bodies, so a binding read only inside a `case` now reaches the layout.
-- Samplers reflect as `'filtering'` (or `'comparison'`); `'non-filtering'`
+  the stages that use them), following helper calls and switch-case bodies —
+  not a `switch` selector: a binding read only there is dropped.
+- Every `texture_*<f32>` binding reflects as `sampleType: 'float'`; samplers as
+  `'filtering'` (or `'comparison'`) — `'unfilterable-float'` / `'non-filtering'`
   can't be derived from WGSL.
-- Node can't import `wgsl_reflect` bare (CJS `main` in a type:module package);
-  Vite resolves its `module` field.
+- `StructView` f16 scalars are Uint16Array (raw bits), f16 vectors and matrices
+  Float16Array (values) — on Chrome/Edge < 135 the `@utils/float16-shim` stub,
+  so raw bits there too (warned once); plain-number 16float texture data is
+  truncated and wrapped to uint16 there (textureFromSource warns once). Import
+  webgpu-utils only through `@utils/webgpu-utils`, which defines the stub before
+  the library loads and deletes the global after (lint-enforced).
+- Don't call webgpu-utils' `setIntrinsicsToView` — it's global and reshapes
+  every struct view's arrays.
 
 ## ComputeShader — kernel cache invalidation
 

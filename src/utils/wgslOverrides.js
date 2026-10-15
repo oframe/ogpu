@@ -12,8 +12,9 @@
 // A constant whose value is absent falls back to its WGSL default expression.
 // Default expressions that reference earlier overrides or module-scope consts
 // are resolved to numeric literals when possible, so the baked output never
-// contains non-literal initialiser expressions that confuse wgsl_reflect's
-// WGSL parser (which errors with "Invalid cast" on unresolvable identifiers).
+// contains non-literal initialiser expressions that confuse the reflection
+// parser (webgpu-utils' wgsl_reflect, which errors with "Invalid cast" on
+// unresolvable identifiers).
 
 const OVERRIDE_RE = /(?:@id\s*\(\s*\d+\s*\)\s*)?override\s+([A-Za-z_]\w*)\s*(?::\s*([A-Za-z_][\w<>]*))?\s*(?:=\s*([^;]+?))?\s*;/g;
 

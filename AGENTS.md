@@ -13,7 +13,7 @@ Hand-rolled WebGPU engine. Vanilla JS, Vite, no framework, no TypeScript (ambien
 This file is the _why_; api-digest is the _what_. Keep method lists out of here.
 
 Each source directory has its own `CLAUDE.md` with that area's footguns, auto-loaded when you read files there:
-`src/core/` (Renderer, Transform, Camera, Mesh, RecordedGroup, Shader, UniformBuffer, PipelineCache, PerDrawBuffer, RenderPipeline, Geometry, ComputeShader, Texture, RenderTarget, `reflect/`, `primitives/`, `skin/`, ShaderReload) · `src/math/` (in-house, no dependency: the `@math/functions` layer — `vec2`/`vec3`/`vec4`/`quat`/`mat3`/`mat4`, out param last — under chainable `Float32Array`-subclass classes) · `src/modules/` (Orbit, Raycast, GUI, Animation, GLTFLoader, CubeMap, VideoTexture, `pbr/`, `gsplat/`) · `src/utils/IBLUtils/`.
+`src/core/` (Renderer, Transform, Camera, Mesh, RecordedGroup, Shader, UniformBuffer, PipelineCache, PerDrawBuffer, RenderPipeline, Geometry, ComputeShader, Texture, RenderTarget, `reflect/`, `primitives/`, `skin/`, ShaderReload) · `src/math/` (the `@math/functions` layer — `vec2`/`vec3`/`vec4`/`quat`/`mat3`/`mat4`, out param last; `wgpu-matrix` plus local overrides, imported from here, never `wgpu-matrix` directly, lint-enforced — under chainable `Float32Array`-subclass classes) · `src/modules/` (Orbit, Raycast, GUI, Animation, GLTFLoader, CubeMap, VideoTexture, `pbr/`, `gsplat/`) · `src/utils/IBLUtils/`.
 `src/utils/` is standalone helpers; `examples/` is runnable demos at the repo root.
 
 `examples/` covers shadows, skinning, PBR/IBL, render targets, compute particles, glTF. Anything overlapping those extends the existing path rather than starting a new one.
@@ -35,26 +35,26 @@ Each source directory has its own `CLAUDE.md` with that area's footguns, auto-lo
 - **WGSL short type aliases.** `vec3f` not `vec3<f32>`, `mat4x4f` not `mat4x4<f32>` (`h` suffix for f16). Texture/atomic/array/ptr keep their generic form.
 - **WGSL vertex entry parameter is named `in`** — `fn vs(in: Vertex) -> VertexOutput`, mirroring `fs`.
 - **Comments earn their place.** Only when they add a why, a gotcha, or a non-obvious invariant. No `ponytail:`/agent prefixes in committed comments — keep the content, strip the prefix.
-- **Use the lookup skill, don't answer from memory.** WebGPU platform questions → `webgpu-spec-lookup`.
+- **Use the lookup skills, don't answer from memory.** WebGPU platform questions → `webgpu-spec-lookup`. `webgpu-utils` library questions → `webgpu-utils-lookup`.
 
 ## Shaders
 
 WGSL lives next to its importer, loaded via `?raw`. Cross-example shaders live in `src/modules/pbr/`. Aliases work in `?raw` imports (`@modules/pbr/pbr.wgsl?raw`); keep same-directory imports relative.
 
-Conventions (reflection is internal — `src/core/reflect/` on `wgsl_reflect`):
+Conventions (reflection goes through `src/core/reflect/` on `webgpu-utils`):
 
 - A Mesh shader starts with `// validate-prepend: ../../src/core/engine.wgsl` (from `examples/<name>/`; module shaders use their own relative path, e.g. `pbr.wgsl` → `../../core/engine.wgsl`) so `validate:shaders` sees `camera`/`object` (the validator hoists `enable` directives above prepends).
 - Custom values: `var<uniform> uniforms` at `@group(0) @binding(0)`, typed as a struct holding only your own fields; `shader.uniforms` is its reflected struct (feed it to `UniformBuffer`). No custom values → no struct, no binding. `shader.uniforms` is found by the var NAME `uniforms`; other uniform vars (hellowebgpu's `scaleUniform`/`alphaUniform`, pbr's `material`) are reached via `shader.defs.uniforms.<name>`.
 - Entry points: vertex `vs`, fragment `fs` (optional — a vertex-only module is a depth-only pipeline), hardcoded in `Shader`/`RenderPipeline`. Compute entry points can be anything — each becomes a kernel keyed by its name.
 - `RenderPipeline` is for fullscreen passes and other non-Mesh draws only: no engine block, a fully reflected layout, nothing dynamic.
-- Layouts hold only the resources an entry point actually uses; `shader.bindGroup` drops declared-but-unused names and throws on undeclared ones.
+- Layouts hold only the resources an entry point actually uses (helper calls and switch-case bodies count — a `switch` selector does not: a binding read only there is dropped, so read it into a `let` first); `shader.bindGroup` drops declared-but-unused names and throws on undeclared ones.
 - Texture uniforms take a `t<Name>` prefix (`tMap`, `tNormal`, `tBrdf`). Samplers are not textures — descriptive names (`iblSampler`).
 
 `npm run validate:shaders` checks every `**/*.wgsl` with `naga`, no browser needed (single file: `node scripts/validate-shaders.mjs <file>`). Install with `brew install naga-cli` — **not** `brew install naga`, an unrelated Snake game that takes the same binary name.
 
 ## Optional features are not guaranteed
 
-`Renderer.initDevice` feature-detects its `wantedFeatures` wishlist and drops (with a warn) anything the adapter lacks, so the engine boots anywhere. Guard any path that needs one on `device.features.has(...)` — `TimingHelper` gates on `'timestamp-query'`, `ComputeShader` timing is opt-in via `timing: true`. Texture-compression families are platform-split (`astc`/`etc2` ≈ mobile/Apple, `bc` ≈ desktop).
+`Renderer.initDevice` feature-detects its `wantedFeatures` wishlist and drops (with a warn) anything the adapter lacks, so the engine boots on any WebGPU adapter. webgpu-utils 2.x references `Float16Array` when it loads; Chrome/Edge 113–134 lack it, so `@utils/webgpu-utils` — the only module allowed to import webgpu-utils (lint-enforced) — installs a `Uint16Array`-subclass stand-in just before the library loads and deletes it right after (app code still sees no `Float16Array`). On those browsers two kinds of data degrade: f16 vector/matrix struct-view fields hold raw bits, not values (`StructView` warns once — use f32 fields or an f32 shader variant), and plain-number `*16float` texture data passed to the texture helpers is truncated and wrapped to uint16 (`textureFromSource` warns once — pass half-float bits in a `Uint16Array`, or use a 32float format). The shim, unshim and wrapper are the package's declared side effects (`sideEffects` in package.json) — keep them listed or bundlers drop or reorder them. Guard any path that needs one on `device.features.has(...)` — `TimingHelper` gates on `'timestamp-query'`, `ComputeShader` timing is opt-in via `timing: true`. Texture-compression families are platform-split (`astc`/`etc2` ≈ mobile/Apple, `bc` ≈ desktop).
 
 ## Running examples
 
@@ -69,10 +69,10 @@ Keys live in the `views` map, gallery rows in the `items` array inside `renderLa
 
 - `public/assets/` — KTX cubemaps, PBR textures, JSON rigs/animations. Plain `fetch('./assets/...')`.
 - `public/libktx_read.js` + `.wasm` — Khronos KTX reader, loaded as a global `<script>` in `index.html`; `initDevice` stashes it on `window.ktx`, ready once `renderer.ready` resolves.
-- No math dependency — see `src/math/`.
-- `wgsl_reflect` — the WGSL parser under `src/core/reflect/`. Vertex generators (`src/core/primitives/vertices.js`), mip chains (`@utils/mipmap`) and texture upload (`@utils/textureFromSource`) are in-house.
+- `webgpu-utils` (pinned exactly, 2.1.1 — its bundled parser is part of the contract) — WGSL reflection, struct views and layout derivation under `src/core/reflect/`, plus `Geometry`'s vertex buffers, the `primitives` generators (`src/core/primitives/vertices.js`), and the mip/texture helpers behind `@utils/mipmap` / `@utils/textureFromSource`. Its parser rejects `block` as an identifier and typed integer const expressions (`const M: u32 = (1u << 19u) - 1u;`); `reflect()` bridges both on a parse-only copy, so only a raw `makeShaderDataDefinitions` call hits them. naga rejects `target`.
+- `wgpu-matrix` (pinned, 3.4.2) — behind `@math/functions` only (see `src/math/CLAUDE.md`).
 - `parse-exr` — EXR loading inside `@utils/IBLUtils`.
-- `@utils/wgslOverrides` (`applyOverrideConstants`) — Safari lacks pipeline-overridable constants, so this bakes `override` decls into module-scope `const` literals before compile, resolving default expressions to numeric literals so wgsl_reflect's parser doesn't choke.
+- `@utils/wgslOverrides` (`applyOverrideConstants`) — Safari lacks pipeline-overridable constants, so this bakes `override` decls into module-scope `const` literals before compile, resolving default expressions to numeric literals so the reflection parser doesn't choke.
 
 Recurring trap across areas: destroying/recreating a `Texture` invalidates its views, so any bind group holding them is stale — rebuild it (`mesh.bindGroups[0] = shader.bindGroup(0, {...})`, or against `pipeline.bindGroupLayout(i)` for a fullscreen pass).
 

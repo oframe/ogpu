@@ -48,7 +48,7 @@ The framework is split into **Core**, **Math**, and **Modules**.
 
 The **Core** (`src/core/`) holds the engine primitives. A drawable is a `Mesh`: geometry + `Shader` + a plain `state` object + bind groups. You never build a render pipeline for it — the renderer derives one and caches it.
 
-- **`Shader`** — wraps a WGSL module with a `vs`/`fs` entry pair. It appends the engine block (`engine.wgsl`), reflects the result with the in-house `reflect/` (on [`wgsl_reflect`](https://github.com/brendan-duncan/wgsl_reflect)), and serves the bind group layouts. `shader.bindGroup(0, { name: resource })` binds by WGSL name. Group(1) is the engine's: `camera.*` (projection/view matrices, `cameraPosition`, `cameraQuaternion`, `time`, `resolution`) and `object.*` (`modelMatrix`, `normalMatrix`, `objectMatrix`; view space is `camera.viewMatrix * (object.modelMatrix * p)`, or `modelViewMatrix()` for the matrix) live in one renderer-owned `PerDrawBuffer` and are bound by dynamic offset: a camera slot per `render()` and a fixed object slot per mesh, so one mesh can draw into several passes of one submit (shadow + main). The object slot holds one value per submit — move the mesh between those passes and both see the last transform.
+- **`Shader`** — wraps a WGSL module with a `vs`/`fs` entry pair. It appends the engine block (`engine.wgsl`), reflects the result with `reflect/` (on [`webgpu-utils`](https://github.com/greggman/webgpu-utils)), and serves the bind group layouts. `shader.bindGroup(0, { name: resource })` binds by WGSL name. Group(1) is the engine's: `camera.*` (projection/view matrices, `cameraPosition`, `cameraQuaternion`, `time`, `resolution`) and `object.*` (`modelMatrix`, `normalMatrix`, `objectMatrix`; view space is `camera.viewMatrix * (object.modelMatrix * p)`, or `modelViewMatrix()` for the matrix) live in one renderer-owned `PerDrawBuffer` and are bound by dynamic offset: a camera slot per `render()` and a fixed object slot per mesh, so one mesh can draw into several passes of one submit (shadow + main). The object slot holds one value per submit — move the mesh between those passes and both see the last transform.
 - **`Mesh`** — a `Transform` holding `geometry`, `shader`, `state` and `bindGroups`; no `gpu`, no GPU objects of its own. `state` (`transparent`, `depthWrite`, `cullMode`, `topology`, `blending`, …) is frozen — swap the object to change it. The renderer's `PipelineCache` builds a pipeline per (shader, state, vertex layout, pass formats), so the same mesh renders into the canvas, an MSAA target or a depth-only shadow map with no per-target setup. Each mesh owns one fixed slot of the engine buffer, rewritten only when it moves; `mesh.destroy()` gives it back (a dropped mesh frees it when collected).
 - **`ComputeShader`** — the compute counterpart. Every entry point in a WGSL compute module becomes a dispatchable kernel keyed by its name, with optional timestamp-query timing. This is the path for GPU compute work — simulation, culling, image processing — without leaving the framework.
 
@@ -117,11 +117,11 @@ The rest of Core:
 - `RenderTarget.js`
 - `GPUEnums.js` — frozen named-constant tables for the WebGPU string enums (`TextureFormat.RGBA16FLOAT`, `AlphaMode.PREMULTIPLIED`, …), so a typo is a `ReferenceError` instead of a silently ignored string
 - `ShaderReload.js` — WGSL hot-reload
-- `reflect/` — WGSL reflection on `wgsl_reflect`: data definitions, `StructView`, bind group layout derivation
+- `reflect/` — WGSL reflection on `webgpu-utils`: data definitions, `StructView`, bind group layout derivation
 - `primitives/` — `Box`, `Sphere`, `Plane`, `Disc`, `Cone`, `Cylinder`, `Torus`, `Quad`, `FullscreenTriangle`; raw generators in `primitives/vertices.js`
 - `skin/` — GPU skinning
 
-The **Math** component (`src/math/`) is in-house, with no dependency: a function layer (`@math/functions` — `vec2`, `vec3`, `vec4`, `quat`, `mat3`, `mat4`; out param last and optional) under chainable, THREE-style classes — `Vec2`–`Vec4`, `Quat`, `Mat3`/`Mat4`, `Euler`, `Color` — each a `Float32Array` subclass.
+The **Math** component (`src/math/`) is a function layer (`@math/functions` — `vec2`, `vec3`, `vec4`, `quat`, `mat3`, `mat4`; out param last and optional; [`wgpu-matrix`](https://github.com/greggman/wgpu-matrix) plus a few local overrides) under chainable, THREE-style classes — `Vec2`–`Vec4`, `Quat`, `Mat3`/`Mat4`, `Euler`, `Color` — each a `Float32Array` subclass.
 
 **Modules** (`src/modules/`) are the optional higher-level pieces, kept out of Core to reduce bloat: `Orbit`, `Raycast`, `GUI`, `Animation`, `GLTFLoader`, `CubeMap`, `VideoTexture`, and a shader-only `pbr/` IBL library.
 
@@ -188,7 +188,7 @@ Composes as `kD · SH-irradiance · albedo + IBL-specular`, applies occlusion/em
 
 Needs a browser with WebGPU. As of late 2025 it ships by default in:
 
-- **Chrome / Edge** — 113+
+- **Chrome / Edge** — 113+ (before 135 there is no `Float16Array`: a stand-in is defined only while webgpu-utils loads, and f16 vector/matrix struct fields and plain-number 16float texture data degrade — use f32 fields, a 32float format, or half-float bits in a `Uint16Array` there)
 - **Firefox** — Windows 141+, macOS ARM64 145+ (Linux expected 2026)
 - **Safari** — macOS Tahoe 26 / iOS 26 / iPadOS 26 / visionOS 26
 

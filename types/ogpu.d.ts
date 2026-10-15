@@ -106,7 +106,7 @@ export interface ReflectedEntryPoint {
     resources: Array<{ name: string; group: number; entry: GPUBindGroupLayoutEntry }>;
 }
 
-/** Result of `reflect(wgsl)` — the data definitions Shader/RenderPipeline/ComputeShader read. */
+/** Result of `reflect(wgsl)` (webgpu-utils' makeShaderDataDefinitions + `inputs`) — the data definitions Shader/RenderPipeline/ComputeShader read. */
 export interface ShaderDefs {
     structs: Record<string, ReflectedType>;
     uniforms: Record<string, ReflectedVariable>;
@@ -115,6 +115,7 @@ export interface ShaderDefs {
     textures: Record<string, ReflectedVariable>;
     externalTextures: Record<string, ReflectedVariable>;
     samplers: Record<string, ReflectedVariable>;
+    immediates: Record<string, ReflectedVariable>;
     entryPoints: Record<string, ReflectedEntryPoint>;
 }
 
@@ -122,7 +123,10 @@ export interface ShaderDefs {
  * Named typed-array views over one ArrayBuffer, laid out by a reflected WGSL
  * type. `views` maps each struct field to a typed array (scalars are length 1;
  * an array of intrinsics is one flat typed array; an array of structs is a JS
- * array of view objects); `set(obj)` writes by field name.
+ * array of view objects; f16 scalars are Uint16Array raw bits, f16 vectors and
+ * matrices Float16Array — raw bits again, in a Uint16Array subclass, where the
+ * browser has no Float16Array (Chrome/Edge < 135; warned once); built by
+ * webgpu-utils' makeTypedArrayViews); `set(obj)` writes by field name.
  * // TODO: tighten field types.
  */
 export class StructView {
@@ -397,10 +401,13 @@ export class Color extends Float32Array {
 
 // =============================================================================
 // @math/functions — the function layer under the classes (also re-exported
-// from '@math' and 'ogpu'). Column-major; mat3 is 12 floats (3 columns × vec4).
-// `out` is last and optional: allocated as a Float32Array when omitted, always
-// returned, and may alias any input. Lanes are written by index, so a plain-array
-// `out` of any length works.
+// from '@math' and 'ogpu'): wgpu-matrix 3.4.2 plus local overrides.
+// Column-major; mat3 is 12 floats (3 columns × vec4). `out` is last and
+// optional: allocated as a Float32Array when omitted, always returned, and may
+// alias any input. Lanes are written by index, so a plain-array `out` of any
+// length works — except that only mat3.set/fromMat4 write mat3's padding lanes
+// (3, 7, 11): the other mat3 ops leave them, so an empty plain-array `out` comes
+// back 11 long with holes.
 // =============================================================================
 
 type NumArray = ArrayLike<number>;
@@ -474,7 +481,7 @@ export const quat: {
 
 export const mat3: {
     set<T extends OutArray = Float32Array>(v0: number, v1: number, v2: number, v3: number, v4: number, v5: number, v6: number, v7: number, v8: number, out?: T): T;
-    /** Reads exactly 12 floats: a 16-float source gives its upper 3x3 (its m[3]/m[7]/m[11] land in the padding); a shorter one leaves NaN. */
+    /** A 16-float source gives its upper 3x3; the padding lanes (3, 7, 11) are left as they were. */
     copy<T extends OutArray = Float32Array>(m: NumArray, out?: T): T;
     identity<T extends OutArray = Float32Array>(out?: T): T;
     fromMat4<T extends OutArray = Float32Array>(m: NumArray, out?: T): T;

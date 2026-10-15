@@ -23,7 +23,7 @@ struct VertexOutput {
 @vertex
 fn vs(in : Vertex) -> VertexOutput {
   var out : VertexOutput;
-  let mvPos = object.modelViewMatrix * vec4f(in.position, 1.0);
+  let mvPos = camera.viewMatrix * (object.modelMatrix * vec4f(in.position, 1.0));
   out.position = camera.projectionMatrix * mvPos;
   out.vUv = vec2f(in.uv.x, 1.0 - in.uv.y);
   out.vMVPos = mvPos.xyz;

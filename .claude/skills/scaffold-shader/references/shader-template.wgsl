@@ -3,8 +3,9 @@
 // relative to the generated file, e.g. ../../src/core/engine.wgsl in examples/<name>/).
 // `camera` (per pass) and `object` (per draw) at group(1) come from the engine block
 // Shader appends: read camera.projectionMatrix / viewMatrix / cameraPosition / time /
-// cameraQuaternion / resolution and object.modelMatrix / modelViewMatrix / normalMatrix /
-// objectMatrix instead of declaring them. Vertex entry `vs`, fragment `fs`.
+// cameraQuaternion / resolution and object.modelMatrix / normalMatrix / objectMatrix
+// instead of declaring them. View space is camera.viewMatrix * (object.modelMatrix * p),
+// associated right to left (mat-vec only). Vertex entry `vs`, fragment `fs`.
 // Fragment outputs the normal mapped to 0..1. Layer custom uniforms (a `Uniforms`
 // struct at @group(0) @binding(0) named `uniforms`), textures, and shading on top.
 
@@ -25,7 +26,7 @@ struct VertexOutput {
 @vertex
 fn vs(in : Vertex) -> VertexOutput {
   var out : VertexOutput;
-  out.position = camera.projectionMatrix * object.modelViewMatrix * vec4f(in.position, 1.0);
+  out.position = camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * vec4f(in.position, 1.0)));
   out.vNormal = object.normalMatrix * in.normal;
   out.vUv = in.uv;
   return out;

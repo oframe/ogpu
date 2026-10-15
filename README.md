@@ -48,7 +48,7 @@ The framework is split into **Core**, **Math**, and **Modules**.
 
 The **Core** (`src/core/`) holds the engine primitives. A drawable is a `Mesh`: geometry + `Shader` + a plain `state` object + bind groups. You never build a render pipeline for it — the renderer derives one and caches it.
 
-- **`Shader`** — wraps a WGSL module with a `vs`/`fs` entry pair. It appends the engine block (`engine.wgsl`), reflects the result with the in-house `reflect/` (on [`wgsl_reflect`](https://github.com/brendan-duncan/wgsl_reflect)), and serves the bind group layouts. `shader.bindGroup(0, { name: resource })` binds by WGSL name. Group(1) is the engine's: `camera.*` (projection/view matrices, `cameraPosition`, `cameraQuaternion`, `time`, `resolution`) and `object.*` (`modelMatrix`, `modelViewMatrix`, `normalMatrix`, `objectMatrix`) are written per pass and per draw into one renderer-owned `PerDrawBuffer` and bound by dynamic offset, so one mesh can draw into several passes of one submit (shadow + main) without stomping itself.
+- **`Shader`** — wraps a WGSL module with a `vs`/`fs` entry pair. It appends the engine block (`engine.wgsl`), reflects the result with the in-house `reflect/` (on [`wgsl_reflect`](https://github.com/brendan-duncan/wgsl_reflect)), and serves the bind group layouts. `shader.bindGroup(0, { name: resource })` binds by WGSL name. Group(1) is the engine's: `camera.*` (projection/view matrices, `cameraPosition`, `cameraQuaternion`, `time`, `resolution`) and `object.*` (`modelMatrix`, `normalMatrix`, `objectMatrix`; view space is `camera.viewMatrix * (object.modelMatrix * p)`, or `modelViewMatrix()` for the matrix) are written per pass and per draw into one renderer-owned `PerDrawBuffer` and bound by dynamic offset, so one mesh can draw into several passes of one submit (shadow + main) without stomping itself.
 - **`Mesh`** — a `Transform` holding `geometry`, `shader`, `state` and `bindGroups`; no `gpu`, no GPU objects of its own. `state` (`transparent`, `depthWrite`, `cullMode`, `topology`, `blending`, …) is frozen — swap the object to change it. The renderer's `PipelineCache` builds a pipeline per (shader, state, vertex layout, pass formats), so the same mesh renders into the canvas, an MSAA target or a depth-only shadow map with no per-target setup.
 - **`ComputeShader`** — the compute counterpart. Every entry point in a WGSL compute module becomes a dispatchable kernel keyed by its name, with optional timestamp-query timing. This is the path for GPU compute work — simulation, culling, image processing — without leaving the framework.
 
@@ -73,7 +73,7 @@ struct VertexOutput {
 @vertex
 fn vs(in: Vertex) -> VertexOutput {
   var out: VertexOutput;
-  out.position = camera.projectionMatrix * object.modelViewMatrix * vec4f(in.position, 1.0);
+  out.position = camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * vec4f(in.position, 1.0)));
   out.vNormal = object.normalMatrix * in.normal;
   return out;
 }

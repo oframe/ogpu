@@ -7,5 +7,5 @@ struct Vertex {
 
 @vertex
 fn vs(in : Vertex) -> @builtin(position) vec4f {
-  return camera.projectionMatrix * object.modelViewMatrix * vec4f(in.position, 1.0);
+  return camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * vec4f(in.position, 1.0)));
 }

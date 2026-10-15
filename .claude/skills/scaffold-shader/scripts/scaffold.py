@@ -71,7 +71,7 @@ def build(fields, engine_rel):
     a("@vertex")
     a("fn vs(in : Vertex) -> VertexOutput {")
     a("  var out : VertexOutput;")
-    a("  out.position = camera.projectionMatrix * object.modelViewMatrix * vec4f(in.position, 1.0);")
+    a("  out.position = camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * vec4f(in.position, 1.0)));")
     a("  out.vNormal = object.normalMatrix * in.normal;")
     a("  out.vUv = in.uv;")
     a("  return out;")

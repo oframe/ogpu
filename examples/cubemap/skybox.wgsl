@@ -17,7 +17,7 @@ struct VertexOutput {
 fn vs(in : Vertex) -> VertexOutput {
   var out : VertexOutput;
   out.vDir = normalize(in.position);
-  out.position = camera.projectionMatrix * object.modelViewMatrix * vec4f(in.position, 1.0);
+  out.position = camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * vec4f(in.position, 1.0)));
   return out;
 }
 

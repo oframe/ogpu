@@ -2,7 +2,7 @@
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
     "nodes": 163,
-    "edges": 296,
+    "edges": 297,
     "modules": 109,
     "shaders": 48,
     "external": 6
@@ -37,6 +37,10 @@
       "inDegree": 5
     },
     {
+      "id": "src/core/Shader.js",
+      "inDegree": 5
+    },
+    {
       "id": "src/core/Transform.js",
       "inDegree": 5
     },
@@ -46,10 +50,6 @@
     },
     {
       "id": "src/core/ComputeShader.js",
-      "inDegree": 4
-    },
-    {
-      "id": "src/core/Shader.js",
       "inDegree": 4
     },
     {
@@ -530,7 +530,7 @@
       "id": "src/core/PerDrawBuffer.js",
       "type": "module",
       "inDegree": 2,
-      "outDegree": 1
+      "outDegree": 2
     },
     {
       "id": "src/core/PipelineCache.js",
@@ -649,7 +649,7 @@
     {
       "id": "src/core/Shader.js",
       "type": "module",
-      "inDegree": 4,
+      "inDegree": 5,
       "outDegree": 5
     },
     {
@@ -1433,6 +1433,10 @@
     {
       "from": "src/core/PerDrawBuffer.js",
       "to": "pkg:@math"
+    },
+    {
+      "from": "src/core/PerDrawBuffer.js",
+      "to": "src/core/Shader.js"
     },
     {
       "from": "src/core/PipelineCache.js",

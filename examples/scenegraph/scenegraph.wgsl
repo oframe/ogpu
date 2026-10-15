@@ -15,7 +15,7 @@ struct VertexOutput {
 fn vs(in: Vertex) -> VertexOutput {
   var vsOut: VertexOutput;
   vsOut.vNormal = normalize(object.normalMatrix * in.normal);
-  let mvPos = object.modelViewMatrix * vec4f(in.position, 1.0);
+  let mvPos = camera.viewMatrix * (object.modelMatrix * vec4f(in.position, 1.0));
   vsOut.vMVPos = mvPos.xyz;
   vsOut.position = camera.projectionMatrix * mvPos;
   return vsOut;

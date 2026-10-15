@@ -80,7 +80,7 @@ fn vs(in : Vertex) -> VertexOutput {
 
   let worldPos = object.modelMatrix * vec4f(position, 1.0);
   vsOut.vWorldPos = worldPos.xyz;
-  vsOut.position = camera.projectionMatrix * camera.viewMatrix * worldPos;
+  vsOut.position = camera.projectionMatrix * (camera.viewMatrix * worldPos);
   vsOut.vNormal = normalize(object.normalMatrix * normal);
   vsOut.vUv = in.uv;
 

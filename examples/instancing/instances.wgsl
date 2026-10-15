@@ -41,7 +41,7 @@ fn vs(in: Vertex) -> VertexOutput {
 
   pos += in.offset;
 
-  vsOut.position = camera.projectionMatrix * object.modelViewMatrix * vec4f(pos, 1.0);
+  vsOut.position = camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * vec4f(pos, 1.0)));
   vsOut.vNormal = object.normalMatrix * in.normal;
   vsOut.vUv = in.uv;
   return vsOut;

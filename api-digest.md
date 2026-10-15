@@ -45,7 +45,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - constructor({ label = 'mesh', geometry, shader, state = NO_STATE, bindGroups = [], manualRender = fal…)
   - onBeforeRender(f)
   - onAfterRender(f)
-  - updateDerived()
+  - updateDerived(needs = NEEDS_NORMAL | NEEDS_OBJECT)
   - draw({ pass, passInfo, renderer, camera, cameraOffset })
 - fn `drawGeometry(pass, geometry)`
 
@@ -55,7 +55,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - alloc(byteLength)
   - write(bytes)
   - writeCamera(camera, time, width, height)
-  - writeObject(mesh, camera)
+  - writeObject(mesh)
   - flush()
   - reset()
 - const `CAMERA_SIZE`, `OBJECT_SIZE`
@@ -128,7 +128,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - bindGroup(group, resources, { label } = {})
   - reload(code)
   - destroy()
-- const `ENGINE_GROUP`
+- const `ENGINE_GROUP`, `NEEDS_NORMAL`, `NEEDS_OBJECT`
 
 ### src/core/ShaderReload.js
 - fn `registerShader(instance)`

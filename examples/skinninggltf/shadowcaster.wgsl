@@ -17,5 +17,5 @@ fn vs(in : Vertex) -> @builtin(position) vec4f {
     positionBuffer[in.vertexIndex * 3 + 1],
     positionBuffer[in.vertexIndex * 3 + 2]
   );
-  return camera.projectionMatrix * camera.viewMatrix * object.modelMatrix * vec4f(position, 1.0);
+  return camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * vec4f(position, 1.0)));
 }

@@ -32,7 +32,7 @@ fn vs(in : Vertex) -> VertexOutput {
   let dist = pow(length(in.uv - 0.5), 2.0) - 0.25;
   pos.y += dist * 0.5;
 
-  let mvPos = object.modelViewMatrix * vec4f(pos, 1.0);
+  let mvPos = camera.viewMatrix * (object.modelMatrix * vec4f(pos, 1.0));
   out.vMVPos = mvPos;
   out.position = camera.projectionMatrix * mvPos;
   out.vUv = in.uv;

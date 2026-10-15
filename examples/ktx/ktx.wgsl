@@ -17,7 +17,7 @@ struct VertexOutput {
 @vertex
 fn vs(in: Vertex) -> VertexOutput {
   var vsOut: VertexOutput;
-  vsOut.position = camera.projectionMatrix * object.modelViewMatrix * vec4f(in.position, 1.0);
+  vsOut.position = camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * vec4f(in.position, 1.0)));
   vsOut.vUv = vec2f(in.uv.x, 1.0 - in.uv.y); // flip y to match OGL's orientation
   return vsOut;
 }

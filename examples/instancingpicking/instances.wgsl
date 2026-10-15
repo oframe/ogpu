@@ -50,7 +50,7 @@ fn vs(in: Vertex) -> VertexOutput {
 
   pos += offset;
 
-  out.position = camera.projectionMatrix * object.modelViewMatrix * vec4f(pos, 1.0);
+  out.position = camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * vec4f(pos, 1.0)));
   out.vNormal = nor;
   out.vHit = hits[in.id];
   return out;

@@ -61,7 +61,7 @@ fn vs(
     // ── Camera-space centre ──────────────────────────────────────────────────
 
     let pos = positions[splatIdx].xyz;
-    let t   = object.modelViewMatrix * vec4f(pos.xyz, 1.0);
+    let t   = camera.viewMatrix * (object.modelMatrix * vec4f(pos.xyz, 1.0));
 
     // Near-plane guard (z is negative in front of camera in WebGPU/RH convention).
     if (t.z >= -0.01) {
@@ -81,9 +81,10 @@ fn vs(
     let Sigma = M * transpose(M);
 
     // ── Transform covariance to camera space ────────────────────────────────
-    // W = upper-left 3×3 of modelViewMatrix (column-major storage).
-    let mv = object.modelViewMatrix;
-    let W  = mat3x3f(mv[0].xyz, mv[1].xyz, mv[2].xyz);
+    // W = upper-left 3×3 of view * model (model is affine, so view3 * model3).
+    let vm = camera.viewMatrix;
+    let mm = object.modelMatrix;
+    let W  = mat3x3f(vm[0].xyz, vm[1].xyz, vm[2].xyz) * mat3x3f(mm[0].xyz, mm[1].xyz, mm[2].xyz);
     let Vrk = W * Sigma * transpose(W);
 
     // ── EWA Jacobian ─────────────────────────────────────────────────────────

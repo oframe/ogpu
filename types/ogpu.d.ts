@@ -805,6 +805,10 @@ export interface ShaderOptions {
 
 /** Index of the bind group the engine owns (camera + object slices). Not in the barrel — import via `@core/Shader`. */
 export const ENGINE_GROUP: 1;
+/** `Shader.needs` bit: the user code reads `normalMatrix`. Import via `@core/Shader`. */
+export const NEEDS_NORMAL: 1;
+/** `Shader.needs` bit: the user code reads `objectMatrix`. Import via `@core/Shader`. */
+export const NEEDS_OBJECT: 2;
 
 /**
  * A resource for Shader.bindGroup: a UniformBuffer or GPUBuffer binds whole;
@@ -826,6 +830,8 @@ export class Shader {
     /** Reflected struct of `var<uniform> uniforms`, or undefined — feed it to UniformBuffer. */
     uniforms: ReflectedVariable | undefined;
     hasFragment: boolean;
+    /** NEEDS_NORMAL | NEEDS_OBJECT: a text check of the user code for `normalMatrix` / `objectMatrix` (comments count). Meshes compute and write only these. */
+    needs: number;
     pipelineLayout: GPUPipelineLayout;
 
     /** (Re)compile in place; hot reload calls this. */
@@ -923,8 +929,8 @@ export class PerDrawBuffer {
     write(bytes: Uint8Array): number;
     /** Write the engine camera block (matrices, position, quaternion, time, resolution). Returns its dynamic offset, or -1 when it doesn't fit. A null camera writes identity matrices. */
     writeCamera(camera: Camera | null | undefined, time: number, width: number, height: number): number;
-    /** Write the engine object block (model/modelView/normal/object matrices) for `mesh`. Returns its dynamic offset, or -1 when it doesn't fit. */
-    writeObject(mesh: Mesh, camera: Camera | null | undefined): number;
+    /** Write the engine object block for `mesh` (model, plus normal/object matrices when `mesh.shader.needs` them; camera-independent). Returns its dynamic offset, or -1 when it doesn't fit. */
+    writeObject(mesh: Mesh): number;
     /** Upload every slice since the last flush in one writeBuffer. Renderer.render calls it; a draw outside render() must too. */
     flush(): void;
     /** Rewind the pointer — Renderer calls this once per rendered frame. */
@@ -996,7 +1002,7 @@ export class Mesh extends Transform {
     state: MeshState;
     /** Setting a group at index 1 throws. */
     bindGroups: GPUBindGroup[];
-    /** Cached against `worldVersion` (see updateDerived). */
+    /** Cached against `worldVersion`, computed only when the shader reads it — call updateDerived() before reading in JS. */
     normalMatrix: Mat3;
     objectMatrix: Mat4;
     /** Set by Renderer.getRenderQueue for sorting. */
@@ -1006,8 +1012,8 @@ export class Mesh extends Transform {
 
     onBeforeRender(f: (args: { mesh: Mesh; camera: Camera | null }) => void): this;
     onAfterRender(f: (args: { mesh: Mesh; camera: Camera | null }) => void): this;
-    /** Recompute normalMatrix/objectMatrix when worldVersion moved. */
-    updateDerived(): void;
+    /** Make the `needs` matrices (default: both) current for this worldVersion. */
+    updateDerived(needs?: number): void;
     draw(args: DrawArgs): void;
 }
 
@@ -1887,7 +1893,7 @@ declare module '@core/Mesh' {
     export { Mesh, MeshOptions, MeshState, DrawArgs };
 }
 declare module '@core/Shader' {
-    export { Shader, ShaderOptions, ShaderResource, ENGINE_GROUP };
+    export { Shader, ShaderOptions, ShaderResource, ENGINE_GROUP, NEEDS_NORMAL, NEEDS_OBJECT };
 }
 declare module '@core/UniformBuffer' {
     export { UniformBuffer };

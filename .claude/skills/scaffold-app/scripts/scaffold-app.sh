@@ -63,7 +63,7 @@ struct VertexOutput {
 fn vs(in : Vertex) -> VertexOutput {
   var out : VertexOutput;
   let localPos = in.position * uniforms.uScale;
-  out.position = camera.projectionMatrix * object.modelViewMatrix * vec4f(localPos, 1.0);
+  out.position = camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * vec4f(localPos, 1.0)));
   out.vNormal = object.normalMatrix * in.normal;
   out.vUv = in.uv;
   return out;

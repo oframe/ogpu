@@ -30,7 +30,7 @@ fn vs(in: Vertex) -> VertexOutput {
 
   let localPos = in.position * scaleUniform.scale;
 
-  vsOut.position = camera.projectionMatrix * object.modelViewMatrix * vec4f(localPos, 1.0);
+  vsOut.position = camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * vec4f(localPos, 1.0)));
   vsOut.vNormal = object.normalMatrix * in.normal;
   vsOut.vUv = in.uv;
   return vsOut;

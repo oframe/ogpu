@@ -1,13 +1,13 @@
 import { Mat4 } from '@math';
+import { NEEDS_NORMAL, NEEDS_OBJECT } from './Shader.js';
 
 // Engine block sizes (src/core/engine.wgsl). Float offsets inside each block:
 export const CAMERA_SIZE = 176;
-export const OBJECT_SIZE = 240;
+export const OBJECT_SIZE = 176;
 const PROJECTION = 0, VIEW = 16, CAMERA_POSITION = 32, TIME = 35, CAMERA_QUATERNION = 36, RESOLUTION = 40; // prettier-ignore
-const MODEL = 0, MODEL_VIEW = 16, NORMAL = 32, OBJECT = 44; // prettier-ignore
+const MODEL = 0, NORMAL = 16, OBJECT = 28; // prettier-ignore
 
 const IDENTITY = /* @__PURE__ */ new Mat4();
-const _modelView = /* @__PURE__ */ new Mat4(); // one scratch for every mesh, consumed immediately
 
 // Shared per-draw uniform buffer (Unity's UnityPerDraw analogue) behind the
 // engine's group(1): one camera slice per render() pass and one object slice per
@@ -79,18 +79,18 @@ export class PerDrawBuffer {
         return offset;
     }
 
-    // Object block for `mesh` (normalMatrix/objectMatrix already current, see
-    // Mesh.updateDerived); modelView goes through one scratch matrix.
-    writeObject(mesh, camera) {
+    // Object block for `mesh`: camera-independent. normalMatrix/objectMatrix are
+    // written only when the shader reads them (already current, see
+    // Mesh.updateDerived); the skipped bytes are left as they were.
+    writeObject(mesh) {
         const offset = this.alloc(OBJECT_SIZE);
         if (offset + OBJECT_SIZE > this.size) return -1;
         const o = offset >> 2;
         const f = this.f32;
-        const world = mesh.worldMatrix;
-        f.set(world, o + MODEL);
-        f.set(camera ? _modelView.copy(camera.viewMatrix).multiply(world) : world, o + MODEL_VIEW);
-        f.set(mesh.normalMatrix, o + NORMAL);
-        f.set(mesh.objectMatrix, o + OBJECT);
+        const needs = mesh.shader.needs;
+        f.set(mesh.worldMatrix, o + MODEL);
+        if (needs & NEEDS_NORMAL) f.set(mesh.normalMatrix, o + NORMAL);
+        if (needs & NEEDS_OBJECT) f.set(mesh.objectMatrix, o + OBJECT);
         return offset;
     }
 

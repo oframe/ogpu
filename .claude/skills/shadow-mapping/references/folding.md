@@ -17,13 +17,13 @@ struct Vertex { @location(0) position : vec3f }
 
 @vertex
 fn vs(in : Vertex) -> @builtin(position) vec4f {
-  return camera.projectionMatrix * object.modelViewMatrix * vec4f(in.position, 1.0);
+  return camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * vec4f(in.position, 1.0)));
 }
 ```
 
 `camera` is whatever camera the caster scene is rendered with — render the caster
-with the LIGHT camera and `camera.projectionMatrix` / `object.modelViewMatrix`
-become the light's matrices automatically.
+with the LIGHT camera and `camera.projectionMatrix` / `camera.viewMatrix` become
+the light's matrices automatically.
 
 ### Skinned / compute-positioned geometry
 
@@ -44,7 +44,7 @@ fn vs(in : Vertex) -> @builtin(position) vec4f {
     positionBuffer[in.vertexIndex * 3 + 1],
     positionBuffer[in.vertexIndex * 3 + 2]
   );
-  return camera.projectionMatrix * camera.viewMatrix * object.modelMatrix * vec4f(position, 1.0);
+  return camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * vec4f(position, 1.0)));
 }
 ```
 

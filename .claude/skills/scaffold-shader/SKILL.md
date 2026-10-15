@@ -23,10 +23,15 @@ silently shades garbage or fails construction:
   appends the engine block (`src/core/engine.wgsl`): `@group(1) camera`
   (`projectionMatrix`, `viewMatrix`, `cameraPosition`, `time`,
   `cameraQuaternion`, `resolution`; one slice per pass) and `@group(1) object`
-  (`modelMatrix`, `modelViewMatrix`, `normalMatrix` (mat3x3f), `objectMatrix`
-  (inverse model); one slice per draw). Read `camera.*` / `object.*`. Don't use
-  `camera`/`object`/`Camera`/`Object` as other module-scope names. group(1) is
-  the engine's — user resources go in group 0 (groups 2–3 for extras).
+  (`modelMatrix`, `normalMatrix` (mat3x3f), `objectMatrix` (inverse model); one
+  slice per draw). Read `camera.*` / `object.*`. There is no stored modelView;
+  per vertex write
+  `camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * p))`
+  (WGSL `*` is left-associative, so `P * V * M * p` does mat-mat products per
+  vertex). `modelViewMatrix()` returns the matrix where code needs it. Don't
+  use `camera`/`object`/`Camera`/`Object`/`modelViewMatrix` as other
+  module-scope names. group(1) is the engine's — user resources go in group 0
+  (groups 2–3 for extras).
 - Custom uniforms: `@group(0) @binding(0) var<uniform> uniforms : Uniforms`
   (lowercase `uniforms`, struct typed; `shader.uniforms` is that struct). Own
   them with a `UniformBuffer` and `set({...})`.

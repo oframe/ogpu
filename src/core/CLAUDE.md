@@ -149,7 +149,7 @@ forward). `Transform.lookAt` without invert aims `+Z` away from target.
 `Shader` appends `engine.wgsl` (after the user code, so error line numbers and
 leading `enable` directives stay put): `camera` at binding 0 (176 B: projection,
 view, cameraPosition, time, cameraQuaternion, resolution) and `object` at
-binding 1 (240 B: model, modelView, normalMatrix `mat3x3f`, objectMatrix). The
+binding 1 (176 B: model, normalMatrix `mat3x3f`, objectMatrix). The
 layout is `renderer.engineLayout`, never reflected; both bindings are dynamic
 offsets into the PerDrawBuffer through the one `renderer.engineBindGroup`. A
 shader binding its own resource at group(1) throws at construction, and
@@ -159,15 +159,26 @@ WGSL compile error — there is no by-name matching left to fail silently.
 Values: `cameraPosition` = `camera.worldPosition`, `cameraQuaternion` =
 `camera.worldQuaternion`, `time` = `renderer.time`, `resolution` = target size
 or else the bound canvas size. With no camera (`render({ scene })`)
-view/projection are identity and modelView is the world matrix.
+view/projection are identity.
+
+There is no stored modelView: the object block depends on the mesh alone, not
+the camera. Per vertex write
+`camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * p))` —
+WGSL `*` is left-associative, so `P * V * M * p` would do two mat-mat products
+per vertex; `modelViewMatrix()` (engine.wgsl) is there for code that needs the
+matrix itself. Shaders that share depth (prepass + `depthCompare: 'equal'`)
+must use the same association.
 
 `normalMatrix` is a Mat3 adjugate of `worldMatrix` (not the inverse-transpose
 of modelView) — correct for non-uniform scale, but only valid in world space.
 `normalMatrix`/`objectMatrix` live on the mesh and are recomputed only when
 `Transform.worldVersion` moves (bumped in `updateMatrixWorld`, the only writer
-of `worldMatrix` — anything else that writes it must bump the counter).
-`modelViewMatrix` is computed per draw into a scratch matrix in
-`PerDrawBuffer.writeObject`; there is no `mesh.modelViewMatrix`.
+of `worldMatrix` — anything else that writes it must bump the counter), and
+only if the mesh's shader reads them: `Shader.needs` is a text check of the
+user code for `normalMatrix` / `objectMatrix` (comments count — it errs toward
+computing). Unread ones are neither computed nor written to the slice, so
+`mesh.normalMatrix`/`objectMatrix` can be stale on the CPU — call
+`mesh.updateDerived()` (no argument computes both) before reading them in JS.
 
 ## Geometry — vertex/instance buffers are VERTEX-only by default
 

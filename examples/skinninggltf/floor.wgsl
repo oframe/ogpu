@@ -28,7 +28,7 @@ struct VertexOutput {
 fn vs(in : Vertex) -> VertexOutput {
   var out : VertexOutput;
   let worldPos = object.modelMatrix * vec4f(in.position, 1.0);
-  out.position = camera.projectionMatrix * camera.viewMatrix * worldPos;
+  out.position = camera.projectionMatrix * (camera.viewMatrix * worldPos);
 
   var shadowCoord = shadowUniforms.projectionViewMatrix * worldPos;
   shadowCoord = shadowCoord / shadowCoord.w;

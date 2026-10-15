@@ -5,6 +5,9 @@ import { UniformBuffer } from './UniformBuffer.js';
 import { applyOverrideConstants } from '@utils/wgslOverrides';
 
 export const ENGINE_GROUP = 1;
+// Shader.needs bits: which derived object matrices the user code reads
+export const NEEDS_NORMAL = 1;
+export const NEEDS_OBJECT = 2;
 
 let ID = 1;
 
@@ -78,6 +81,9 @@ export class Shader {
         // struct of `var<uniform> uniforms`, if declared — feed it to UniformBuffer
         this.uniforms = defs.uniforms.uniforms;
         this.hasFragment = hasFragment;
+        // A plain text check of the user code (comments included, so it errs
+        // toward computing): meshes skip the matrices no shader of theirs reads.
+        this.needs = (/\bnormalMatrix\b/.test(code) ? NEEDS_NORMAL : 0) | (/\bobjectMatrix\b/.test(code) ? NEEDS_OBJECT : 0);
         this._layouts = layouts;
         this.pipelineLayout = device.createPipelineLayout({
             label: `${this.label}-layout`,

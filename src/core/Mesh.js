@@ -1,6 +1,6 @@
 import { Transform } from './Transform';
 import { Mat3, Mat4 } from '@math';
-import { ENGINE_GROUP } from './Shader.js';
+import { ENGINE_GROUP, NEEDS_NORMAL, NEEDS_OBJECT } from './Shader.js';
 
 const NO_STATE = Object.freeze({});
 const _offsets = [0, 0]; // group(1) dynamic offsets: camera slice, object slice
@@ -35,10 +35,13 @@ export class Mesh extends Transform {
         this.state = state;
         this.bindGroups = bindGroups;
 
-        // depend on worldMatrix only — recomputed when Transform.worldVersion moves
+        // depend on worldMatrix only — recomputed when Transform.worldVersion moves,
+        // and only the ones the shader reads (Shader.needs); updateDerived() makes
+        // both current for CPU readers
         this.normalMatrix = new Mat3();
         this.objectMatrix = new Mat4();
         this._derivedVersion = -1;
+        this._derivedMask = 0;
     }
 
     get state() {
@@ -74,11 +77,16 @@ export class Mesh extends Transform {
         return this;
     }
 
-    updateDerived() {
-        if (this._derivedVersion === this.worldVersion) return;
-        this.normalMatrix.fromNormalMatrix(this.worldMatrix);
-        this.objectMatrix.copy(this.worldMatrix).invert();
-        this._derivedVersion = this.worldVersion;
+    updateDerived(needs = NEEDS_NORMAL | NEEDS_OBJECT) {
+        if (this._derivedVersion !== this.worldVersion) {
+            this._derivedVersion = this.worldVersion;
+            this._derivedMask = 0;
+        }
+        const missing = needs & ~this._derivedMask;
+        if (!missing) return;
+        if (missing & NEEDS_NORMAL) this.normalMatrix.fromNormalMatrix(this.worldMatrix);
+        if (missing & NEEDS_OBJECT) this.objectMatrix.copy(this.worldMatrix).invert();
+        this._derivedMask |= missing;
     }
 
     // called by Renderer.render for every queued mesh, inside its pass
@@ -87,10 +95,10 @@ export class Mesh extends Transform {
 
         const pipeline = renderer.pipelines.get(this, passInfo);
         if (!pipeline || cameraOffset < 0) return; // reported by the cache / buffer overflow
-        this.updateDerived();
+        this.updateDerived(this.shader.needs);
         // object slice lands in the CPU mirror; Renderer.render uploads the
         // frame's slices in one writeBuffer after the pass
-        const objectOffset = renderer.perDraw.writeObject(this, camera);
+        const objectOffset = renderer.perDraw.writeObject(this);
         if (objectOffset < 0) return; // per-draw buffer full: drop the draw, keep the pass valid
 
         pass.setPipeline(pipeline);

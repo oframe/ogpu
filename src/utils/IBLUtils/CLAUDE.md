@@ -16,7 +16,7 @@ General-purpose pbr shaders (`pbr.wgsl`, `brdflut.wgsl`, `display.wgsl`) stay in
 
 - **Two distinct mip chains — don't conflate them.** The build has a _source_ pyramid
   and an _output_ pyramid:
-    - **Source env cube mips** (`unpackToCube` → `generateMipmap`): plain box downsample,
+    - **Source env cube mips** (`unpackToCube` → `generateMipmap` from `@utils/mipmap`): plain box downsample,
       cheap, NOT integrated. These are the _input_ to the convolution.
     - **Output prefiltered cube mips** (`prefilterCube`, written by `ggx.wgsl`): full GGX
       importance-sample integration, one mip per roughness level.

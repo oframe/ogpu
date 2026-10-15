@@ -46,31 +46,85 @@ OGPU is deliberately geared toward development with coding agents (Claude Code, 
 
 The framework is split into **Core**, **Math**, and **Modules**.
 
-The **Core** (`src/core/`) holds the engine primitives. Two classes carry the weight and are worth understanding first:
+The **Core** (`src/core/`) holds the engine primitives. A drawable is a `Mesh`: geometry + `Shader` + a plain `state` object + bind groups. You never build a render pipeline for it — the renderer derives one and caches it.
 
-- **`RenderPipeline`** — wraps a WGSL render module. It reflects the shader with `webgpu-utils` and compiles the pipeline — pure compiled state, shareable across meshes. It owns no uniform buffers or bind groups; it serves the bind group layouts via `pipeline.bindGroupLayout(i)`, and each `Mesh` builds its bind groups against them. Uniforms come from one renderer-owned `PerDrawBuffer`: every `Mesh.draw` takes an aligned slice of that shared buffer and binds group(0) with a dynamic offset, so the same mesh can be drawn in several passes of one submit (shadow + main) without stomping itself. `Mesh.draw` matches standard per-frame uniforms (matrices, camera, time, resolution) to your `Uniforms` struct **by field name**. You write WGSL with a `vs`/`fs` entry pair; reflection wires it up.
+- **`Shader`** — wraps a WGSL module with a `vs`/`fs` entry pair. It appends the engine block (`engine.wgsl`), reflects the result with the in-house `reflect/` (on [`wgsl_reflect`](https://github.com/brendan-duncan/wgsl_reflect)), and serves the bind group layouts. `shader.bindGroup(0, { name: resource })` binds by WGSL name. Group(1) is the engine's: `camera.*` (projection/view matrices, `cameraPosition`, `cameraQuaternion`, `time`, `resolution`) and `object.*` (`modelMatrix`, `modelViewMatrix`, `normalMatrix`, `objectMatrix`) are written per pass and per draw into one renderer-owned `PerDrawBuffer` and bound by dynamic offset, so one mesh can draw into several passes of one submit (shadow + main) without stomping itself.
+- **`Mesh`** — a `Transform` holding `geometry`, `shader`, `state` and `bindGroups`; no `gpu`, no GPU objects of its own. `state` (`transparent`, `depthWrite`, `cullMode`, `topology`, `blending`, …) is frozen — swap the object to change it. The renderer's `PipelineCache` builds a pipeline per (shader, state, vertex layout, pass formats), so the same mesh renders into the canvas, an MSAA target or a depth-only shadow map with no per-target setup.
 - **`ComputeShader`** — the compute counterpart. Every entry point in a WGSL compute module becomes a dispatchable kernel keyed by its name, with optional timestamp-query timing. This is the path for GPU compute work — simulation, culling, image processing — without leaving the framework.
+
+```wgsl
+// validate-prepend: ../../src/core/engine.wgsl
+struct Uniforms {
+  color: vec3f,
+}
+
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+
+struct Vertex {
+  @location(0) position: vec3f,
+  @location(1) normal: vec3f,
+}
+
+struct VertexOutput {
+  @builtin(position) position: vec4f,
+  @location(0) vNormal: vec3f,
+}
+
+@vertex
+fn vs(in: Vertex) -> VertexOutput {
+  var out: VertexOutput;
+  out.position = camera.projectionMatrix * object.modelViewMatrix * vec4f(in.position, 1.0);
+  out.vNormal = object.normalMatrix * in.normal;
+  return out;
+}
+
+@fragment
+fn fs(in: VertexOutput) -> @location(0) vec4f {
+  return vec4f(uniforms.color * (0.5 + 0.5 * normalize(in.vNormal).y), 1.0);
+}
+```
+
+```js
+const shader = new Shader(gpu, { label: 'box-shader', code });
+const uniforms = new UniformBuffer(gpu, shader.uniforms, { color: [1, 0.4, 0.2] }, { label: 'box-uniforms' });
+
+const mesh = new Mesh({
+    label: 'box',
+    geometry: new Box(gpu),
+    shader,
+    state: { transparent: true, depthWrite: false },
+    bindGroups: [shader.bindGroup(0, { uniforms })],
+});
+mesh.setParent(scene);
+
+uniforms.set({ color: [0.2, 0.6, 1] }); // uploads now
+```
+
+`UniformBuffer.set()` uploads immediately, so its values are shared by every pass in one submit — give each view its own buffer + bind group when they must differ. `renderer.compile({ scene, target })` pre-warms pipelines asynchronously; otherwise each builds on first draw. `examples/hellowebgpu/` is the canonical sample.
 
 The rest of Core:
 
 - `Renderer.js`
 - `Transform.js`
 - `Camera.js`
-- `Mesh.js`
-- `Geometry.js`
+- `Geometry.js` — builds its own vertex/index buffers; `layoutKey` feeds the pipeline cache
+- `UniformBuffer.js` — a reflected struct view + the GPU buffer it uploads to
+- `PipelineCache.js` — the renderer-owned, derived pipeline cache (`renderer.pipelines`)
+- `PerDrawBuffer.js` — the shared dynamic-offset buffer behind the engine group
+- `RenderPipeline.js` — a hand-built pipeline for fullscreen passes and other non-`Mesh` draws (fully reflected layout, no engine block)
 - `Texture.js`
 - `RenderTarget.js`
-- `PerDrawBuffer.js` — the shared dynamic-offset uniform buffer behind every draw
 - `GPUEnums.js` — frozen named-constant tables for the WebGPU string enums (`TextureFormat.RGBA16FLOAT`, `AlphaMode.PREMULTIPLIED`, …), so a typo is a `ReferenceError` instead of a silently ignored string
 - `ShaderReload.js` — WGSL hot-reload
-- `primitives/` — `Box`, `Sphere`, `Plane`, `Disc`, `Cone`, `Cylinder`, `Torus`, `Quad`, `FullscreenTriangle`
+- `reflect/` — WGSL reflection on `wgsl_reflect`: data definitions, `StructView`, bind group layout derivation
+- `primitives/` — `Box`, `Sphere`, `Plane`, `Disc`, `Cone`, `Cylinder`, `Torus`, `Quad`, `FullscreenTriangle`; raw generators in `primitives/vertices.js`
 - `skin/` — GPU skinning
 
 The **Math** component (`src/math/`) is a set of chainable, THREE-style wrappers over [`wgpu-matrix`](https://github.com/greggman/wgpu-matrix) — `Vec2`–`Vec4`, `Quat`, `Mat3`/`Mat4`, `Euler`, `Color` — each a `Float32Array` subclass.
 
 **Modules** (`src/modules/`) are the optional higher-level pieces, kept out of Core to reduce bloat: `Orbit`, `Raycast`, `GUI`, `Animation`, `GLTFLoader`, `CubeMap`, `VideoTexture`, and a shader-only `pbr/` IBL library.
 
-**Utils** (`src/utils/`, alias `@utils`) are standalone helpers: `BufferUtils`, `RenderUtils` (`blit`), `IBLUtils`, `ktxutils`, `TimingHelper`, `JSONLoader`, the `Mat3`/`Mat4`/`Euler` helpers, and `wgslOverrides` (bakes `override` constants into `const` literals, since Safari has no pipeline-overridable constants).
+**Utils** (`src/utils/`, alias `@utils`) are standalone helpers: `BufferUtils`, `RenderUtils` (`blit`), `mipmap` (render-pass mip chain), `textureFromSource` (image/bitmap upload), `IBLUtils`, `ktxutils`, `TimingHelper`, `JSONLoader`, the `Mat3`/`Mat4`/`Euler` helpers, and `wgslOverrides` (bakes `override` constants into `const` literals, since Safari has no pipeline-overridable constants).
 
 Examples live in `examples/` (repo root, outside `src/`), switched by a query string in `src/main.js`. The root serves a gallery — sidebar of links plus a preview iframe — and `?example=<name>` deep-links a specific one. `?src=<name>` is the inner URL the iframe loads: that example alone, no gallery chrome.
 
@@ -82,7 +136,7 @@ Post-processing, feedback, and display passes all run through one path instead o
 blit(encoder, { pipeline, geometry: gpu.TRIANGLE, targetView, bindGroup, clear: true });
 ```
 
-It takes the `RenderPipeline` wrapper, not the raw GPU pipeline, and reads `pipeline.hasDynamicUniform` to decide whether group(0) needs the per-draw dynamic offset — so a pass whose shader binds only a sampler + texture doesn't need a `Uniforms` struct at all.
+It takes the `RenderPipeline` wrapper, not the raw GPU pipeline. A fullscreen `RenderPipeline` has no engine block and nothing dynamic: its owner builds the uniform buffer (if the shader declares one), writes it with `queue.writeBuffer`, and builds the group(0) bind group against `pipeline.bindGroupLayout(0)` — a pass that binds only a sampler + texture needs no `Uniforms` struct at all.
 
 `targetView` is explicit and a blit lands wherever it points, so `renderer.setContext` (below) never reaches one — to blit onto another canvas take the view from `renderer.contextFor(canvas)`.
 
@@ -100,7 +154,7 @@ for (const view of views) {
 renderer.render({ scene, camera }); // back on the default canvas
 ```
 
-Each extra canvas is configured on first bind and keeps its own depth texture; meshes, pipelines and the scene are shared, since every draw takes its own slice of the renderer's `PerDrawBuffer`. Extra canvases aren't observed — set `canvas.width/height` yourself, and give each one its own camera aspect.
+Each extra canvas is configured on first bind and keeps its own depth texture; meshes and the scene are shared, since every pass writes its own camera slice and every draw its own object slice of the renderer's `PerDrawBuffer` (a canvas with a custom format just gets its own cached pipelines). `UniformBuffer` values are not per pass — give a view its own buffer when they must differ. Extra canvases aren't observed — set `canvas.width/height` yourself, and give each one its own camera aspect.
 
 The `multicanvas` example (`?example=multicanvas`) puts eight primitives on eight canvases in a scrollable 2×2 CSS grid — one `ResizeObserver` drives every backing store off its laid-out box, an `IntersectionObserver` skips cells scrolled out of view, and all eight cells record into a single command encoder, so the grid costs one submit per frame.
 
@@ -117,7 +171,7 @@ blit(encoder, {
 
 ## PBR shading & IBL
 
-`src/modules/pbr/` is a shader-only library (no JS, imported with `?raw`). The core piece, `pbr.wgsl`, is a glTF-style metallic-roughness shader lit entirely by IBL. It declares the standard `vs`/`fs` + `uniforms` so it drops into a `RenderPipeline`; material factors live in a `Material` block and maps follow the `t<Name>` convention (`tMap`, `tMetallicRoughness`, `tNormal`, `tOcclusion`, `tEmissive`, `tOpacity`). Normal mapping uses vertex tangents when present, else a screen-space derived frame.
+`src/modules/pbr/` is a shader-only library (no JS, imported with `?raw`). The core piece, `pbr.wgsl`, is a glTF-style metallic-roughness shader lit entirely by IBL. It reads `camera.*`/`object.*` from the engine block and declares `vs`/`fs`, so it drops into a `Shader` for a `Mesh`; material factors live in a `Material` uniform and maps follow the `t<Name>` convention (`tMap`, `tMetallicRoughness`, `tNormal`, `tOcclusion`, `tEmissive`, `tOpacity`). Normal mapping uses vertex tangents when present, else a screen-space derived frame.
 
 Lighting inputs are built once at init (see `initIBL` in `examples/pbrshader/PBRShader.js` or `examples/gltf/GLTF.js`):
 
@@ -127,7 +181,7 @@ Lighting inputs are built once at init (see `initIBL` in `examples/pbrshader/PBR
 
 Composes as `kD · SH-irradiance · albedo + IBL-specular`, applies occlusion/emissive, then tonemaps (filmic) + gamma-encodes. Drop the tonemap tail if rendering into an intermediate target with its own display pass.
 
-> Working in Claude Code? The `pbr-shading` skill (`.claude/skills/pbr-shading/`) walks through folding this shader into a `RenderPipeline` — which WGSL blocks to copy, the full 0–12 bind group, IBL/fallback-texture wiring, and the things that break silently.
+> Working in Claude Code? The `pbr-shading` skill (`.claude/skills/pbr-shading/`) walks through folding this shader into a `Shader` + `Mesh` — which WGSL blocks to copy, the group(0) bindings, IBL/fallback-texture wiring, and the things that break silently.
 
 ## Browser requirements
 

@@ -3,7 +3,9 @@
 ## GaussianSplat (GaussianSplat.js)
 
 Extends `../../core/Mesh.js`, so it rides the normal scene graph and render
-queue. The geometry is 4-vertex triangle-strip screen-space corners — position
+queue. It builds its own `Shader` (+ a `UniformBuffer` for `uCount`) and passes
+`geometry`, `shader`, `state` and `bindGroups` to `super({...})` — the constructor
+still takes `gpu` first, since it owns the sort compute shaders and buffers. The geometry is 4-vertex triangle-strip screen-space corners — position
 attributes mean nothing for culling. Bounds are instead set from splat centers
 (positions stride-4) padded by 3× the largest per-axis scale, so frustum
 culling in `../../core/Camera.js` works correctly; see the `computeBoundingSphere`
@@ -52,7 +54,8 @@ constant baked by `applyOverrideConstants` before compile). Any in-flight
 sliced sort is abandoned and re-queued.
 
 Blending: `one / one-minus-src-alpha` (premultiplied); `depthWrite: false`;
-`cullMode: 'none'`. If you add a depth-sorted transparent scene, splats must
+`cullMode: 'none'` — all set in the mesh's frozen `state`, which the pipeline
+cache keys on (swap `mesh.state` for a new object, never mutate it). If you add a depth-sorted transparent scene, splats must
 render in a separate pass — they cannot share a depth-write-enabled render
 target because `depthWrite: false` means other objects always composite over
 them regardless of depth.

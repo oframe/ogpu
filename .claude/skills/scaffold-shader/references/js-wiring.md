@@ -4,100 +4,75 @@ Both variants assume `gpu` (`renderer.gpu`) and a `scene` Transform exist, and
 the shader was imported raw:
 
 ```js
-import { RenderPipeline, Mesh } from 'ogpu';
-import { Box } from '@core/primitives';
+import { Shader, UniformBuffer, Mesh, Box } from 'ogpu';
 import myShader from './my.wgsl?raw';
 ```
 
-The ownership split to keep straight: `RenderPipeline` is **pure compiled
-state** — it owns the shader module, reflected `defs`, and the vertex layout,
-nothing else. It can be shared across many meshes. Each `Mesh` owns its
-structured uniform view (`mesh.uniforms`, built from the pipeline's reflected
-`Uniforms` struct) and its bind groups, but no uniform buffer: `mesh.uniformResource`
-is a `{buffer, offset, size}` slice of the renderer's shared per-draw buffer. So
-`Mesh` REQUIRES a `bindGroups` argument — a `GPUBindGroup[]` or a factory
-`(uniformResource) => GPUBindGroup[]` that receives that slice to bind verbatim
-at group(0)/binding(0). Build groups against `pipeline.bindGroupLayout(i)`.
+The ownership split to keep straight: `Shader` holds the compiled module and
+reflected layouts (and appends the engine block, so `camera.*`/`object.*` just
+work at group(1)). `state` is a plain frozen object (`cullMode`, `transparent`,
+`depthWrite`, `blending`, …) — replace it, don't mutate it. The renderer derives
+the `GPURenderPipeline` from shader + state + geometry layout + the pass's
+formats, so a `Mesh` takes no `gpu`, no pipeline, and no targets. Bind groups
+are built by WGSL name with `shader.bindGroup(group, { name: resource })`;
+group(1) is the engine's, so `bindGroups[1]` stays empty.
 
 ## No texture (short path)
 
 ```js
 const geometry = new Box(gpu);
+const shader = new Shader(gpu, { label: 'my-shader', code: myShader });
 
-const pipeline = new RenderPipeline(gpu, {
-    label: 'my-shader',
-    code: myShader,
-    vertexBuffers: geometry.bufferLayouts,
-    cullMode: 'back',
-});
+// only if the WGSL declares `var<uniform> uniforms : Uniforms`
+const uniforms = new UniformBuffer(gpu, shader.uniforms, { uScale: 1.0 });
 
-const mesh = new Mesh(gpu, {
+const mesh = new Mesh({
     label: 'my-mesh',
-    pipeline,
     geometry,
-    bindGroups: (uniformResource) => [
-        gpu.device.createBindGroup({
-            layout: pipeline.bindGroupLayout(0),
-            entries: [{ binding: 0, resource: uniformResource }],
-        }),
-    ],
+    shader,
+    state: { cullMode: 'back' },
+    bindGroups: [shader.bindGroup(0, { uniforms })],
 });
 
-// custom uniforms — names must match the WGSL Uniforms struct
-mesh.uniforms.set({ uScale: 1.0 });
+// custom uniforms — names must match the WGSL Uniforms struct; uploads immediately
+uniforms.set({ uScale: 2.0 });
 
 mesh.setParent(scene);
 ```
 
-Standard uniforms (matrices/time/resolution) are written and uploaded by
-`Mesh.draw` every frame; `mesh.uniforms.set({...})` is for the custom fields.
+A base scaffold with no `Uniforms` struct needs no `UniformBuffer` and no
+`bindGroups` at all.
 
 ## With a texture
 
-Keep the texture lines in the `.wgsl` (`mySampler` + `tMap`), then add the
-sampler/texture entries to the bind group — the bindings get resolved by name
-via reflection on `pipeline.defs`:
+Keep the texture lines in the `.wgsl` (`mySampler` + `tMap`), then add them to
+the bind group by WGSL name:
 
 ```js
 const geometry = new Box(gpu);
-
-const pipeline = new RenderPipeline(gpu, {
-  label: 'my-shader',
-  code: myShader,
-  vertexBuffers: geometry.bufferLayouts,
-  cullMode: 'back',
-});
+const shader = new Shader(gpu, { label: 'my-shader', code: myShader });
+const uniforms = new UniformBuffer(gpu, shader.uniforms, { uScale: 1.0 });
 
 // however you obtain the texture — e.g. device.createTexture + writeTexture
 const texture = /* GPUTexture */;
 
-const mesh = new Mesh(gpu, {
-  label: 'my-mesh',
-  pipeline,
-  geometry,
-  bindGroups: (uniformResource) => [
-    gpu.device.createBindGroup({
-      layout: pipeline.bindGroupLayout(0),
-      entries: [
-        { binding: 0, resource: uniformResource },
-        {
-          binding: pipeline.defs.samplers.mySampler.binding,
-          resource: gpu.device.createSampler(),
-        },
-        {
-          binding: pipeline.defs.textures.tMap.binding,
-          resource: texture.createView(),
-        },
-      ],
-    }),
-  ],
+const mesh = new Mesh({
+    label: 'my-mesh',
+    geometry,
+    shader,
+    state: { cullMode: 'back' },
+    bindGroups: [
+        shader.bindGroup(0, {
+            uniforms,
+            mySampler: gpu.device.createSampler(),
+            tMap: texture.createView(),
+        }),
+    ],
 });
-
-mesh.uniforms.set({ uScale: 1.0 });
 
 mesh.setParent(scene);
 ```
 
-After a texture resize/recreate the old views are stale — rebuild the affected
-group against `pipeline.bindGroupLayout(0)` (use `mesh.uniformResource` for
-binding 0) and assign it back to `mesh.bindGroups[0]`.
+Unknown names throw; a declared name that `vs`/`fs` never use is dropped. After a
+texture resize/recreate the old views are stale — rebuild the group and assign it
+back: `mesh.bindGroups[0] = shader.bindGroup(0, { uniforms, mySampler, tMap: fresh.createView() })`.

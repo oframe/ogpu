@@ -8,7 +8,7 @@ import { UniformBuffer } from '@core/UniformBuffer.js';
  * engine-aware helpers:
  *
  *   gui.add(obj, 'key', opts)            // bind a single property, returns the binding
- *   gui.uniform(ub, 'uScale', opts)       // bind a UniformBuffer/Mesh/pass uniform; written through on change
+ *   gui.uniform(ub, 'uScale', opts)       // bind a UniformBuffer/pass uniform; written through on change
  *   gui.button('Label', () => {...})      // action button
  *   gui.folder('Title')                   // returns a sub-GUI scoped to a folder
  *   gui.monitor(obj, 'key', opts)         // read-only readout (e.g. fps)

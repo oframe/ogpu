@@ -1,14 +1,14 @@
 #!/bin/sh
 # Scaffold a new OGPU example: a renderer + camera + orbit + update loop and a
-# single spinning cube (Box primitive -> RenderPipeline -> Mesh). Generates the
+# single spinning cube (Box primitive -> Shader + UniformBuffer -> Mesh). Generates the
 # example class and its shader under examples/<dir>/. It does NOT touch
-# src/main.js — wiring the ?view= switch + landing entry is done by the caller
+# src/main.js — wiring the ?src= switch + landing entry is done by the caller
 # (the skill's SKILL.md covers it), since that's structured editing.
 #
 # Usage: scaffold-app.sh <Name>
-#   <Name> is used verbatim as the class name; the directory and ?view= value
+#   <Name> is used verbatim as the class name; the directory and ?src= value
 #   are its lowercased form. e.g. `scaffold-app.sh Ripples` ->
-#   examples/ripples/Ripples.js, class Ripples, ?view=ripples
+#   examples/ripples/Ripples.js, class Ripples, ?src=ripples
 set -e
 
 if [ -n "$1" ]; then
@@ -38,10 +38,11 @@ fi
 mkdir -p "$EX_DIR"
 
 cat > "$EX_DIR/cube.wgsl" <<'WGSL'
+// validate-prepend: ../../src/core/engine.wgsl
+// `camera` and `object` (group 1) come from the engine block Shader appends
+
 struct Uniforms {
-  projectionMatrix : mat4x4f,
-  modelViewMatrix : mat4x4f,
-  normalMatrix : mat3x3f,
+  uScale : f32,
 }
 
 @group(0) @binding(0) var<uniform> uniforms : Uniforms;
@@ -61,8 +62,9 @@ struct VertexOutput {
 @vertex
 fn vs(in : Vertex) -> VertexOutput {
   var out : VertexOutput;
-  out.position = uniforms.projectionMatrix * uniforms.modelViewMatrix * vec4f(in.position, 1.0);
-  out.vNormal = uniforms.normalMatrix * in.normal;
+  let localPos = in.position * uniforms.uScale;
+  out.position = camera.projectionMatrix * object.modelViewMatrix * vec4f(localPos, 1.0);
+  out.vNormal = object.normalMatrix * in.normal;
   out.vUv = in.uv;
   return out;
 }
@@ -74,7 +76,7 @@ fn fs(in : VertexOutput) -> @location(0) vec4f {
 WGSL
 
 cat > "$EX_DIR/$CLASS.js" <<JS
-import { Box, Mesh, Renderer, RenderPipeline, Transform, Camera, Orbit } from 'ogpu';
+import { Box, Mesh, Renderer, Shader, UniformBuffer, Transform, Camera, Orbit } from 'ogpu';
 
 import cubeShader from './cube.wgsl?raw';
 
@@ -101,28 +103,19 @@ export class $CLASS {
 
         this.scene = new Transform();
 
-        // Vanilla setup: Box primitive -> RenderPipeline -> Mesh.
+        // Box primitive -> Shader (+ UniformBuffer) -> Mesh. A Mesh takes no gpu and
+        // no pipeline: the renderer derives one from shader + state + the pass.
         const geometry = new Box(this.gpu);
+        const shader = new Shader(this.gpu, { label: '$DIR-cube-shader', code: cubeShader });
+        this.uniforms = new UniformBuffer(this.gpu, shader.uniforms, { uScale: 1 }, { label: '$DIR-cube-uniforms' });
 
-        const pipeline = new RenderPipeline(this.gpu, {
+        this.cube = new Mesh({
             label: '$DIR-cube',
-            code: cubeShader,
-            vertexBuffers: geometry.bufferLayouts,
-            cullMode: 'back',
-        });
-
-        // Caller owns bind groups (pipelines serve layouts only). The factory
-        // receives this mesh's per-draw slice ({buffer, offset, size}) for group(0)/binding(0).
-        this.cube = new Mesh(this.gpu, {
-            label: '$DIR-cube',
-            pipeline,
             geometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: pipeline.bindGroupLayout(0),
-                    entries: [{ binding: 0, resource: uniformResource }],
-                }),
-            ],
+            shader,
+            state: { cullMode: 'back' },
+            // bind by WGSL name; group(1) is the engine's (camera + object)
+            bindGroups: [shader.bindGroup(0, { uniforms: this.uniforms })],
         });
         this.cube.setParent(this.scene);
 
@@ -151,5 +144,5 @@ echo "Created OGPU example '$CLASS':"
 echo "  examples/$DIR/$CLASS.js"
 echo "  examples/$DIR/cube.wgsl"
 echo ""
-echo "Next: wire src/main.js (import + ?view=$DIR switch case + landing entry)."
-echo "Then visit ?view=$DIR in the dev server."
+echo "Next: wire src/main.js (import + ?src=$DIR views entry + landing entry)."
+echo "Then visit ?src=$DIR in the dev server."

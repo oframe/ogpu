@@ -53,6 +53,10 @@ wgpu-matrix pads `mat3` to `12 × f32` (column-major, 4 floats per column).
 `new Mat3()` allocates 12, not 9. Passing a 9-element typed array to `Mat3`
 methods will silently write garbage into the padding slots.
 
+The padding is also what makes the instance upload-ready: `mesh.normalMatrix` (a `Mat3`)
+is copied verbatim into the engine's `object.normalMatrix : mat3x3f` slot, whose WGSL
+layout is the same 3 × vec4 columns.
+
 ## Mat4.lookAt vs Mat4.aim
 
 `lookAt` builds a **view matrix** (camera space, −Z forward). `aim` builds an

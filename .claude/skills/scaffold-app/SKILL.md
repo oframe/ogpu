@@ -1,13 +1,13 @@
 ---
 name: scaffold-app
-description: Scaffold a new OGPU example/app from scratch — a Renderer + Camera + Orbit + update loop and a single spinning cube wired through the vanilla Box primitive -> RenderPipeline -> Mesh setup. Use whenever the user wants a new OGPU example, a base/starter scene, a blank WebGPU sketch in this repo, "scaffold an app", "new example called X", "boilerplate a OGPU scene", "set me up a starting point", or just "new scene"/"new example" when OGPU is the implied target. Generates the example class + shader and wires it into src/main.js so it boots at ?src=<name>.
+description: Scaffold a new OGPU example/app from scratch — a Renderer + Camera + Orbit + update loop and a single spinning cube wired through the vanilla Box primitive -> Shader + UniformBuffer -> Mesh setup. Use whenever the user wants a new OGPU example, a base/starter scene, a blank WebGPU sketch in this repo, "scaffold an app", "new example called X", "boilerplate a OGPU scene", "set me up a starting point", or just "new scene"/"new example" when OGPU is the implied target. Generates the example class + shader and wires it into src/main.js so it boots at ?src=<name>.
 ---
 
 # Scaffold a OGPU example
 
 Stand up a complete, runnable OGPU example: renderer boot, camera + orbit
 controls, an update loop, and one spinning cube built the canonical way —
-`new Box(gpu)` → `new RenderPipeline(...)` → `new Mesh(...)`. The point is a
+`new Box(gpu)` → `new Shader(...)` + `new UniformBuffer(...)` → `new Mesh({ shader, state, bindGroups })`. The point is a
 clean, idiomatic starting point the user immediately builds on, not a finished
 piece.
 
@@ -50,16 +50,19 @@ examples/<name>/cube.wgsl` (runs `naga`). The generated cube always
   grabs `this.gpu = renderer.gpu` (the OGPU gpu context — never the raw
   device).
 - `Camera` + `Orbit`, a `Transform` scene root.
-- Vanilla mesh: `Box` geometry → `RenderPipeline` (pure compiled state, serves
-  layouts only) → `Mesh`, parented to the scene. `Mesh` REQUIRES `bindGroups`:
-  the template passes a factory `(uniformResource) => [...]` that builds group(0)
-  against `pipeline.bindGroupLayout(0)` and binds that per-draw slice verbatim
-  at binding 0.
+- Vanilla mesh: `Box` geometry → `Shader` (module + reflected layouts, engine
+  block appended) → `Mesh({ label, geometry, shader, state, bindGroups })`,
+  parented to the scene. A `Mesh` takes no `gpu` and no pipeline; the renderer
+  derives the pipeline from shader + `state` + the pass. The template builds a
+  `UniformBuffer` (`uScale`) and binds it by WGSL name with
+  `shader.bindGroup(0, { uniforms })`; group(1) is the engine's.
 - Drives the loop via `this.gpu.renderer.add(this.update)` — OGPU owns the
   rAF tick and calls back with `{ time, deltaTime }`. The cube spins in
   `update`, which then calls `renderer.render({ scene, camera })`.
-- `cube.wgsl` outputs the normal mapped to 0..1 (a clear, lighting-free default
-  that confirms geometry + transforms are correct).
+- `cube.wgsl` starts with the `// validate-prepend: ../../src/core/engine.wgsl`
+  line (so `validate-shaders` can compile it) and reads `camera.*`/`object.*`
+  instead of declaring matrices. It outputs the normal mapped to 0..1 (a clear,
+  lighting-free default that confirms geometry + transforms are correct).
 
 ## Extending from here
 

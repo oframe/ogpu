@@ -97,17 +97,17 @@ precomputed input.
 ## roughnessLevels override constant
 
 `loadIBLCubeMap` returns `mipLevels`; the prefiltered cube has one GGX-integrated
-roughness level per mip. Pass it to the pipeline so the shader's roughness→lod
+roughness level per mip. Pass it to the `Shader` so the shader's roughness→lod
 mapping matches the cube it samples:
 
 ```js
-const pipeline = new RenderPipeline(this.gpu, {
-    label: 'pbr-pipeline',
-    vertexBuffers: geometry.bufferLayouts,
+const shader = new Shader(this.gpu, {
+    label: 'pbr-shader',
     code: pbr,
     constants: { roughnessLevels: ibl.mipLevels },
-    transparent, // when the material has an opacity/alpha-blend path
 });
+// blending/depth live in the Mesh `state`, e.g. { transparent: true, depthWrite: false }
+// for a material with an opacity/alpha-blend path
 ```
 
 `pbr.wgsl` declares `override roughnessLevels : f32 = 6.0` and maps roughness
@@ -177,86 +177,80 @@ binds one swizzled RMO map to both the metallic-roughness and occlusion slots.
 
 ## Material uniforms (separate uniform block, binding 12)
 
-Material factors are NOT in the per-frame `Uniforms` block — they live in their
-own `Material` struct at binding 12, so they're set once at init (or on a GUI
-change) into their own buffer, independent of the per-draw uniforms `Mesh.draw`
-writes. Build a structured view from reflection, set every field (webgpu-utils
-zero-initializes, and a zeroed `baseColorFactor` renders black), then upload:
+`pbr.wgsl` has no `Uniforms` block (matrices come from the engine's `camera`/
+`object`). Material factors live in their own `Material` struct at binding 12
+(`material`), set once at init (or on a GUI change) into a `UniformBuffer` you
+own. Build it from the reflected struct and set every field (unset fields are
+zero, and a zeroed `baseColorFactor` renders black); `set` uploads immediately:
 
 ```js
-const materialView = makeStructuredView(pipeline.defs.uniforms.material);
-materialView.set({
-    baseColorFactor: [1, 1, 1, 1],
-    emissiveFactor: [0, 0, 0],
-    metallicFactor: 0.0,
-    roughnessFactor: 0.5,
-    normalScale: 1.0,
-    occlusionStrength: 1.0,
-    alphaCutoff: 0.5,
-    alphaMode: 0, // 0 OPAQUE, 1 MASK, 2 BLEND
-    hasNormalMap: 0, // 1 only when a real tNormal is bound
-    hasTangents: geometry.hasTangents ? 1 : 0, // 1 = TBN from vertex tangent
-    useGeometricNormal: 0, // 1 = ignore the normal map entirely
-});
-
-const materialBuffer = createUniformBuffer(this.gpu, {
-    label: 'pbr-material',
-    size: materialView.arrayBuffer.byteLength,
-});
-this.gpu.device.queue.writeBuffer(materialBuffer, 0, materialView.arrayBuffer);
+const materialUniforms = new UniformBuffer(
+    this.gpu,
+    shader.defs.uniforms.material,
+    {
+        baseColorFactor: [1, 1, 1, 1],
+        emissiveFactor: [0, 0, 0],
+        metallicFactor: 0.0,
+        roughnessFactor: 0.5,
+        normalScale: 1.0,
+        occlusionStrength: 1.0,
+        alphaCutoff: 0.5,
+        alphaMode: 0, // 0 OPAQUE, 1 MASK, 2 BLEND
+        hasNormalMap: 0, // 1 only when a real tNormal is bound
+        hasTangents: geometry.hasTangents ? 1 : 0, // 1 = TBN from vertex tangent
+        useGeometricNormal: 0, // 1 = ignore the normal map entirely
+        useBrdfApprox: 0, // 1 = Karis analytic env-BRDF instead of the tBrdf LUT
+    },
+    { label: 'pbr-material' }
+);
 ```
 
-(`makeStructuredView` and `createUniformBuffer` are imported from `webgpu-utils`
-and the `ogpu` barrel respectively.)
+(`UniformBuffer` comes from the `ogpu` barrel; a later factor change is
+`materialUniforms.set({ roughnessFactor: 0.8 })`.)
 
 ## Bind group (stock pbr.wgsl layout)
 
-`RenderPipeline` exposes the layout via `pipeline.bindGroupLayout(group)` and the
-reflected defs via `pipeline.defs` — it does NOT own a uniform buffer or a
-`createBindGroup` helper, so build the bind group with the device. The `Mesh`
-hands its per-draw uniform slice (`{buffer, offset, size}`) to the `bindGroups` callback:
+Bind by WGSL name with `shader.bindGroup(0, {...})` (unknown names throw; names the
+entry points don't use are dropped). A `Mesh` takes no `gpu` and no pipeline; group(1)
+is the engine's, so don't put anything there:
 
 ```js
-const mesh = new Mesh(this.gpu, {
+const mesh = new Mesh({
     label: 'pbr-mesh',
-    pipeline,
     geometry,
-    bindGroups: (uniformResource) => [
-        this.gpu.device.createBindGroup({
-            layout: pipeline.bindGroupLayout(0),
-            entries: [
-                { binding: 0, resource: uniformResource }, // per-frame Uniforms (Mesh.draw)
-                { binding: 1, resource: ibl.specView }, // tSpecular (cube)
-                { binding: 2, resource: { buffer: ibl.shBuffer } }, // SHConstants
-                { binding: 3, resource: ibl.lutTexture.createView() }, // tBrdf
-                { binding: 4, resource: iblSampler },
-                { binding: 5, resource: whiteTex.createView() }, // tMap
-                { binding: 6, resource: whiteTex.createView() }, // tMetallicRoughness
-                { binding: 7, resource: blackTex.createView() }, // tNormal
-                { binding: 8, resource: whiteTex.createView() }, // tOcclusion
-                { binding: 9, resource: blackTex.createView() }, // tEmissive
-                { binding: 10, resource: materialSampler },
-                { binding: 11, resource: whiteTex.createView() }, // tOpacity (white = opaque)
-                { binding: 12, resource: { buffer: materialBuffer } }, // Material
-            ],
+    shader,
+    state: {}, // e.g. { transparent: true, depthWrite: false } for alpha blend
+    bindGroups: [
+        shader.bindGroup(0, {
+            tSpecular: ibl.specView, // cube
+            shConstants: ibl.shBuffer, // SHConstants
+            tBrdf: ibl.lutTexture.createView(),
+            iblSampler,
+            tMap: whiteTex.createView(),
+            tMetallicRoughness: whiteTex.createView(),
+            tNormal: blackTex.createView(), // unused with hasNormalMap = 0
+            tOcclusion: whiteTex.createView(),
+            tEmissive: blackTex.createView(),
+            materialSampler,
+            tOpacity: whiteTex.createView(), // white = opaque
+            material: materialUniforms, // the UniformBuffer above
         }),
     ],
 });
 ```
 
-`Mesh.draw` uploads the per-frame `Uniforms` each frame; the `Material` buffer is
-yours to update (e.g. on a GUI change, re-`set` the view and re-`writeBuffer`).
+The renderer uploads `camera`/`object` itself; the `material` buffer is yours to
+update (`materialUniforms.set({...})`).
 
-If the shader was folded into a custom layout (different binding numbers), derive
-entries from reflection instead of hardcoding:
-`pipeline.defs.textures.<name>.binding` / `pipeline.defs.samplers.<name>.binding`
-/ `pipeline.defs.uniforms.<name>.binding`.
+If the shader was folded into a custom layout (different binding numbers), nothing
+changes — `shader.bindGroup` resolves bindings by name.
 
 ## GLTFLoader path
 
 When the target is a glTF asset, skip all per-material wiring — construct
 `new GLTFLoader(gpu, { code: pbr, iblEntries, constants: { roughnessLevels: ibl.mipLevels } })`
-where `iblEntries` is just bindings 1–4 above:
+(no targets/sampleCount — they come from the pass) where `iblEntries` is just bindings 1–4
+above as raw group-0 entries:
 
 ```js
 const iblEntries = [

@@ -1,16 +1,12 @@
-// Annotated reference of what scaffold.py emits.
-// Conventions: uniform block named `uniforms`, vertex entry `vs`, fragment `fs`.
-// Standard uniform fields are written by Mesh.draw by name — declare only what
-// you use. Fragment outputs the normal mapped to 0..1. Layer custom uniforms,
-// textures, and shading on top with Edit after generating.
-
-struct Uniforms {
-  projectionMatrix : mat4x4f,
-  modelViewMatrix : mat4x4f,
-  normalMatrix : mat3x3f,
-}
-
-@group(0) @binding(0) var<uniform> uniforms : Uniforms;
+// validate-prepend: ../../../../src/core/engine.wgsl
+// Annotated reference of what scaffold.py emits (it writes the prepend path
+// relative to the generated file, e.g. ../../src/core/engine.wgsl in examples/<name>/).
+// `camera` (per pass) and `object` (per draw) at group(1) come from the engine block
+// Shader appends: read camera.projectionMatrix / viewMatrix / cameraPosition / time /
+// cameraQuaternion / resolution and object.modelMatrix / modelViewMatrix / normalMatrix /
+// objectMatrix instead of declaring them. Vertex entry `vs`, fragment `fs`.
+// Fragment outputs the normal mapped to 0..1. Layer custom uniforms (a `Uniforms`
+// struct at @group(0) @binding(0) named `uniforms`), textures, and shading on top.
 
 // Attribute order must match the geometry's data order.
 // @core/primitives emit: position (0), normal (1), uv (2).
@@ -29,8 +25,8 @@ struct VertexOutput {
 @vertex
 fn vs(in : Vertex) -> VertexOutput {
   var out : VertexOutput;
-  out.position = uniforms.projectionMatrix * uniforms.modelViewMatrix * vec4f(in.position, 1.0);
-  out.vNormal = uniforms.normalMatrix * in.normal;
+  out.position = camera.projectionMatrix * object.modelViewMatrix * vec4f(in.position, 1.0);
+  out.vNormal = object.normalMatrix * in.normal;
   out.vUv = in.uv;
   return out;
 }

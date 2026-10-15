@@ -21,15 +21,15 @@ AABB when both exist.
 
 ## GUI.js
 
-`gui.uniform(target, key)` maintains a local proxy object and calls
-`target.uniforms.set({[key]: value})` on every Tweakpane change. `target` is any
-object owning `.uniforms` + `.gpu` — a `Mesh`, or any pass owning its own
-uniform buffer — NOT a `RenderPipeline` (pipelines own no uniforms).
-`.uniformBuffer` is optional: passes owning a private buffer get it written
-immediately; Meshes have none (their struct uploads into the per-draw buffer on
-the next draw). Scalar uniforms (length-1 typed-array view) are unwrapped to a
-number for the proxy; vec uniforms stay arrays. The `opts` object is passed
-straight through to Tweakpane, so `min`/`max`/`step`/`options` all work.
+`gui.uniform(ub, key)` takes a `UniformBuffer` (the same one you bind via
+`shader.bindGroup`): it keeps a local proxy object, seeds it from the buffer's
+current value, and calls `ub.set({[key]: value})` on every Tweakpane change — and
+`set` uploads immediately, so there is no per-draw upload to wait for. Scalar
+uniforms (length-1 typed-array view) are unwrapped to a number for the proxy; vec
+uniforms stay arrays. The `opts` object is passed straight through to Tweakpane, so
+`min`/`max`/`step`/`options` all work. A `RenderPipeline` or a bare `Mesh` owns no
+uniforms and is not a target; a fullscreen pass that owns its own structured view
+(`.uniforms` + `.gpu`, optional `.uniformBuffer`) still works via the legacy path.
 
 `gui.folder(title)` returns a new `GUI` instance wrapping a Tweakpane FolderApi — you can
 chain `.uniform`/`.add`/`.button` on it normally.
@@ -48,9 +48,18 @@ integers to avoid that blend.
 
 ## GLTFLoader.js
 
-`dataOnly: true` skips all GPU work (no pipelines, textures, materials). Required when
+`dataOnly: true` skips all GPU work (no `Shader`, textures, materials). Required when
 you only want geometry/skin/animation data — e.g. feeding `../core/skin/Skin`.
 Passing `code`/`iblEntries` with `dataOnly` is silently ignored.
+
+Otherwise the loader builds ONE `Shader` for the whole file (`loader.shader`; the
+`constants` option, e.g. `roughnessLevels`, is forwarded to it) plus a
+`UniformBuffer` per material, and every primitive becomes a `Mesh({ geometry,
+shader, state, bindGroups })`. The only per-material pipeline state is cull +
+blend, kept as shared frozen `state` objects (one per `cullMode|transparent`
+combo) so the pipeline cache sees one identity per combo. There are no `targets`/
+`sampleCount` options — the renderer derives them from the pass. `iblEntries` are
+raw group-0 entries keyed by binding number (bindings 1–4 of `pbr.wgsl`).
 
 Rig shape: bone order == `skin.joints` order, so JOINTS_0 indices map straight to bone
 indices. glTF `inverseBindMatrices` **are read and used** when the skin declares them —
@@ -73,14 +82,18 @@ pass, not the bind-pose attribute, so bounding sphere tests would be wrong.
 ## pbr/
 
 Shaders only — no JS. Import via `?raw`. Entry points: `pbr.wgsl` (material shading),
-`brdflut.wgsl` (BRDF LUT compute), `display.wgsl` (fullscreen present). Consumed by `examples/gltf/` and `examples/pbrshader/`. The IBL-build shaders
+`brdflut.wgsl` (BRDF LUT compute), `display.wgsl` (fullscreen present). `pbr.wgsl` is a
+mesh shader: it starts with `// validate-prepend: ../../core/engine.wgsl` and reads
+`camera.*`/`object.*` from the engine block (group 1) — it has no `Uniforms` struct; the
+material factors are their own `material` uniform (binding 12) that the consumer owns.
+Consumed by `examples/gltf/` and `examples/pbrshader/`. The IBL-build shaders
 (GGX prefilter, equirect/oct unpack) live next to their only consumer in
 `@utils/IBLUtils/` — see that dir's CLAUDE.md.
 
 `pbr.wgsl` exposes an `override roughnessLevels : f32` (default `6.0`) — the prefiltered
 specular cube's mip count, mapping roughness `[0,1]` → lod `[0, roughnessLevels-1]`. It
 must match the IBL build's mip count: `loadIBLCubeMap` returns `mipLevels`, so consumers
-pass `constants: { roughnessLevels: ibl.mipLevels }` to the `RenderPipeline`/`GLTFLoader`.
+pass `constants: { roughnessLevels: ibl.mipLevels }` to the `Shader` (or `GLTFLoader`).
 Leave it unset only if you still build the legacy 6-level cube.
 
 `Material.useBrdfApprox` (1 = on) swaps the `tBrdf` LUT sample for Karis' analytic
@@ -92,8 +105,8 @@ rebuild; the LUT still has to be bound either way.
 
 Not a stub — functional. Takes 6 face sources in WebGPU/D3D cube order (+X -X +Y -Y +Z -Z).
 `await cubemap.ready` before binding. Bind `cubemap.view` as `texture_cube<f32>` in WGSL.
-No mip generation by default; set `mips: true` to enable (uses webgpu-utils `generateMipmap`
-via `Texture` internals).
+No mip generation by default; set `mips: true` to enable (via `generateMipmap` in
+`@utils/mipmap`, through `Texture` internals).
 
 ## VideoTexture.js
 

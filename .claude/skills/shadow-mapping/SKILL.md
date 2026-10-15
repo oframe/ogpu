@@ -1,9 +1,9 @@
 ---
 name: shadow-mapping
-description: Fold real-time shadow mapping into an existing RenderPipeline/shader in the OGPU engine. Use whenever the user wants cast shadows, a depth-pass / shadow-map shadow, a character or mesh to drop a shadow on a floor, self-shadowing, PCF soft shadows, "make it cast a shadow", "add shadows", or real-time shadows on a custom (skinned, displaced, instanced, IBL-lit) shader. Covers the depth-only caster pass + the receiver sampling fold.
+description: Fold real-time shadow mapping into an existing Shader + Mesh in the OGPU engine. Use whenever the user wants cast shadows, a depth-pass / shadow-map shadow, a character or mesh to drop a shadow on a floor, self-shadowing, PCF soft shadows, "make it cast a shadow", "add shadows", or real-time shadows on a custom (skinned, displaced, instanced, IBL-lit) shader. Covers the depth-only caster pass + the receiver sampling fold.
 ---
 
-# Fold shadow mapping into a RenderPipeline
+# Fold shadow mapping into a Shader + Mesh
 
 The engine has no shadow primitive. Shadow mapping is two passes you wire by
 hand: (1) a **depth-only caster pass** that renders the occluders from the
@@ -42,8 +42,10 @@ in every case — `references/folding.md` has the copy-paste blocks.
 
 1. **Read the target shader + its geometry and render loop.** Note how the main
    vertex stage gets its position (attribute vs storage buffer) — the caster must
-   match it. Confirm the receiver's `Uniforms` already carries `modelMatrix` and
-   `viewMatrix` (needed for world pos + the lit term).
+   match it. The receiver's world position and lit term come from the engine block
+   (`object.modelMatrix`, `camera.viewMatrix`, group 1) — nothing to add to a
+   `Uniforms` struct; just start the file with the
+   `// validate-prepend: <path>/src/core/engine.wgsl` line.
 2. **Depth `RenderTarget`:** `color: false`, `depthTexture: true`,
    `depthFormat: 'depth32float'`, square (`SHADOW_SIZE = 2048`).
 3. **Light camera:** orthographic (`{ left, right, top, bottom, near, far }`)
@@ -51,23 +53,27 @@ in every case — `references/folding.md` has the copy-paste blocks.
    extents must bound the occluders — too large wastes resolution and causes
    acne; geometry outside the frustum is silently unshadowed. Build
    `shadowVP = new Mat4().copy(cam.projectionMatrix).multiply(cam.viewMatrix)`.
-4. **Caster pipeline:** vertex-only WGSL — declare NO `fs` entry point so
-   `RenderPipeline` emits no fragment stage and no color target (it auto-detects
-   `defs.entryPoints.fs`). Pass `depthStencil` verbatim with `format:
-'depth32float'`, `depthWriteEnabled: true`, `depthCompare: 'less'`, and slope
-   bias (`depthBias: 1`, `depthBiasSlopeScale: 1.75`). Make a separate `Mesh`
-   sharing the geometry (and the skin storage buffer for skinned). Set
+4. **Caster `Shader` + `Mesh`:** vertex-only WGSL — declare NO `fs` entry point
+   (`Shader` treats `fs` as optional), so the derived pipeline has no fragment
+   stage and no color target. Make a separate `Mesh` sharing the geometry (and the
+   skin storage buffer, bound by name, for skinned) whose `state` carries the slope
+   bias: `{ depthBias: 1, depthBiasSlopeScale: 1.75 }`. There is no pipeline to
+   build and no depth format to pass: the renderer derives the pipeline from the
+   pass, so the depth-only `RenderTarget` supplies `depth32float` and
+   `depthWrite`/`depthCompare` default to a normal depth test. Set
    `frustumCulled = false` on skinned casters.
 5. **Shadow uniform buffer:** a `Shadow { projectionViewMatrix : mat4x4f,
-lightDirection : vec3f }` block. `makeStructuredView` it off any receiver
-   pipeline's `defs.uniforms.shadowUniforms`, `set` both fields, write once.
-   Keep the struct identical across every receiver that shares this buffer.
+lightDirection : vec3f }` block. `new UniformBuffer(gpu,
+receiverShader.defs.uniforms.shadowUniforms, { projectionViewMatrix, lightDirection })`
+   (any receiver's reflected struct works; `set` uploads immediately). Keep the
+   struct identical across every receiver that shares this buffer.
 6. **Comparison sampler:** `compare: 'less'`, `min/magFilter: 'linear'`,
    `addressMode*: 'clamp-to-edge'`. Bind it as `sampler_comparison` against a
    `texture_depth_2d` view of the target's `depthTexture`.
 7. **Fold receiving into each receiver shader:** add the `Shadow` uniform +
    `sampler_comparison` + `texture_depth_2d` bindings and an `override
-shadowDepthTextureSize`. Vertex computes `vShadowCoord` (NDC→UV, **flip y**).
+shadowDepthTextureSize` (fed via `new Shader(gpu, { constants: { shadowDepthTextureSize: SHADOW_SIZE } })`).
+   Bind them by WGSL name in `receiverShader.bindGroup(0, { shadowUniforms, shadowSampler, shadowMap, … })`. Vertex computes `vShadowCoord` (NDC→UV, **flip y**).
    Fragment runs PCF (`shadowVisibility`) and gates the light term. Full blocks
    in `references/folding.md`.
 8. **Render loop:** render the caster scene to the depth target with the light
@@ -87,7 +93,7 @@ shadowDepthTextureSize`. Vertex computes `vShadowCoord` (NDC→UV, **flip y**).
   `vShadowCoord = vec4f(ndc.xy * vec2f(0.5, -0.5) + 0.5, ndc.z, 1.0)`. Wrong
   sign mirrors the shadow off the caster.
 - **Two-tier depth bias.** `depthBias`/`depthBiasSlopeScale` live on the caster
-  pipeline; the receiver subtracts a small constant from `shadowCoord.z` (~0.002)
+  Mesh's `state`; the receiver subtracts a small constant from `shadowCoord.z` (~0.002)
   in the compare. Too little → shadow acne (self-stripes); too much →
   peter-panning (shadow detaches from contact point). Tune both.
 - **Comparison binding types are not the color ones.** A `compare` sampler must
@@ -98,8 +104,10 @@ shadowDepthTextureSize`. Vertex computes `vShadowCoord` (NDC→UV, **flip y**).
   `vertexIndex * 3` stride. A mismatch makes the shadow drift off the mesh while
   the visible mesh looks fine.
 - **Shared shadow uniform layout.** Every receiver sampling the same
-  `shadowUniformBuffer` must declare an identical `Shadow` struct (keep
-  `lightDirection` even if a receiver ignores it) or std140 offsets diverge.
+  `shadowUniforms` buffer must declare an identical `Shadow` struct (keep
+  `lightDirection` even if a receiver ignores it) or the offsets diverge.
+- **`state` is frozen.** Change the caster/receiver state by assigning a new
+  object (`mesh.state = { … }`), not by mutating — mutation throws.
 - **IBL-only shaders need an added light.** Multiplying IBL ambient by the shadow
   factor wrongly darkens the whole object. Gate an _added directional_ term
   instead; leave the ambient/IBL untouched.
@@ -111,7 +119,8 @@ shadowDepthTextureSize`. Vertex computes `vShadowCoord` (NDC→UV, **flip y**).
 - `references/folding.md` — full copy-paste blocks: the caster WGSL (static +
   skinned), the receiver fold (bindings, `Shadow` struct, `vShadowCoord`,
   `hash22`+`shadowVisibility` PCF, light gating incl. the IBL+directional case),
-  and the JS (depth target, light camera, caster pipeline+mesh, shadow uniform,
-  comparison sampler, receiver bind-group entries, two-pass render loop).
+  and the JS (depth target, light camera, caster shader+mesh+state, shadow
+  `UniformBuffer`, comparison sampler, receiver `shader.bindGroup` entries,
+  two-pass render loop).
 - Canonical working examples: `examples/shadowmapping/` (static),
   `examples/skinninggltf/` (skinned + IBL self-shadow + contact-shadow floor).

@@ -6,27 +6,17 @@ become PBR. The strategy: keep the user's vertex stage, replace/extend the
 fragment stage with the PBR flow from `src/modules/pbr/pbr.wgsl`. Always read
 the current `pbr.wgsl` first — copy from the file, not from memory.
 
-## 1. Two uniform blocks: Uniforms and Material
+## 1. Material struct + engine block
 
-`pbr.wgsl` keeps per-frame data and material factors in _separate_ uniform
-blocks, and this split matters: `Mesh.draw` writes only the per-frame
-`Uniforms` block by field name each draw, while the `Material` block is owned
-and updated by the consumer. Don't merge material factors into `Uniforms` — bind
-`Material` as its own buffer (binding 12 in stock layout).
-
-The per-frame `Uniforms` block the fragment flow needs (keep the user's own
-fields alongside these — both `Mesh.draw` and reflection match by name):
-
-```wgsl
-struct Uniforms {
-  projectionMatrix : mat4x4f,
-  viewMatrix : mat4x4f,
-  modelMatrix : mat4x4f,
-  normalMatrix : mat3x3f,
-  cameraPosition : vec3f,
-  resolution : vec2f,
-}
-```
+`pbr.wgsl` has no per-frame `Uniforms` block. Camera/object data comes from the
+engine block `Shader` appends (group 1): the fragment flow reads
+`camera.cameraPosition`, and the vertex stage builds world position and world
+normal from `object.modelMatrix` / `object.normalMatrix`. Don't declare those in a
+`Uniforms` struct, and start the file with
+`// validate-prepend: <relative path>/src/core/engine.wgsl` (as `pbr.wgsl` does).
+The material factors are a separate `material` uniform owned by the consumer
+(`UniformBuffer`, binding 12 in the stock layout); the user's own `Uniforms`
+struct (if any) stays untouched.
 
 The material factor block (set by the consumer, see `js-wiring.md`):
 
@@ -139,16 +129,16 @@ Two correctness constraints worth knowing the reason for:
 - The IBL specular sample maps roughness onto the prefiltered cube's mip chain
   via `roughness * (roughnessLevels - 1.0)`. `roughnessLevels` is an `override`
   constant (default 6.0) fed from the IBL build's `mipLevels`; pass
-  `constants: { roughnessLevels: ibl.mipLevels }` to the pipeline so the mapping
+  `constants: { roughnessLevels: ibl.mipLevels }` to the `Shader` so the mapping
   matches the cube you built. Don't hardcode `roughness * 5.0`.
 
 ## 6. Engine conventions checklist
 
-- uniform block named `uniforms`, entry points `vs` / `fs` (hardcoded in
-  RenderPipeline)
-- standard per-frame fields (`projectionMatrix`, `viewMatrix`, `modelMatrix`,
-  `normalMatrix`, `cameraPosition`, `resolution`, `time`) are written by
-  `Mesh.draw` only if present in the struct — declare what you use
+- the user's own uniform block (if any) is named `uniforms`; entry points `vs` / `fs`
+  (hardcoded)
+- per-pass/per-draw fields come from the engine block (`camera.*`, `object.*`,
+  group 1), never from the shader's own structs; user resources stay in group 0
+  (groups 2–3 for extras)
 - WGSL lives next to the JS, imported with `?raw`
 - WGSL short aliases (`vec3f`, `mat3x3f`, …); `let` for values that don't change,
   `var` only where reassigned

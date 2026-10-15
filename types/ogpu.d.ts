@@ -34,7 +34,7 @@
  * or target a lib.dom that ships them.
  *
  * Types are best-effort JS typing: options objects as interfaces, `any` where
- * the real type is a webgpu-utils internal (reflection defs, buffer bundles).
+ * the real type is an engine internal (geometry buffer bundles).
  * Every declaration is derived from the actual source in `src/` and the
  * repo-root api-digest.md.
  */
@@ -78,15 +78,67 @@ export interface Bounds {
 }
 
 /**
- * A reflected, structured uniform view (webgpu-utils makeStructuredView).
- * `views` maps each declared struct field to a typed-array view over
- * `arrayBuffer`; `set(obj)` writes by field name.
+ * A reflected WGSL type definition (from `reflect()`): an intrinsic
+ * (`{ size, type }`), an array (`{ size, elementType, numElements }`, 0 =
+ * runtime-sized) or a struct (`{ size, fields: { name: { offset, type } } }`).
  */
-export interface StructuredView {
-    arrayBuffer: ArrayBuffer;
-    views: Record<string, Float32Array | Uint32Array | Int32Array>;
-    set(values: Record<string, unknown>): void;
+export interface ReflectedType {
+    size: number;
+    type?: string;
+    elementType?: ReflectedType;
+    numElements?: number;
+    fields?: Record<string, { offset: number; type: ReflectedType }>;
+    offset?: number;
 }
+
+/** A reflected module-scope variable (`defs.uniforms.<name>`, `defs.storages.<name>`, …). */
+export interface ReflectedVariable {
+    typeDefinition: ReflectedType;
+    group: number;
+    binding: number;
+    size: number;
+}
+
+/** Entry-point info from `reflect()`; `stage` is a GPUShaderStage bit. */
+export interface ReflectedEntryPoint {
+    stage: number;
+    inputs: Array<{ name: string; location: number }>;
+    resources: Array<{ name: string; group: number; entry: GPUBindGroupLayoutEntry }>;
+}
+
+/** Result of `reflect(wgsl)` — the data definitions Shader/RenderPipeline/ComputeShader read. */
+export interface ShaderDefs {
+    structs: Record<string, ReflectedType>;
+    uniforms: Record<string, ReflectedVariable>;
+    storages: Record<string, ReflectedVariable>;
+    storageTextures: Record<string, ReflectedVariable>;
+    textures: Record<string, ReflectedVariable>;
+    externalTextures: Record<string, ReflectedVariable>;
+    samplers: Record<string, ReflectedVariable>;
+    entryPoints: Record<string, ReflectedEntryPoint>;
+}
+
+/**
+ * Named typed-array views over one ArrayBuffer, laid out by a reflected WGSL
+ * type. `views` maps each struct field to a typed array (scalars are length 1;
+ * an array of intrinsics is one flat typed array; an array of structs is a JS
+ * array of view objects); `set(obj)` writes by field name.
+ * // TODO: tighten field types.
+ */
+export class StructView {
+    /** `def`: a reflected variable or a type/struct definition. Pass `arrayBuffer` for runtime-sized arrays. */
+    constructor(def: ReflectedVariable | ReflectedType, arrayBuffer?: ArrayBuffer, byteOffset?: number);
+    type: ReflectedType;
+    arrayBuffer: ArrayBuffer;
+    views: Record<string, any>;
+    set(values: Record<string, unknown>): this;
+}
+
+/** Same as `new StructView(def, arrayBuffer, byteOffset)`. */
+export function makeStructuredView(def: ReflectedVariable | ReflectedType, arrayBuffer?: ArrayBuffer, byteOffset?: number): StructView;
+
+/** WGSL source -> data definitions (structs, uniforms, storages, textures, samplers, entry points). */
+export function reflect(code: string): ShaderDefs;
 
 // =============================================================================
 // @math — chainable Float32Array math wrappers over wgpu-matrix
@@ -358,6 +410,8 @@ export class Transform {
     worldMatrix: Mat4;
     matrixAutoUpdate: boolean;
     worldMatrixNeedsUpdate: boolean;
+    /** Bumped whenever worldMatrix is recomputed; Mesh caches normal/object matrices against it. */
+    worldVersion: number;
 
     position: Vec3;
     quaternion: Quat;
@@ -438,11 +492,11 @@ export class Camera extends Transform {
 }
 
 // =============================================================================
-// @core/Geometry — wraps webgpu-utils buffer/attribute creation.
+// @core/Geometry — builds vertex/index buffers and layouts from attribute arrays.
 // =============================================================================
 
 /**
- * webgpu-utils attribute arrays. Each entry is a typed array or a descriptor
+ * Attribute arrays keyed by name. Each entry is a typed array or a descriptor
  * `{ data, numComponents }`.
  */
 export type GeometryData = Record<string, ArrayLike<number> | { data: ArrayLike<number>; numComponents?: number }>;
@@ -456,7 +510,7 @@ export interface GeometryOptions {
     drawBuffer?: GPUBuffer | null;
     /**
      * Extra GPUBufferUsage flags OR'd into every vertex/instance buffer.
-     * webgpu-utils creates them VERTEX-only — pass GPUBufferUsage.COPY_DST
+     * They are created VERTEX-only — pass GPUBufferUsage.COPY_DST
      * if you plan to queue.writeBuffer them at runtime.
      */
     usage?: GPUBufferUsageFlags;
@@ -466,14 +520,16 @@ export class Geometry {
     constructor(gpu: GPU, options: GeometryOptions);
     attributes: GeometryData;
     drawBuffer: GPUBuffer | null;
-    /** webgpu-utils BuffersAndAttributes (buffers, bufferLayouts, indexBuffer, numElements…). */
+    /** `{ buffers, bufferLayouts, indexBuffer?, indexFormat?, numElements… }`. */
     nonInstancedVerts: any;
-    /** webgpu-utils BuffersAndAttributes, `{}` when not instanced. */
+    /** Same shape as `nonInstancedVerts`; `{}` when not instanced. */
     instancedVerts: any;
     hasInstancedAttributes: boolean;
     /** True when the geometry has per-instance attributes or a drawBuffer. */
     readonly instanced: boolean;
     bufferLayouts: GPUVertexBufferLayout[];
+    /** JSON of `bufferLayouts` — pipeline-cache key part; equal layouts share pipelines. */
+    layoutKey: string;
     numBuffers: number;
     bounds?: Bounds;
     /** Set to 'sphere' to prefer sphere over AABB in Raycast. */
@@ -487,12 +543,12 @@ export class Geometry {
 }
 
 // =============================================================================
-// @core/primitives — Geometry subclasses wrapping webgpu-utils shape generators.
+// @core/primitives — Geometry subclasses wrapping the engine's shape generators.
 // =============================================================================
 
 /**
- * Shape options are forwarded to the matching webgpu-utils
- * `primitives.create*Vertices` call (size, radius, subdivisions, …);
+ * Shape options are forwarded to the matching vertex generator
+ * (`createCubeVertices`, …, in core/primitives/vertices.js) (size, radius, subdivisions, …);
  * `instancedData`/`interleave` pass through to Geometry. Note: `usage` is NOT
  * forwarded — use a plain Geometry when buffers need runtime updates.
  */
@@ -541,8 +597,10 @@ export class FullscreenTriangle extends Geometry {
 }
 
 // =============================================================================
-// @core/RenderPipeline — pure compiled state (module + defs + GPURenderPipeline).
-// Owns NO uniform buffer and NO bind groups — those are per-Mesh concerns.
+// @core/RenderPipeline — an explicit GPURenderPipeline for fullscreen passes and
+// other non-Mesh draws (fixed geometry + fixed target). No engine block: callers
+// own their uniform buffers and bind groups (against bindGroupLayout(i)). Meshes
+// use Shader + MeshState instead.
 // =============================================================================
 
 /** Blend descriptors per GPUBlendState. */
@@ -584,20 +642,13 @@ export class RenderPipeline {
     code: string;
     vertexBuffers: GPUVertexBufferLayout[];
     module: GPUShaderModule;
-    /** makeShaderDataDefinitions result (webgpu-utils reflection). */
-    defs: any;
+    defs: ShaderDefs;
     pipeline: GPURenderPipeline;
     depthTest: boolean;
     depthWrite: boolean;
     depthStencil: false | GPUDepthStencilState | Record<string, never>;
     transparent: boolean;
     cullMode: GPUCullMode;
-    /**
-     * True when the shader has a used uniform at group(0)/binding(0) — the
-     * entry is marked hasDynamicOffset and Mesh.draw/blit bind it with a
-     * dynamic offset into the shared PerDrawBuffer.
-     */
-    hasDynamicUniform: boolean;
 
     /** Recompile + recreate the GPURenderPipeline from `code`. */
     build(code: string): void;
@@ -606,15 +657,122 @@ export class RenderPipeline {
      * your bind groups against this, not pipeline.getBindGroupLayout.
      */
     bindGroupLayout(groupIndex?: number): GPUBindGroupLayout;
-    /** Hot-reload entry point (Meshes detect the reload via `defs` identity). */
+    /** Hot-reload entry point. */
     reload(code: string): void;
     /** Unregisters from the hot-reload registry. */
     destroy(): void;
 }
 
 // =============================================================================
-// @core/PerDrawBuffer — renderer-owned shared per-draw uniform buffer.
+// @core/Shader — shader module + reflected interface (no geometry/targets/state).
 // =============================================================================
+
+export interface ShaderOptions {
+    label?: string;
+    /** Raw WGSL. Entry points `vs` and (optionally) `fs`; the engine block (camera/object at group(1)) is appended. */
+    code: string;
+    /** Override constants, baked into source (Safari-safe). */
+    constants?: Record<string, number>;
+}
+
+/** Index of the bind group the engine owns (camera + object slices). Not in the barrel — import via `@core/Shader`. */
+export const ENGINE_GROUP: 1;
+
+/**
+ * A resource for Shader.bindGroup: a UniformBuffer or GPUBuffer binds whole;
+ * `{ buffer, offset, size }`, texture views, samplers and external textures
+ * pass through.
+ */
+export type ShaderResource = UniformBuffer | GPUBuffer | GPUTextureView | GPUSampler | GPUExternalTexture | GPUBufferBinding;
+
+export class Shader {
+    constructor(gpu: GPU, options: ShaderOptions);
+    gpu: GPU;
+    label: string;
+    id: number;
+    /** Bumped on every (re)build; cached pipelines key on it. */
+    version: number;
+    code: string;
+    module: GPUShaderModule;
+    defs: ShaderDefs;
+    /** Reflected struct of `var<uniform> uniforms`, or undefined — feed it to UniformBuffer. */
+    uniforms: ReflectedVariable | undefined;
+    hasFragment: boolean;
+    pipelineLayout: GPUPipelineLayout;
+
+    /** (Re)compile in place; hot reload calls this. */
+    build(code: string): void;
+    bindGroupLayout(group?: number): GPUBindGroupLayout;
+    /**
+     * Bind group at `group` from resources keyed by WGSL name. Names declared but
+     * unused by vs/fs are dropped; names not declared in the group throw. Group 1 throws.
+     */
+    bindGroup(group: number, resources: Record<string, ShaderResource>, options?: { label?: string }): GPUBindGroup;
+    reload(code: string): void;
+    /** Unregisters from the hot-reload registry. */
+    destroy(): void;
+}
+
+// =============================================================================
+// @core/UniformBuffer — a StructView plus the GPUBuffer it uploads to.
+// =============================================================================
+
+export class UniformBuffer {
+    /** `struct` is a reflected struct (usually `shader.uniforms`). */
+    constructor(gpu: GPU, struct: ReflectedVariable | ReflectedType, values?: Record<string, unknown>, options?: { label?: string; usage?: GPUBufferUsageFlags });
+    gpu: GPU;
+    label: string;
+    view: StructView;
+    buffer: GPUBuffer;
+    /** Shorthand for `view.views`. */
+    readonly views: StructView['views'];
+    /** Write `values` into the view and upload immediately. */
+    set(values: Record<string, unknown>): this;
+    /** Upload the view; call after writing `views` directly. */
+    upload(): this;
+    destroy(): void;
+}
+
+// =============================================================================
+// @core/PipelineCache — renderer-owned GPURenderPipeline cache.
+// =============================================================================
+
+/** Stable pass descriptor from PipelineCache.passInfo. */
+export interface PassInfo {
+    colorFormats: GPUTextureFormat[];
+    depthFormat: GPUTextureFormat | null | undefined;
+    sampleCount: number;
+    key: string;
+    id: number;
+}
+
+export class PipelineCache {
+    constructor(gpu: GPU);
+    gpu: GPU;
+    /** Bumped by clear() (device restore); per-mesh memos from before are stale. */
+    generation: number;
+
+    passInfo(colorFormats: GPUTextureFormat[], depthFormat: GPUTextureFormat | null | undefined, sampleCount: number): PassInfo;
+    /** The pipeline for (mesh shader + state + geometry layout, pass); null when it can't be built (already reported). */
+    get(mesh: Mesh, passInfo: PassInfo): GPURenderPipeline | null;
+    /** Warm-up: compile asynchronously so later draws hit the cache. */
+    compileAsync(mesh: Mesh, passInfo: PassInfo): Promise<GPURenderPipeline | null>;
+    key(mesh: Mesh, passInfo: PassInfo): string;
+    descriptor(mesh: Mesh, passInfo: PassInfo): GPURenderPipelineDescriptor;
+    describe(mesh: Mesh, passInfo: PassInfo, state?: MeshState): string;
+    clear(): void;
+}
+
+// =============================================================================
+// @core/PerDrawBuffer — shared per-draw uniform buffer behind the engine group(1).
+// One camera slice per render() pass and one object slice per Mesh draw, bound via
+// dynamic offsets; Renderer owns one and resets the pointer each frame.
+// =============================================================================
+
+/** Byte size of the engine camera block (group(1) binding 0). Not in the barrel — import via `@core/PerDrawBuffer`. */
+export const CAMERA_SIZE: number;
+/** Byte size of the engine object block (group(1) binding 1). Not in the barrel — import via `@core/PerDrawBuffer`. */
+export const OBJECT_SIZE: number;
 
 export class PerDrawBuffer {
     constructor(gpu: GPU, options?: { label?: string; size?: number });
@@ -625,6 +783,8 @@ export class PerDrawBuffer {
     buffer: GPUBuffer;
     /** CPU copy of `buffer`; draws write here, `flush` uploads. */
     mirror: Uint8Array;
+    /** Float32 view over `mirror`. */
+    f32: Float32Array;
     pointer: number;
     /** Bytes already uploaded this frame; `[flushed, pointer)` is pending. */
     flushed: number;
@@ -633,6 +793,10 @@ export class PerDrawBuffer {
     alloc(byteLength: number): number;
     /** alloc + copy into the mirror. Returns the dynamic offset, or -1 when the slice doesn't fit (skip the draw). */
     write(bytes: Uint8Array): number;
+    /** Write the engine camera block (matrices, position, quaternion, time, resolution). Returns its dynamic offset, or -1 when it doesn't fit. A null camera writes identity matrices. */
+    writeCamera(camera: Camera | null | undefined, time: number, width: number, height: number): number;
+    /** Write the engine object block (model/modelView/normal/object matrices) for `mesh`. Returns its dynamic offset, or -1 when it doesn't fit. */
+    writeObject(mesh: Mesh, camera: Camera | null | undefined): number;
     /** Upload every slice since the last flush in one writeBuffer. Renderer.render calls it; a draw outside render() must too. */
     flush(): void;
     /** Rewind the pointer — Renderer calls this once per rendered frame. */
@@ -640,56 +804,71 @@ export class PerDrawBuffer {
 }
 
 // =============================================================================
-// @core/Mesh — owns its uniform view + bind groups; draws via a shared pipeline.
+// @core/Mesh — geometry + Shader + plain state + bind groups. Holds no GPU
+// objects; the renderer derives the pipeline and binds the engine group(1).
 // =============================================================================
 
-/** Slice descriptor into the shared PerDrawBuffer for group(0) binding(0). */
-export interface UniformResource {
-    buffer: GPUBuffer;
-    offset: number;
-    size: number;
+/**
+ * Plain, per-mesh render state. Compared by identity (Mesh freezes it): replace
+ * the object, don't mutate it. All fields optional; defaults shown.
+ */
+export interface MeshState {
+    /** default false — alpha-blend + back-to-front sort bucket. */
+    transparent?: boolean;
+    /** default true */
+    depthWrite?: boolean;
+    /** default true */
+    depthTest?: boolean;
+    /** Derived from depthTest when unset. */
+    depthCompare?: GPUCompareFunction;
+    depthBias?: number;
+    depthBiasSlopeScale?: number;
+    depthBiasClamp?: number;
+    /** default 'back' */
+    cullMode?: GPUCullMode;
+    /** default 'ccw' */
+    frontFace?: GPUFrontFace;
+    /** default 'triangle-list' */
+    topology?: GPUPrimitiveTopology;
+    blending?: BlendingOptions;
+    writeMask?: GPUColorWriteFlags;
 }
 
 export interface MeshOptions {
     label?: string;
-    pipeline: RenderPipeline;
     geometry: Geometry;
-    /**
-     * REQUIRED. Either the bind groups themselves, or a factory receiving the
-     * mesh's `uniformResource` (slice descriptor into the shared per-draw
-     * buffer) so group(0) can bind it at binding 0.
-     */
-    bindGroups: GPUBindGroup[] | ((uniformResource: UniformResource) => GPUBindGroup[]);
+    shader: Shader;
+    state?: MeshState;
+    /** Indexed by group; index 1 must be empty (the engine's). Missing slots bind the renderer's empty group. */
+    bindGroups?: GPUBindGroup[];
     manualRender?: boolean;
     renderOrder?: number;
     frustumCulled?: boolean;
 }
 
 export interface DrawArgs {
-    camera?: Camera | null;
     pass: GPURenderPassEncoder;
-    time?: number;
-    /** [width, height] of the pass target; defaults to the canvas size. */
-    resolution?: [number, number] | number[] | null;
+    passInfo: PassInfo;
+    renderer: Renderer;
+    camera?: Camera | null;
+    /** Dynamic offset of this pass's camera slice in the PerDrawBuffer; < 0 skips the draw. */
+    cameraOffset: number;
 }
 
 export class Mesh extends Transform {
-    constructor(gpu: GPU, options: MeshOptions);
+    /** `new Mesh(gpu, …)` (the legacy pipeline path) throws. */
+    constructor(options: MeshOptions);
     label: string;
-    gpu: GPU;
     manualRender: boolean;
     renderOrder: number;
     frustumCulled: boolean;
-    pipeline: RenderPipeline;
     geometry: Geometry;
-    /** Structured uniform view built from the pipeline's reflected `uniforms` struct. */
-    uniforms: StructuredView;
-    /** Byte length of the reflected uniform struct. */
-    structSize: number;
-    /** Slice descriptor into the shared PerDrawBuffer (bind at group(0) binding(0)). */
-    uniformResource: UniformResource;
+    shader: Shader;
+    /** Frozen on assignment. */
+    state: MeshState;
+    /** Setting a group at index 1 throws. */
     bindGroups: GPUBindGroup[];
-    modelViewMatrix: Mat4;
+    /** Cached against `worldVersion` (see updateDerived). */
     normalMatrix: Mat3;
     objectMatrix: Mat4;
     /** Set by Renderer.getRenderQueue for sorting. */
@@ -699,6 +878,8 @@ export class Mesh extends Transform {
 
     onBeforeRender(f: (args: { mesh: Mesh; camera: Camera | null }) => void): this;
     onAfterRender(f: (args: { mesh: Mesh; camera: Camera | null }) => void): this;
+    /** Recompute normalMatrix/objectMatrix when worldVersion moved. */
+    updateDerived(): void;
     draw(args: DrawArgs): void;
 }
 
@@ -737,8 +918,7 @@ export class ComputeShader {
     gpu: GPU;
     code: string;
     module: GPUShaderModule;
-    /** makeShaderDataDefinitions result (webgpu-utils reflection). */
-    defs: any;
+    defs: ShaderDefs;
     /** Entry-point name → compute pipeline. Object reference stays stable across reloads. */
     kernels: Record<string, GPUComputePipeline>;
     /** Present only when the device has 'timestamp-query'. */
@@ -1003,6 +1183,14 @@ export class Renderer {
     presentationFormat: GPUTextureFormat;
     /** Shared per-draw uniform buffer (null after destroy()). */
     perDraw: PerDrawBuffer | null;
+    /** Layout of the engine's group(1): dynamic camera + object slices of `perDraw`. */
+    engineLayout: GPUBindGroupLayout;
+    engineBindGroup: GPUBindGroup;
+    /** Shared layout/bind group for empty slots in a Shader's pipeline layout. */
+    emptyLayout: GPUBindGroupLayout;
+    emptyBindGroup: GPUBindGroup;
+    /** Derives and caches the GPURenderPipeline for each (shader, state, geometry, pass). */
+    pipelines: PipelineCache;
     depthTexture?: GPUTexture | null;
     renderQueue?: Mesh[];
     timingHelper?: TimingHelper;
@@ -1044,6 +1232,11 @@ export class Renderer {
     sortTransparent(a: Mesh, b: Mesh): number;
     sortUI(a: Mesh, b: Mesh): number;
     getRenderQueue(options: { scene: Transform; camera?: Camera; sort?: boolean; frustumCull?: boolean }): Mesh[];
+    /**
+     * Warm-up: compile every Mesh pipeline `scene` needs for `target` (or the
+     * canvas) asynchronously so the first draw doesn't stall. Optional.
+     */
+    compile(options: { scene: Transform; target?: RenderTarget | null }): Promise<void>;
     render(options: RenderOptions): void;
     /** Bind another canvas for exactly the next render(); null restores now. */
     setContext(canvas?: HTMLCanvasElement | null, options?: CanvasContextOptions): void;
@@ -1055,8 +1248,8 @@ export class Renderer {
 // @core/ShaderReload — hot-reload registry (dev only; not in the barrel).
 // =============================================================================
 
-/** Register a RenderPipeline/ComputeShader for WGSL hot-reload. Returns an unregister fn. */
-export function registerShader(instance: RenderPipeline | ComputeShader): () => void;
+/** Register a Shader/RenderPipeline/ComputeShader for WGSL hot-reload. Returns an unregister fn. */
+export function registerShader(instance: Shader | RenderPipeline | ComputeShader): () => void;
 
 // =============================================================================
 // @core/GPUEnums — named constants for the WebGPU string enums.
@@ -1182,14 +1375,13 @@ export interface GUIOptions {
 }
 
 /**
- * Target shape for gui.uniform(): any object owning `.uniforms` + `.gpu` — a
- * Mesh, or a pass that owns its own uniform buffer. NOT a RenderPipeline
- * (pipelines no longer own uniforms). `.uniformBuffer` is optional: present on
- * passes with a private buffer (written immediately), absent on Meshes (value
- * lands in `.uniforms` and uploads at the next draw).
+ * Pass-style target for gui.uniform(): an object owning its own uniforms —
+ * `.uniforms` (a StructView), `.gpu`, and optionally the `.uniformBuffer`
+ * GPUBuffer it's written to (written immediately on change). Not a Mesh or
+ * RenderPipeline. A UniformBuffer is accepted directly.
  */
 export interface UniformTarget {
-    uniforms: StructuredView;
+    uniforms: StructView;
     gpu: GPU;
     uniformBuffer?: GPUBuffer;
 }
@@ -1205,8 +1397,8 @@ export class GUI {
     button(title: string, onClick: () => void): any;
     /** Returns a GUI scoped to a sub-folder. */
     folder(title: string, opts?: { expanded?: boolean }): GUI;
-    /** Bind a uniform on a Mesh/pass; writes through target.uniforms.set on change. */
-    uniform(target: UniformTarget, key: string, opts?: Record<string, unknown>): any;
+    /** Bind a uniform on a UniformBuffer or pass; writes through on change. */
+    uniform(target: UniformBuffer | UniformTarget, key: string, opts?: Record<string, unknown>): any;
     dispose(): void;
 }
 
@@ -1253,11 +1445,9 @@ export interface GLTFLoaderOptions {
     /** PBR shader WGSL. Required unless dataOnly. */
     code?: string;
     iblEntries?: GPUBindGroupEntry[];
-    /** Override constants forwarded to every primitive pipeline (e.g. roughnessLevels). */
+    /** Override constants baked into the shared Shader (e.g. roughnessLevels). */
     constants?: Record<string, number>;
-    targets?: GPUColorTargetState[] | null;
-    sampleCount?: number;
-    /** Parse geometry/skin/animation only — no pipelines/materials/textures. */
+    /** Parse geometry/skin/animation only — no shader/materials/textures. */
     dataOnly?: boolean;
 }
 
@@ -1289,7 +1479,8 @@ export class GLTFLoader {
     gpu: GPU;
     dataOnly: boolean;
     meshes: Mesh[];
-    pipelines: RenderPipeline[];
+    /** The one Shader shared by every primitive; null when dataOnly. */
+    shader: Shader | null;
     /** Parsed rigs (one per glTF skin). */
     skins: Array<{ rig: any }>;
     /** Parsed animation channels (raw; resampled on demand by getAnimation). */
@@ -1463,8 +1654,8 @@ export function createBuffer(gpu: GPU, options: CreateBufferOptions): GPUBuffer;
 /**
  * Record a fullscreen color-only pass drawing `geometry` (gpu.TRIANGLE, or
  * gpu.QUAD) through `pipeline` into `targetView`. Pass the RenderPipeline
- * WRAPPER, not the raw .pipeline — blit reads `.hasDynamicUniform` to bind
- * group(0) with the right dynamic-offset count.
+ * WRAPPER, not the raw .pipeline. `bindGroup` binds at group(0) with no
+ * dynamic offsets.
  */
 export function blit(
     encoder: GPUCommandEncoder,
@@ -1563,13 +1754,25 @@ declare module '@core/Camera' {
     export { Camera, CameraOptions };
 }
 declare module '@core/Mesh' {
-    export { Mesh, MeshOptions, DrawArgs, UniformResource };
+    export { Mesh, MeshOptions, MeshState, DrawArgs };
+}
+declare module '@core/Shader' {
+    export { Shader, ShaderOptions, ShaderResource, ENGINE_GROUP };
+}
+declare module '@core/UniformBuffer' {
+    export { UniformBuffer };
+}
+declare module '@core/PipelineCache' {
+    export { PipelineCache, PassInfo };
+}
+declare module '@core/reflect' {
+    export { StructView, makeStructuredView, reflect, ShaderDefs };
 }
 declare module '@core/RenderPipeline' {
     export { RenderPipeline, RenderPipelineOptions, BlendingOptions };
 }
 declare module '@core/PerDrawBuffer' {
-    export { PerDrawBuffer };
+    export { PerDrawBuffer, CAMERA_SIZE, OBJECT_SIZE };
 }
 declare module '@core/Geometry' {
     export { Geometry, GeometryOptions, GeometryData };

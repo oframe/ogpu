@@ -159,6 +159,10 @@ the user seems to expect a correctness guarantee.
 
 The standalone part also cuts the other way: a `.wgsl` file that's a *fragment*
 meant to be concatenated into a larger shader will fail validation on its own,
-which is a false alarm rather than a bug. Repos with a shader-chunk system either
-want those paths in the script's `SKIP` set or want the hook narrowed — worth
-raising before the user concludes the setup is broken.
+which is a false alarm rather than a bug. The bundled `validate-shaders.mjs` has
+no answer for this — put such paths in its `SKIP` set or narrow the hook. A repo's
+own script may do better: ogpu's `scripts/validate-shaders.mjs` honors first-line
+`// validate-prepend: ./lib.wgsl` comments (path relative to the file) and validates
+the concatenation, which is how mesh shaders that rely on the engine block `Shader`
+appends at runtime (`// validate-prepend: ../../src/core/engine.wgsl`) get checked.
+Worth raising before the user concludes the setup is broken.

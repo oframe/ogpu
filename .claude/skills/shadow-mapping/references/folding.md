@@ -1,34 +1,29 @@
 # Shadow mapping — copy-paste blocks
 
 All blocks lifted from the two working examples. Adapt names; keep the
-conventions (uniform block named `uniforms`, entry points `vs`/`fs`, texture
-prefix `t*`).
+conventions (entry points `vs`/`fs`, texture prefix `t*`, user resources in
+group 0). Every mesh shader starts with
+`// validate-prepend: <relative path>/src/core/engine.wgsl` and reads the engine's
+`camera.*` / `object.*` (group 1) instead of declaring matrices.
 
 ## 1. Caster WGSL (vertex-only — no `fs`)
 
 ### Static geometry (vertex attributes)
 
 ```wgsl
-struct Uniforms {
-  projectionMatrix : mat4x4f,
-  modelViewMatrix : mat4x4f,
-}
-@group(0) @binding(0) var<uniform> uniforms : Uniforms;
+// validate-prepend: ../../src/core/engine.wgsl
 
 struct Vertex { @location(0) position : vec3f }
-struct VertexOutput { @builtin(position) position : vec4f }
 
 @vertex
-fn vs(in : Vertex) -> VertexOutput {
-  var out : VertexOutput;
-  out.position = uniforms.projectionMatrix * uniforms.modelViewMatrix * vec4f(in.position, 1.0);
-  return out;
+fn vs(in : Vertex) -> @builtin(position) vec4f {
+  return camera.projectionMatrix * object.modelViewMatrix * vec4f(in.position, 1.0);
 }
 ```
 
-`Mesh.draw` writes `projectionMatrix`/`modelViewMatrix` by name from whatever
-camera the caster scene is rendered with — render the caster with the LIGHT
-camera and these become the light's matrices automatically.
+`camera` is whatever camera the caster scene is rendered with — render the caster
+with the LIGHT camera and `camera.projectionMatrix` / `object.modelViewMatrix`
+become the light's matrices automatically.
 
 ### Skinned / compute-positioned geometry
 
@@ -36,12 +31,8 @@ Pull position from the same storage buffer the main vertex stage uses, indexed
 by `@builtin(vertex_index)`:
 
 ```wgsl
-struct Uniforms {
-  projectionMatrix : mat4x4f,
-  viewMatrix : mat4x4f,
-  modelMatrix : mat4x4f,
-}
-@group(0) @binding(0) var<uniform> uniforms : Uniforms;
+// validate-prepend: ../../src/core/engine.wgsl
+
 @group(0) @binding(1) var<storage, read> positionBuffer : array<f32>;
 
 struct Vertex { @builtin(vertex_index) vertexIndex : u32 }
@@ -53,7 +44,7 @@ fn vs(in : Vertex) -> @builtin(position) vec4f {
     positionBuffer[in.vertexIndex * 3 + 1],
     positionBuffer[in.vertexIndex * 3 + 2]
   );
-  return uniforms.projectionMatrix * uniforms.viewMatrix * uniforms.modelMatrix * vec4f(position, 1.0);
+  return camera.projectionMatrix * camera.viewMatrix * object.modelMatrix * vec4f(position, 1.0);
 }
 ```
 
@@ -79,6 +70,7 @@ struct Shadow {
 
 ```wgsl
 // add to VertexOutput:  @location(K) vShadowCoord : vec4f,
+// worldPos = object.modelMatrix * vec4f(in.position, 1.0)
 var shadowCoord = shadowUniforms.projectionViewMatrix * worldPos;
 shadowCoord = shadowCoord / shadowCoord.w;
 out.vShadowCoord = vec4f(shadowCoord.xy * vec2f(0.5, -0.5) + vec2f(0.5), shadowCoord.z, 1.0);
@@ -141,8 +133,7 @@ return vec4f(vec3f(light), 1.0);
 ## 3. JS wiring
 
 ```js
-import { Camera, Mesh, RenderPipeline, RenderTarget, Mat4, createUniformBuffer } from 'ogpu';
-import { makeStructuredView } from 'webgpu-utils';
+import { Camera, Mesh, Shader, UniformBuffer, RenderTarget, Mat4 } from 'ogpu';
 
 const SHADOW_SIZE = 2048;
 const SHADOW_FORMAT = 'depth32float';
@@ -178,51 +169,54 @@ const shadowMapSampler = this.gpu.device.createSampler({
     compare: 'less',
 });
 
-// Shadow uniform buffer — structured view off ANY receiver pipeline's defs
-const shadowView = makeStructuredView(receiverPipeline.defs.uniforms.shadowUniforms);
-shadowView.set({ projectionViewMatrix: shadowVP, lightDirection: lightDir.map((v) => v / lightLen) });
-const shadowUniformBuffer = createUniformBuffer(this.gpu, { label: 'shadow-uniforms', size: shadowView.arrayBuffer.byteLength });
-this.gpu.device.queue.writeBuffer(shadowUniformBuffer, 0, shadowView.arrayBuffer);
+// two Shaders: a vertex-only caster, and the receiver (override baked in)
+const casterShader = new Shader(this.gpu, { label: 'shadow-caster-shader', code: casterCode });
+const receiverShader = new Shader(this.gpu, {
+    label: 'receiver-shader',
+    code: receiverCode,
+    constants: { shadowDepthTextureSize: SHADOW_SIZE },
+});
+
+// Shadow uniform buffer — built off ANY receiver's reflected struct; `set` uploads
+const shadowUniforms = new UniformBuffer(
+    this.gpu,
+    receiverShader.defs.uniforms.shadowUniforms,
+    { projectionViewMatrix: shadowVP, lightDirection: lightDir.map((v) => v / lightLen) },
+    { label: 'shadow-uniforms' }
+);
 const shadowDepthView = this.shadowBuffer.depthTexture.createView();
 
-// caster pipeline (note depthStencil with slope bias, no fragment stage in the WGSL)
-const casterPipeline = new RenderPipeline(this.gpu, {
+// caster mesh: no gpu, no pipeline — the slope bias rides on `state`, and the
+// depth-only format comes from the pass (this.shadowBuffer)
+this.shadowMesh = new Mesh({
     label: 'shadow-caster',
-    code: casterShader,
-    vertexBuffers: geometry.bufferLayouts,
-    depthStencil: {
-        depthWriteEnabled: true,
-        depthCompare: 'less',
-        format: SHADOW_FORMAT,
-        depthBias: 1,
-        depthBiasSlopeScale: 1.75,
-        depthBiasClamp: 0.0,
-    },
-});
-this.shadowMesh = new Mesh(this.gpu, {
-    label: 'shadow-caster',
-    pipeline: casterPipeline,
     geometry,
-    bindGroups: (uniformResource) => [
-        this.gpu.device.createBindGroup({
-            layout: casterPipeline.bindGroupLayout(0),
-            entries: [
-                { binding: 0, resource: uniformResource },
-                // skinned only: { binding: 1, resource: { buffer: skin.skinnedPositionBuffer } },
-            ],
-        }),
-    ],
+    shader: casterShader,
+    state: { depthBias: 1, depthBiasSlopeScale: 1.75, depthBiasClamp: 0.0 },
+    // skinned only: bind the Skin's storage buffer by WGSL name
+    // bindGroups: [casterShader.bindGroup(0, { positionBuffer: skin.skinnedPositionBuffer })],
 });
 this.shadowMesh.frustumCulled = false; // skinned/storage-positioned casters
 ```
 
-Receiver bind-group entries (append the three shadow bindings to the receiver's
-existing group-0 entries):
+Receiver mesh — add the three shadow resources to its group-0 `bindGroup` call, by
+WGSL name:
 
 ```js
-{ binding: N,   resource: { buffer: shadowUniformBuffer } },
-{ binding: N+1, resource: shadowMapSampler },
-{ binding: N+2, resource: shadowDepthView },
+const receiver = new Mesh({
+    label: 'receiver',
+    geometry: receiverGeometry,
+    shader: receiverShader,
+    state: { cullMode: 'back' },
+    bindGroups: [
+        receiverShader.bindGroup(0, {
+            shadowUniforms,
+            shadowSampler: shadowMapSampler,
+            shadowMap: shadowDepthView,
+            // …the receiver's own bindings
+        }),
+    ],
+});
 ```
 
 Two-pass render loop:
@@ -231,6 +225,10 @@ Two-pass render loop:
 this.renderer.render({ scene: this.shadowMesh, camera: this.shadowCamera, target: this.shadowBuffer });
 this.renderer.render({ scene: this.scene, camera: this.camera });
 ```
+
+Optionally warm both pipelines up front (they are derived per pass, so each target
+needs its own): `renderer.compile({ scene: this.shadowMesh, target: this.shadowBuffer })`
+and `renderer.compile({ scene: this.scene })`.
 
 If the caster moves independently of the receiver, copy the receiver's
 `position`/`quaternion` onto `this.shadowMesh` each frame (see

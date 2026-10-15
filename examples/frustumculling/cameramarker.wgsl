@@ -1,14 +1,9 @@
+// validate-prepend: ../../src/core/engine.wgsl
+// camera/object come from the engine block (group 1)
+
 // Camera-shape marker for the demo camera — a 4-sided open truncated cone,
 // colored by world normal (port of OGL's NormalProgram). Mirrors the little
 // "camera" gizmo the OGL frustum-culling example parents to the demo camera.
-
-struct Uniforms {
-  projectionMatrix : mat4x4f,
-  modelViewMatrix  : mat4x4f,
-  normalMatrix     : mat3x3f,
-}
-
-@group(0) @binding(0) var<uniform> uniforms : Uniforms;
 
 struct Vertex {
   @location(0) position : vec3f,
@@ -23,8 +18,8 @@ struct VertexOutput {
 @vertex
 fn vs(in : Vertex) -> VertexOutput {
   var out : VertexOutput;
-  out.position = uniforms.projectionMatrix * uniforms.modelViewMatrix * vec4f(in.position, 1.0);
-  out.vNormal = normalize(uniforms.normalMatrix * in.normal);
+  out.position = camera.projectionMatrix * object.modelViewMatrix * vec4f(in.position, 1.0);
+  out.vNormal = normalize(object.normalMatrix * in.normal);
   return out;
 }
 

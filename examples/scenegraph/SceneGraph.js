@@ -1,4 +1,4 @@
-import { Camera, Renderer, Orbit, RenderPipeline, Mesh, Transform, Box, Sphere } from 'ogpu';
+import { Camera, Renderer, Orbit, Shader, Mesh, Transform, Box, Sphere } from 'ogpu';
 
 import sceneGraphShader from './scenegraph.wgsl?raw';
 
@@ -31,38 +31,9 @@ export class SceneGraph {
         const sphereGeometry = new Sphere(this.gpu, { radius: 0.15 });
         const cubeGeometry = new Box(this.gpu, { size: 0.3 });
 
-        // sphere and cube share the same attribute layout (position/normal/uv, interleaved,
-        // stride 32) — declare it once and feed it to the pipeline both meshes draw with,
-        // rather than borrowing one geometry's `.bufferLayouts`.
-        const vertexLayout = [
-            {
-                arrayStride: 32,
-                attributes: [
-                    { shaderLocation: 0, offset: 0, format: 'float32x3' }, // position
-                    { shaderLocation: 1, offset: 12, format: 'float32x3' }, // normal
-                    { shaderLocation: 2, offset: 24, format: 'float32x2' }, // uv
-                ],
-            },
-        ];
+        const shader = new Shader(this.gpu, { label: 'scene-graph-shader', code: sceneGraphShader });
 
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: 'scene-graph-pipeline',
-            code: sceneGraphShader,
-            vertexBuffers: vertexLayout,
-        });
-
-        const makeMesh = (geometry, label) =>
-            new Mesh(this.gpu, {
-                label,
-                pipeline,
-                geometry,
-                bindGroups: (uniformResource) => [
-                    this.gpu.device.createBindGroup({
-                        layout: pipeline.bindGroupLayout(0),
-                        entries: [{ binding: 0, resource: uniformResource }],
-                    }),
-                ],
-            });
+        const makeMesh = (geometry, label) => new Mesh({ label, geometry, shader });
 
         // Root sphere parented to the scene; every other shape attaches to a
         // previously created shape, building a nested hierarchy.

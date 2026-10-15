@@ -1,14 +1,5 @@
-struct Uniforms {
-  projectionMatrix : mat4x4f,
-  viewMatrix : mat4x4f,
-  modelViewMatrix : mat4x4f,
-  modelMatrix: mat4x4f,
-  normalMatrix : mat3x3f,
-  cameraPosition: vec3f,
-  resolution: vec2f,
-}
+// validate-prepend: ../../src/core/engine.wgsl
 
-@group(0) @binding(0) var<uniform> uniforms : Uniforms;
 @group(0) @binding(1) var textureSampler: sampler;
 @group(0) @binding(2) var tMap: texture_2d<f32>;
 
@@ -28,8 +19,8 @@ struct VertexOutput {
 fn vs(in: Vertex) -> VertexOutput {
   var vsOut: VertexOutput;
   vsOut.vUv = in.uv;
-  vsOut.vNormal = normalize(uniforms.normalMatrix * in.normal);
-  vsOut.position = uniforms.projectionMatrix * uniforms.modelViewMatrix * vec4f(in.position, 1.0);
+  vsOut.vNormal = normalize(object.normalMatrix * in.normal);
+  vsOut.position = camera.projectionMatrix * object.modelViewMatrix * vec4f(in.position, 1.0);
   return vsOut;
 }
 

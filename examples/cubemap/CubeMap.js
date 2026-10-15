@@ -1,4 +1,4 @@
-import { Camera, Renderer, Orbit, RenderPipeline, Mesh, Transform, Box, CubeMap } from 'ogpu';
+import { Camera, Renderer, Orbit, Shader, Mesh, Transform, Box, CubeMap } from 'ogpu';
 
 import skybox from './skybox.wgsl?raw';
 
@@ -28,29 +28,12 @@ export class CubeMapExample {
         const sampler = this.gpu.device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
 
         const geometry = new Box(this.gpu);
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: 'cubemap-pipeline',
-            code: skybox,
-            vertexBuffers: geometry.bufferLayouts,
-            cullMode: 'none', // both the inside-out skybox and the box are drawn with one pipeline
-        });
+        const shader = new Shader(this.gpu, { label: 'cubemap', code: skybox });
+        // both the inside-out skybox and the box are drawn with one state
+        const state = { cullMode: 'none' };
+        const bindGroups = [shader.bindGroup(0, { cubeSampler: sampler, tMap: cubemap.view })];
 
-        const makeMesh = (label) =>
-            new Mesh(this.gpu, {
-                label,
-                pipeline,
-                geometry,
-                bindGroups: (uniformResource) => [
-                    this.gpu.device.createBindGroup({
-                        layout: pipeline.bindGroupLayout(0),
-                        entries: [
-                            { binding: 0, resource: uniformResource },
-                            { binding: 1, resource: sampler },
-                            { binding: 2, resource: cubemap.view },
-                        ],
-                    }),
-                ],
-            });
+        const makeMesh = (label) => new Mesh({ label, geometry, shader, state, bindGroups });
 
         this.skybox = makeMesh('skybox');
         this.skybox.scale.set(20, 20, 20);

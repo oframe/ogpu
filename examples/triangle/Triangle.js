@@ -1,6 +1,6 @@
-import { Renderer, RenderPipeline, Mesh, Transform, FullscreenTriangle } from 'ogpu';
+import { Renderer, Shader, UniformBuffer, Mesh, Transform, FullscreenTriangle } from 'ogpu';
 
-import shader from './triangle.wgsl?raw';
+import triangleShader from './triangle.wgsl?raw';
 
 // Port of OGL's triangle-screen-shader: a single fullscreen covering triangle
 // (position -1..3, uv 0..2; excess clipped) with an animated cos() color ramp.
@@ -20,25 +20,16 @@ export class Triangle {
 
         const geometry = new FullscreenTriangle(this.gpu);
 
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: 'triangle-screen-pipeline',
-            code: shader,
-            vertexBuffers: geometry.bufferLayouts,
-            cullMode: 'none',
-        });
+        const shader = new Shader(this.gpu, { label: 'triangle-screen-shader', code: triangleShader });
+        const ub = new UniformBuffer(this.gpu, shader.uniforms, { uColor: [0.3, 0.2, 0.5] }, { label: 'triangle-uniforms' });
 
-        this.mesh = new Mesh(this.gpu, {
+        this.mesh = new Mesh({
             label: 'triangle-screen-mesh',
-            pipeline,
             geometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: pipeline.bindGroupLayout(0),
-                    entries: [{ binding: 0, resource: uniformResource }],
-                }),
-            ],
+            shader,
+            state: { cullMode: 'none' },
+            bindGroups: [shader.bindGroup(0, { uniforms: ub })],
         });
-        this.mesh.uniforms.set({ uColor: [0.3, 0.2, 0.5] });
         this.mesh.setParent(this.scene);
 
         this.gpu.renderer.add(this.update);

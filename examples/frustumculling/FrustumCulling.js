@@ -1,4 +1,4 @@
-import { Camera, Renderer, Orbit, RenderPipeline, Mesh, Geometry, Texture, Transform, Vec3, Cone, loadJSON } from 'ogpu';
+import { Camera, Renderer, Orbit, Shader, Mesh, Geometry, Texture, Transform, Vec3, Cone, loadJSON } from 'ogpu';
 
 import fieldShader from './field.wgsl?raw';
 import cameraMarkerShader from './cameramarker.wgsl?raw';
@@ -48,11 +48,7 @@ export class FrustumCulling {
                 uv: { data: data.uv, numComponents: 2, type: Float32Array },
             },
         });
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: 'frustum-field-pipeline',
-            code: fieldShader,
-            vertexBuffers: geometry.bufferLayouts,
-        });
+        const shader = new Shader(this.gpu, { label: 'frustum-field-shader', code: fieldShader });
 
         const texture = new Texture(this.gpu, { src: './assets/frustumculling/forest.jpg', mips: true });
         await texture.ready;
@@ -65,33 +61,18 @@ export class FrustumCulling {
             addressModeV: 'repeat',
         });
 
-        const fieldBindGroups = (uniformResource) => [
-            this.gpu.device.createBindGroup({
-                layout: pipeline.bindGroupLayout(0),
-                entries: [
-                    { binding: 0, resource: uniformResource },
-                    { binding: 1, resource: sampler },
-                    { binding: 2, resource: textureView },
-                ],
-            }),
-        ];
-
-        const makeBindGroups = (pl) => (uniformResource) => [
-            this.gpu.device.createBindGroup({
-                layout: pl.bindGroupLayout(0),
-                entries: [{ binding: 0, resource: uniformResource }],
-            }),
-        ];
+        // one bind group shared by the whole field
+        const fieldBindGroups = [shader.bindGroup(0, { textureSampler: sampler, tMap: textureView })];
 
         // Field: a size x size grid spread across a wide area.
         const size = 20;
         const num = size * size;
         this.field = [];
         for (let i = 0; i < num; i++) {
-            const mesh = new Mesh(this.gpu, {
+            const mesh = new Mesh({
                 label: `tree-${i}`,
-                pipeline,
                 geometry,
+                shader,
                 bindGroups: fieldBindGroups,
             });
 
@@ -125,18 +106,13 @@ export class FrustumCulling {
             topCap: false,
             bottomCap: false,
         });
-        const markerPipeline = new RenderPipeline(this.gpu, {
-            label: 'frustum-marker-pipeline',
-            code: cameraMarkerShader,
-            vertexBuffers: markerGeometry.bufferLayouts,
-            cullMode: 'none',
-        });
-        this.marker = new Mesh(this.gpu, {
+        const markerShader = new Shader(this.gpu, { label: 'frustum-marker-shader', code: cameraMarkerShader });
+        this.marker = new Mesh({
             label: 'camera-marker',
-            pipeline: markerPipeline,
             geometry: markerGeometry,
+            shader: markerShader,
+            state: { cullMode: 'none' },
             frustumCulled: false,
-            bindGroups: makeBindGroups(markerPipeline),
         });
         // OGL's fixed local orientation so the cone points along the camera.
         this.marker.rotation.x = -Math.PI / 2;

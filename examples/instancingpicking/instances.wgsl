@@ -1,15 +1,5 @@
-struct Uniforms {
-  projectionMatrix : mat4x4f,
-  viewMatrix : mat4x4f,
-  modelViewMatrix : mat4x4f,
-  modelMatrix: mat4x4f,
-  normalMatrix : mat3x3f,
-  cameraPosition: vec3f,
-  resolution: vec2f,
-  time: f32,
-}
+// validate-prepend: ../../src/core/engine.wgsl
 
-@group(0) @binding(0) var<uniform> uniforms : Uniforms;
 // Hit flags written by the picking compute pass — one f32 per instance.
 @group(0) @binding(1) var<storage, read> hits : array<f32>;
 
@@ -47,8 +37,8 @@ fn vs(in: Vertex) -> VertexOutput {
 
   pos *= 0.9 + random.y * 0.2;
 
-  let a1 = random.x * 6.28 + 4.0 * uniforms.time * (random.y - 0.5);
-  let a2 = random.z * 0.5 * sin(uniforms.time * random.x + random.z * 3.14);
+  let a1 = random.x * 6.28 + 4.0 * camera.time * (random.y - 0.5);
+  let a2 = random.z * 0.5 * sin(camera.time * random.x + random.z * 3.14);
 
   // rotate position around y (xz) then x (zy)
   let pxz = rotate2d(pos.xz, a1); pos.x = pxz.x; pos.z = pxz.y;
@@ -60,7 +50,7 @@ fn vs(in: Vertex) -> VertexOutput {
 
   pos += offset;
 
-  out.position = uniforms.projectionMatrix * uniforms.modelViewMatrix * vec4f(pos, 1.0);
+  out.position = camera.projectionMatrix * object.modelViewMatrix * vec4f(pos, 1.0);
   out.vNormal = nor;
   out.vHit = hits[in.id];
   return out;

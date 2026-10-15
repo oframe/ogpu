@@ -1,4 +1,4 @@
-import { Camera, Renderer, Orbit, RenderPipeline, Mesh, Transform, Box, Sphere, Plane, Torus, Cylinder, Disc, Cone, Quad } from 'ogpu';
+import { Camera, Renderer, Orbit, Shader, Mesh, Transform, Box, Sphere, Plane, Torus, Cylinder, Disc, Cone, Quad } from 'ogpu';
 
 import primitivesShader from './primitives.wgsl?raw';
 
@@ -25,38 +25,19 @@ export class Primitives {
 
         this.scene = new Transform();
 
-        const geometries = [
-            new Box(this.gpu),
-            new Sphere(this.gpu),
-            new Cylinder(this.gpu),
-            new Cone(this.gpu),
-            new Torus(this.gpu),
-            new Disc(this.gpu),
-            new Plane(this.gpu),
-            new Quad(this.gpu),
-        ];
+        const geometries = [new Box(this.gpu), new Sphere(this.gpu), new Cylinder(this.gpu), new Cone(this.gpu), new Torus(this.gpu), new Disc(this.gpu), new Plane(this.gpu), new Quad(this.gpu)];
+
+        const shader = new Shader(this.gpu, { label: 'primitives-shader', code: primitivesShader });
+        const state = { cullMode: 'none' };
 
         const cols = 3;
         const spacing = 2.4;
         this.meshes = geometries.map((geometry, i) => {
-            // per-geometry pipeline: layouts differ (Quad is 2D, rest 3D).
-            const pipeline = new RenderPipeline(this.gpu, {
-                label: `primitive-pipeline-${i}`,
-                code: primitivesShader,
-                vertexBuffers: geometry.bufferLayouts,
-                cullMode: 'none',
-            });
-
-            const mesh = new Mesh(this.gpu, {
+            const mesh = new Mesh({
                 label: `primitive-${i}`,
-                pipeline,
                 geometry,
-                bindGroups: (uniformResource) => [
-                    this.gpu.device.createBindGroup({
-                        layout: pipeline.bindGroupLayout(0),
-                        entries: [{ binding: 0, resource: uniformResource }],
-                    }),
-                ],
+                shader,
+                state,
             });
 
             const col = i % cols;

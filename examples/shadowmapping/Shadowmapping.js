@@ -1,4 +1,4 @@
-import { Mesh, Renderer, RenderPipeline, Transform, Camera, Orbit, Plane, RenderTarget, Mat4, Geometry, Texture, loadJSON, createUniformBuffer, TextureFormat, makeStructuredView } from 'ogpu';
+import { Mesh, Renderer, Shader, UniformBuffer, Transform, Camera, Orbit, Plane, RenderTarget, Mat4, Geometry, Texture, loadJSON, TextureFormat } from 'ogpu';
 
 import meshShader from './mesh.wgsl?raw';
 import shadow from './shadow.wgsl?raw';
@@ -72,42 +72,14 @@ export class Shadowmapping {
 
         const floorGeometry = new Plane(this.gpu, { width: 6, depth: 6 });
 
-        // airplane and floor share the same attribute layout (pos/normal/uv, interleaved,
-        // stride 32). Since we know that upfront, declare the vertex layout once and hand it
-        // to both pipelines — rather than borrowing one geometry's `.bufferLayouts` and
-        // implicitly assuming every other geometry the pipeline draws happens to match.
-        const vertexLayout = [
-            {
-                arrayStride: 32,
-                attributes: [
-                    { shaderLocation: 0, offset: 0, format: 'float32x3' }, // position
-                    { shaderLocation: 1, offset: 12, format: 'float32x3' }, // normal
-                    { shaderLocation: 2, offset: 24, format: 'float32x2' }, // uv
-                ],
-            },
-        ];
-
-        const shadowPipeline = new RenderPipeline(this.gpu, {
-            label: 'shadow-pipeline',
-            code: shadow,
-            vertexBuffers: vertexLayout,
-            depthStencil: {
-                depthWriteEnabled: true,
-                depthCompare: 'less',
-                format: DEPTH_FORMAT,
-                depthBias: 1,
-                depthBiasSlopeScale: 1.75,
-                depthBiasClamp: 0.0,
-            },
-        });
-
-        const renderPipeline = new RenderPipeline(this.gpu, {
-            label: 'render-pipeline',
+        const shadowShader = new Shader(this.gpu, { label: 'shadow-shader', code: shadow });
+        const renderShader = new Shader(this.gpu, {
+            label: 'render-shader',
             code: meshShader,
-            vertexBuffers: vertexLayout,
-            cullMode: 'back',
             constants: { shadowDepthTextureSize: SHADOW_SIZE },
         });
+
+        const casterState = { depthBias: 1, depthBiasSlopeScale: 1.75 };
 
         const shadowMapSampler = this.gpu.device.createSampler({
             label: 'shadow-map-sampler',
@@ -126,53 +98,37 @@ export class Shadowmapping {
             addressModeV: 'repeat',
         });
 
-        const shadowView = makeStructuredView(renderPipeline.defs.uniforms.shadowUniforms);
+        const shadowUniforms = new UniformBuffer(this.gpu, renderShader.defs.uniforms.shadowUniforms, { projectionViewMatrix: shadowViewProjectionMatrix }, { label: 'shadow-uniforms' });
 
-        const shadowUniformBuffer = createUniformBuffer(this.gpu, {
-            label: 'shadow-uniform-buffer',
-            size: shadowViewProjectionMatrix.byteLength,
-        });
-
-        shadowView.set({ projectionViewMatrix: shadowViewProjectionMatrix });
-        this.gpu.device.queue.writeBuffer(shadowUniformBuffer, 0, shadowView.arrayBuffer);
-
-        const makeRenderBG = (uniformResource, gpuTexture) =>
-            this.gpu.device.createBindGroup({
-                layout: renderPipeline.bindGroupLayout(0),
-                entries: [
-                    { binding: 0, resource: uniformResource },
-                    { binding: 1, resource: { buffer: shadowUniformBuffer } },
-                    { binding: 2, resource: shadowMapSampler },
-                    { binding: 3, resource: this.shadowBuffer.depthTexture.createView() },
-                    { binding: 4, resource: colorSampler },
-                    { binding: 5, resource: gpuTexture.createView() },
-                ],
+        const shadowDepthView = this.shadowBuffer.depthTexture.createView();
+        const makeRenderBG = (gpuTexture) =>
+            renderShader.bindGroup(0, {
+                shadowUniforms,
+                shadowSampler: shadowMapSampler,
+                shadowMap: shadowDepthView,
+                textureSampler: colorSampler,
+                tMap: gpuTexture.createView(),
             });
 
-        this.shadowAirplane = new Mesh(this.gpu, {
+        this.shadowAirplane = new Mesh({
             label: 'shadow-airplane',
-            pipeline: shadowPipeline,
             geometry: airplaneGeometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: shadowPipeline.bindGroupLayout(0),
-                    entries: [{ binding: 0, resource: uniformResource }],
-                }),
-            ],
+            shader: shadowShader,
+            state: casterState,
         });
 
-        this.airplane = new Mesh(this.gpu, {
+        this.airplane = new Mesh({
             label: 'airplane',
-            pipeline: renderPipeline,
             geometry: airplaneGeometry,
-            bindGroups: (uniformResource) => [makeRenderBG(uniformResource, airplaneTex.texture)],
+            shader: renderShader,
+            bindGroups: [makeRenderBG(airplaneTex.texture)],
         });
 
-        this.floor = new Mesh(this.gpu, {
+        this.floor = new Mesh({
             label: 'floor',
-            pipeline: renderPipeline,
             geometry: floorGeometry,
-            bindGroups: (uniformResource) => [makeRenderBG(uniformResource, waterTex.texture)],
+            shader: renderShader,
+            bindGroups: [makeRenderBG(waterTex.texture)],
         });
 
         this.floor.position.y = -3;

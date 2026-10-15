@@ -1,4 +1,21 @@
-import { Camera, Renderer, Orbit, RenderPipeline, Mesh, Transform, Color, Texture, Plane, RenderTarget, createUniformBuffer, blit, TextureFormat, makeStructuredView } from 'ogpu';
+import {
+    Camera,
+    Renderer,
+    Orbit,
+    RenderPipeline,
+    Shader,
+    UniformBuffer,
+    Mesh,
+    Transform,
+    Color,
+    Texture,
+    Plane,
+    RenderTarget,
+    createUniformBuffer,
+    blit,
+    TextureFormat,
+    makeStructuredView,
+} from 'ogpu';
 
 import sceneShader from './scene.wgsl?raw';
 import feedbackShader from './feedback.wgsl?raw';
@@ -49,48 +66,28 @@ export class FeedbackTrails {
         this.scene = new Transform();
         const geometry = new Plane(this.gpu, { subdivisionsWidth: 10, subdivisionsDepth: 10 });
 
-        // shared alpha-blended pipeline (transparent bucket, back-to-front sorted),
-        // targeting the offscreen rgba16float buffer.
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: 'feedback-scene-pipeline',
-            code: sceneShader,
-            vertexBuffers: geometry.bufferLayouts,
-            targets: this.sceneTarget.getTargets(),
-            transparent: true,
-            depthWrite: false,
-            cullMode: 'none',
-        });
+        // shared alpha-blended state (transparent bucket, back-to-front sorted); the
+        // offscreen rgba16float target decides the pipeline's colour format.
+        const shader = new Shader(this.gpu, { label: 'feedback-scene', code: sceneShader });
+        const state = { transparent: true, depthWrite: false, cullMode: 'none' };
 
         const sampler = this.gpu.device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
         const texture = new Texture(this.gpu, { src: './assets/sorttransparency/leaf.jpg' });
         await texture.ready;
         const view = texture.createView();
         const color = new Color('#ffc219');
+        const uniforms = new UniformBuffer(this.gpu, shader.uniforms, { color: [color[0], color[1], color[2]] }, { label: 'leaf-uniforms' });
+        const bindGroups = [shader.bindGroup(0, { uniforms, textureSampler: sampler, tMap: view })];
 
         this.meshes = [];
         for (let i = 0; i < 50; i++) {
-            const mesh = new Mesh(this.gpu, {
-                label: `leaf-${i}`,
-                pipeline,
-                geometry,
-                bindGroups: (uniformResource) => [
-                    this.gpu.device.createBindGroup({
-                        layout: pipeline.bindGroupLayout(0),
-                        entries: [
-                            { binding: 0, resource: uniformResource },
-                            { binding: 1, resource: sampler },
-                            { binding: 2, resource: view },
-                        ],
-                    }),
-                ],
-            });
+            const mesh = new Mesh({ label: `leaf-${i}`, geometry, shader, state, bindGroups });
 
             mesh.position.set((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 3);
             mesh.rotation.set(0, (Math.random() - 0.5) * 6.28, (Math.random() - 0.5) * 6.28);
             const s = Math.random() * 0.5 + 0.2;
             mesh.scale.set(s, s, s);
             mesh.speed = Math.random() * 1.5 + 0.2;
-            mesh.uniforms.set({ color: [color[0], color[1], color[2]] });
 
             mesh.setParent(this.scene);
             this.meshes.push(mesh);

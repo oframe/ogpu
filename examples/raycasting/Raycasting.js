@@ -1,4 +1,4 @@
-import { Camera, Renderer, Orbit, Raycast, RenderPipeline, Mesh, Transform, Box, Sphere, Quad } from 'ogpu';
+import { Camera, Renderer, Orbit, Raycast, Shader, UniformBuffer, Mesh, Transform, Box, Sphere, Quad } from 'ogpu';
 
 import raycastShader from './raycast.wgsl?raw';
 
@@ -31,28 +31,21 @@ export class Raycasting {
             cube: new Box(this.gpu),
         };
 
+        const shader = new Shader(this.gpu, { label: 'raycast-shader', code: raycastShader });
+        const state = { cullMode: 'none' };
+
         const makeMesh = (label, geometry, position) => {
-            // per-geometry pipeline: Quad is 2D, sphere/cube 3D — layouts differ.
-            const pipeline = new RenderPipeline(this.gpu, {
-                label: `raycast-pipeline-${label}`,
-                code: raycastShader,
-                vertexBuffers: geometry.bufferLayouts,
-                cullMode: 'none',
-            });
-            const mesh = new Mesh(this.gpu, {
+            // own hit-state buffer per mesh; the renderer derives a pipeline per geometry layout
+            const hit = new UniformBuffer(this.gpu, shader.uniforms, { uHit: 0 }, { label: `${label}-hit` });
+            const mesh = new Mesh({
                 label,
-                pipeline,
                 geometry,
-                bindGroups: (uniformResource) => [
-                    this.gpu.device.createBindGroup({
-                        layout: pipeline.bindGroupLayout(0),
-                        entries: [{ binding: 0, resource: uniformResource }],
-                    }),
-                ],
+                shader,
+                state,
+                bindGroups: [shader.bindGroup(0, { uniforms: hit })],
             });
             if (position) mesh.position.set(...position);
-            // share a pipeline but keep per-mesh hit state: write uHit just before draw
-            mesh.onBeforeRender(({ mesh }) => mesh.uniforms.set({ uHit: mesh.isHit ? 1 : 0 }));
+            mesh.onBeforeRender(({ mesh }) => hit.set({ uHit: mesh.isHit ? 1 : 0 }));
             mesh.setParent(this.scene);
             return mesh;
         };

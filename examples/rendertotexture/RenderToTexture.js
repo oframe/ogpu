@@ -1,4 +1,4 @@
-import { Box, Mesh, Renderer, RenderPipeline, Transform, RenderTarget, Camera, Orbit, blit, createUniformBuffer, TextureFormat, makeStructuredView } from 'ogpu';
+import { Box, Mesh, Shader, Renderer, RenderPipeline, Transform, RenderTarget, Camera, Orbit, blit, createUniformBuffer, TextureFormat, makeStructuredView } from 'ogpu';
 
 import display from './display.wgsl?raw';
 import cubeShader from './cube.wgsl?raw';
@@ -109,52 +109,16 @@ export class RenderToTexture {
 
         const geometry = new Box(this.gpu);
 
-        const testMeshPipeline = new RenderPipeline(this.gpu, {
-            label: 'simple-cube-render-pipeline',
-            vertexBuffers: geometry.bufferLayouts,
-            code: cubeShader,
-            targets: this.sceneBuffer.getTargets(),
-            sampleCount: this.sceneBuffer.sampleCount,
-        });
+        const shader = new Shader(this.gpu, { label: 'simple-cube', code: cubeShader });
 
-        this.testMesh = new Mesh(this.gpu, {
-            label: 'test-mesh',
-            pipeline: testMeshPipeline,
-            geometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    label: 'simple-box',
-                    layout: testMeshPipeline.bindGroupLayout(0),
-                    entries: [{ binding: 0, resource: uniformResource }],
-                }),
-            ],
-        });
+        this.testMesh = new Mesh({ label: 'test-mesh', geometry, shader });
 
         this.testMesh.setParent(this.sceneOne);
 
         this.testMesh.position.x = 0.0;
         this.testMesh.position.z = 1.0;
 
-        const testMeshTwoPipeline = new RenderPipeline(this.gpu, {
-            label: 'simple-cube-render-pipeline',
-            vertexBuffers: geometry.bufferLayouts,
-            code: cubeShader,
-            targets: this.sceneBuffer.getTargets(),
-            sampleCount: this.sceneBuffer.sampleCount,
-        });
-
-        this.testMeshTwo = new Mesh(this.gpu, {
-            label: 'test-mesh',
-            pipeline: testMeshTwoPipeline,
-            geometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    label: 'simple-box',
-                    layout: testMeshTwoPipeline.bindGroupLayout(0),
-                    entries: [{ binding: 0, resource: uniformResource }],
-                }),
-            ],
-        });
+        this.testMeshTwo = new Mesh({ label: 'test-mesh-two', geometry, shader });
 
         this.testMeshTwo.setParent(this.sceneOne);
 

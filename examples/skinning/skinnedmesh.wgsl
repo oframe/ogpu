@@ -1,20 +1,10 @@
-struct Uniforms {
-  projectionMatrix : mat4x4f,
-  viewMatrix : mat4x4f,
-  modelViewMatrix : mat4x4f,
-  modelMatrix: mat4x4f,
-  normalMatrix : mat3x3f,
-  cameraPosition: vec3f,
-  resolution: vec2f,
-  uScale: f32,
-  uAlpha: f32
-}
+// validate-prepend: ../../src/core/engine.wgsl
+// `camera` and `object` (group 1) come from the engine block Shader appends
 
-@group(0) @binding(0) var<uniform> uniforms : Uniforms;
-@group(0) @binding(1) var<storage, read> positionBuffer : array<f32>;
-@group(0) @binding(2) var<storage, read> normalBuffer : array<f32>;
-@group(0) @binding(3) var textureSampler : sampler;
-@group(0) @binding(4) var tMap : texture_2d<f32>;
+@group(0) @binding(0) var<storage, read> positionBuffer : array<f32>;
+@group(0) @binding(1) var<storage, read> normalBuffer : array<f32>;
+@group(0) @binding(2) var textureSampler : sampler;
+@group(0) @binding(3) var tMap : texture_2d<f32>;
 
 struct Vertex {
     @location(0) position: vec3f,
@@ -46,9 +36,9 @@ fn vs(in: Vertex) -> VertexOutput {
         normalBuffer[in.vertexIndex * 3 + 2]
     );
 
-    let worldPosition = uniforms.modelMatrix * vec4f(position, 1.0);
-    let viewPosition = uniforms.viewMatrix * worldPosition;
-    let clipPosition = uniforms.projectionMatrix * viewPosition;
+    let worldPosition = object.modelMatrix * vec4f(position, 1.0);
+    let viewPosition = camera.viewMatrix * worldPosition;
+    let clipPosition = camera.projectionMatrix * viewPosition;
 
     vsOut.position = clipPosition;
     vsOut.vUv = vec2f(in.uv.x, 1.0 - in.uv.y); //y is flipped in WebGPU

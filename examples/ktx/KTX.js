@@ -1,4 +1,4 @@
-import { Camera, Renderer, Orbit, RenderPipeline, Mesh, Transform, KTXTexture, Plane } from 'ogpu';
+import { Camera, Renderer, Orbit, Shader, Mesh, Transform, KTXTexture, Plane } from 'ogpu';
 
 import ktxShader from './ktx.wgsl?raw';
 
@@ -29,12 +29,7 @@ export class KTX {
         this.scene = new Transform();
 
         const geometry = new Plane(this.gpu);
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: 'ktx-pipeline',
-            code: ktxShader,
-            vertexBuffers: geometry.bufferLayouts,
-            cullMode: 'none',
-        });
+        const shader = new Shader(this.gpu, { label: 'ktx', code: ktxShader });
 
         // Same uv-grid texture as OGL, in whichever block format this GPU can
         // sample — order by preference like OGL's TextureLoader.
@@ -59,20 +54,12 @@ export class KTX {
             addressModeV: 'repeat',
         });
 
-        this.mesh = new Mesh(this.gpu, {
+        this.mesh = new Mesh({
             label: 'ktx-plane',
-            pipeline,
             geometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: pipeline.bindGroupLayout(0),
-                    entries: [
-                        { binding: 0, resource: uniformResource },
-                        { binding: 1, resource: sampler },
-                        { binding: 2, resource: view },
-                    ],
-                }),
-            ],
+            shader,
+            state: { cullMode: 'none' },
+            bindGroups: [shader.bindGroup(0, { textureSampler: sampler, tMap: view })],
         });
         this.mesh.rotation.x = -Math.PI / 2; // stand the XZ plane up to face the camera
         this.scene.addChild(this.mesh);

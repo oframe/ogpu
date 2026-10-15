@@ -1,10 +1,5 @@
-struct Uniforms {
-  projectionMatrix : mat4x4f,
-  modelViewMatrix : mat4x4f,
-  normalMatrix : mat3x3f,
-}
-
-@group(0) @binding(0) var<uniform> uniforms : Uniforms;
+// validate-prepend: ../../src/core/engine.wgsl
+// camera/object come from the engine block (group 1)
 
 struct Vertex {
   @location(0) position: vec3f,
@@ -19,8 +14,8 @@ struct VertexOutput {
 @vertex
 fn vs(in: Vertex) -> VertexOutput {
   var vsOut: VertexOutput;
-  vsOut.vNormal = normalize(uniforms.normalMatrix * in.normal);
-  vsOut.position = uniforms.projectionMatrix * uniforms.modelViewMatrix * vec4f(in.position, 1.0);
+  vsOut.vNormal = normalize(object.normalMatrix * in.normal);
+  vsOut.position = camera.projectionMatrix * object.modelViewMatrix * vec4f(in.position, 1.0);
   return vsOut;
 }
 

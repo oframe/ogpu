@@ -1,16 +1,9 @@
+// validate-prepend: ../../src/core/engine.wgsl
 // Feedback example's leaf scene — same as Sort Transparency's, but the distance
 // fog blends toward BLACK (not white) so distant leaves sink into the example's
 // black background instead of hazing over it.
 
 struct Uniforms {
-  projectionMatrix : mat4x4f,
-  viewMatrix : mat4x4f,
-  modelViewMatrix : mat4x4f,
-  modelMatrix : mat4x4f,
-  normalMatrix : mat3x3f,
-  cameraPosition : vec3f,
-  resolution : vec2f,
-  time : f32,
   color : vec3f,
 }
 
@@ -39,9 +32,9 @@ fn vs(in : Vertex) -> VertexOutput {
   let dist = pow(length(in.uv - 0.5), 2.0) - 0.25;
   pos.y += dist * 0.5;
 
-  let mvPos = uniforms.modelViewMatrix * vec4f(pos, 1.0);
+  let mvPos = object.modelViewMatrix * vec4f(pos, 1.0);
   out.vMVPos = mvPos;
-  out.position = uniforms.projectionMatrix * mvPos;
+  out.position = camera.projectionMatrix * mvPos;
   out.vUv = in.uv;
   return out;
 }

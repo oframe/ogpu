@@ -1,4 +1,4 @@
-import { Renderer, Camera, Orbit, Transform, Mesh, Geometry, Texture, RenderPipeline, ComputeShader, Vec3, createStorageBuffer, createUniformBuffer, Cone, loadJSON } from 'ogpu';
+import { Renderer, Camera, Orbit, Transform, Mesh, Geometry, Texture, Shader, ComputeShader, Vec3, createStorageBuffer, createUniformBuffer, Cone, loadJSON } from 'ogpu';
 
 import fieldShader from './field.wgsl?raw';
 import cameraMarkerShader from './cameramarker.wgsl?raw';
@@ -123,33 +123,14 @@ export class ComputeFrustumCulling {
             addressModeV: 'repeat',
         });
 
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: 'compute-frustum-field-pipeline',
-            code: fieldShader,
-            vertexBuffers: geometry.bufferLayouts,
-        });
-        this.field = new Mesh(this.gpu, {
+        const shader = new Shader(this.gpu, { label: 'compute-frustum-field-shader', code: fieldShader });
+        this.field = new Mesh({
             label: 'tree-field',
-            pipeline,
             geometry,
+            shader,
             frustumCulled: false,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: pipeline.bindGroupLayout(0),
-                    entries: [
-                        { binding: 0, resource: uniformResource },
-                        { binding: 1, resource: sampler },
-                        { binding: 2, resource: textureView },
-                    ],
-                }),
-                this.gpu.device.createBindGroup({
-                    layout: pipeline.bindGroupLayout(1),
-                    entries: [
-                        { binding: 0, resource: { buffer: this.modelBuffer } },
-                        { binding: 1, resource: { buffer: this.visibleBuffer } },
-                    ],
-                }),
-            ],
+            // group(1) is the engine's; the instance buffers live at group(2)
+            bindGroups: [shader.bindGroup(0, { textureSampler: sampler, tMap: textureView }), null, shader.bindGroup(2, { models: this.modelBuffer, visible: this.visibleBuffer })],
         });
         this.field.setParent(this.scene);
     }
@@ -190,24 +171,14 @@ export class ComputeFrustumCulling {
             bottomCap: false,
         });
 
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: 'compute-frustum-marker-pipeline',
-            code: cameraMarkerShader,
-            vertexBuffers: geometry.bufferLayouts,
-            cullMode: 'none',
-        });
+        const shader = new Shader(this.gpu, { label: 'compute-frustum-marker-shader', code: cameraMarkerShader });
 
-        this.marker = new Mesh(this.gpu, {
+        this.marker = new Mesh({
             label: 'camera-marker',
-            pipeline,
             geometry,
+            shader,
+            state: { cullMode: 'none' },
             frustumCulled: false,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: pipeline.bindGroupLayout(0),
-                    entries: [{ binding: 0, resource: uniformResource }],
-                }),
-            ],
         });
 
         this.marker.rotation.x = -Math.PI / 2;

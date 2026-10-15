@@ -1,4 +1,4 @@
-import { Camera, Renderer, Orbit, RenderPipeline, Mesh, Transform, Color, Texture, Plane, FullscreenTriangle, RenderTarget, GUI, TextureFormat } from 'ogpu';
+import { Camera, Renderer, Orbit, Shader, UniformBuffer, Mesh, Transform, Color, Texture, Plane, FullscreenTriangle, RenderTarget, GUI, TextureFormat } from 'ogpu';
 
 // Reuse the sort-transparency leaf shader unchanged — same Uniforms struct,
 // same green-channel alpha cutout.
@@ -35,9 +35,12 @@ export class MSAA {
         const sampler = this.gpu.device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
         const texture = new Texture(this.gpu, { src: './assets/sorttransparency/leaf.jpg' });
         await texture.ready;
-        this.leafSampler = sampler;
         this.leafView = texture.createView();
         this.color = new Color('#ffc219');
+
+        this.leafShader = new Shader(this.gpu, { label: 'msaa-leaf', code: leafShader });
+        const leafUniforms = new UniformBuffer(this.gpu, this.leafShader.uniforms, { color: [this.color[0], this.color[1], this.color[2]] }, { label: 'leaf-uniforms' });
+        this.leafBindGroups = [this.leafShader.bindGroup(0, { uniforms: leafUniforms, textureSampler: sampler, tMap: this.leafView })];
 
         this.buildTarget(this.params.sampleCount);
         this.initDisplay();
@@ -52,8 +55,8 @@ export class MSAA {
         this.update();
     }
 
-    // sampleCount is baked into both the RenderTarget and the pipeline, so a
-    // change tears down and rebuilds the target + scene mesh.
+    // sampleCount lives on the RenderTarget; a change rebuilds the target and
+    // the mesh pipelines follow it automatically.
     buildTarget(sampleCount) {
         this.target?.destroy();
 
@@ -66,33 +69,13 @@ export class MSAA {
             sampleCount,
         });
 
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: 'msaa-leaf-pipeline',
-            code: leafShader,
-            vertexBuffers: this.geometry.bufferLayouts,
-            targets: this.target.getTargets(),
-            sampleCount: this.target.sampleCount,
-            cullMode: 'none',
-            transparent: true,
-            depthWrite: false,
-        });
-
-        this.leaf = new Mesh(this.gpu, {
+        this.leaf = new Mesh({
             label: 'leaf',
-            pipeline,
             geometry: this.geometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: pipeline.bindGroupLayout(0),
-                    entries: [
-                        { binding: 0, resource: uniformResource },
-                        { binding: 1, resource: this.leafSampler },
-                        { binding: 2, resource: this.leafView },
-                    ],
-                }),
-            ],
+            shader: this.leafShader,
+            state: { cullMode: 'none', transparent: true, depthWrite: false },
+            bindGroups: this.leafBindGroups,
         });
-        this.leaf.uniforms.set({ color: [this.color[0], this.color[1], this.color[2]] });
         // Plane is XZ (normal +Y) — tilt it up to face the +Z camera, scale to fill.
         this.leaf.rotation.set(-Math.PI / 2 + 0.35, 0, 0);
         this.leaf.scale.set(0.6, 0.6, 0.6);
@@ -107,32 +90,20 @@ export class MSAA {
     initDisplay() {
         const geometry = new FullscreenTriangle(this.gpu);
 
-        this.displayPipeline = new RenderPipeline(this.gpu, {
-            label: 'msaa-display-pipeline',
-            code: displayShader,
-            vertexBuffers: geometry.bufferLayouts,
-            cullMode: 'none',
-        });
+        this.displayShader = new Shader(this.gpu, { label: 'msaa-display', code: displayShader });
         this.displaySampler = this.gpu.device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
 
-        this.display = new Mesh(this.gpu, {
+        this.display = new Mesh({
             label: 'msaa-display',
-            pipeline: this.displayPipeline,
             geometry,
-            bindGroups: () => [this.displayBindGroup()],
+            shader: this.displayShader,
+            state: { cullMode: 'none' },
+            bindGroups: [this.displayBindGroup()],
         });
     }
 
-    // display.wgsl never reads `uniforms`, so reflection drops binding 0 from the
-    // layout — only bind the sampler + resolved color texture.
     displayBindGroup() {
-        return this.gpu.device.createBindGroup({
-            layout: this.displayPipeline.bindGroupLayout(0),
-            entries: [
-                { binding: 1, resource: this.displaySampler },
-                { binding: 2, resource: this.target.createView(0) },
-            ],
-        });
+        return this.displayShader.bindGroup(0, { textureSampler: this.displaySampler, tMap: this.target.createView(0) });
     }
 
     bindDisplay() {

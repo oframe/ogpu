@@ -1,4 +1,4 @@
-import { Camera, Renderer, Orbit, RenderPipeline, Mesh, Geometry, Transform, Texture, VideoTexture, loadJSON, Box } from 'ogpu';
+import { Camera, Renderer, Orbit, Shader, Mesh, Geometry, Transform, Texture, VideoTexture, loadJSON, Box } from 'ogpu';
 
 import texturedObj from './texturedObj.wgsl?raw';
 
@@ -37,41 +37,22 @@ export class Textures {
             },
         });
 
-        const saddlePipeline = new RenderPipeline(this.gpu, {
-            label: 'saddle-pipeline',
-            code: texturedObj,
-            vertexBuffers: saddleGeo.bufferLayouts,
-        });
+        const shader = new Shader(this.gpu, { label: 'textured-obj', code: texturedObj });
+        this.shader = shader;
 
         const saddleTexture = new Texture(this.gpu, { src: './assets/textures/saddle.jpg' });
         await saddleTexture.ready;
         const saddleView = saddleTexture.createView();
 
-        this.saddle = new Mesh(this.gpu, {
+        this.saddle = new Mesh({
             label: 'saddle',
-            pipeline: saddlePipeline,
             geometry: saddleGeo,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: saddlePipeline.bindGroupLayout(0),
-                    entries: [
-                        { binding: 0, resource: uniformResource },
-                        { binding: 1, resource: sampler },
-                        { binding: 2, resource: saddleView },
-                    ],
-                }),
-            ],
+            shader,
+            bindGroups: [shader.bindGroup(0, { sampler2d: sampler, testTexture: saddleView })],
         });
         this.scene.addChild(this.saddle);
 
         const boxGeo = new Box(this.gpu);
-        const videoPipeline = new RenderPipeline(this.gpu, {
-            label: 'video-box-pipeline',
-            code: texturedObj,
-            vertexBuffers: boxGeo.bufferLayouts,
-            cullMode: 'none',
-        });
-        this.videoPipeline = videoPipeline;
 
         this.videoTexture = new VideoTexture(this.gpu, {
             video: './assets/textures/laputa.mp4',
@@ -81,20 +62,12 @@ export class Textures {
         // The video texture doesn't exist until the video's metadata loads, so
         // wire its bind group once it's ready instead of polling every frame.
         this.videoTexture.ready.then((video) => {
-            this.videoBox = new Mesh(this.gpu, {
+            this.videoBox = new Mesh({
                 label: 'video-box',
-                pipeline: videoPipeline,
                 geometry: boxGeo,
-                bindGroups: (uniformResource) => [
-                    this.gpu.device.createBindGroup({
-                        layout: videoPipeline.bindGroupLayout(0),
-                        entries: [
-                            { binding: 0, resource: uniformResource },
-                            { binding: 1, resource: this.videoSampler },
-                            { binding: 2, resource: video.createView() },
-                        ],
-                    }),
-                ],
+                shader,
+                state: { cullMode: 'none' },
+                bindGroups: [shader.bindGroup(0, { sampler2d: this.videoSampler, testTexture: video.createView() })],
             });
 
             this.videoBox.scale.set(1.78 * 1.5, 1.5, 1.78 * 1.5);
@@ -127,14 +100,7 @@ export class Textures {
         if (this.videoBox) {
             const view = this.videoTexture.createView();
             if (view) {
-                this.videoBox.bindGroups[0] = this.gpu.device.createBindGroup({
-                    layout: this.videoPipeline.bindGroupLayout(0),
-                    entries: [
-                        { binding: 0, resource: this.videoBox.uniformResource },
-                        { binding: 1, resource: this.videoSampler },
-                        { binding: 2, resource: view },
-                    ],
-                });
+                this.videoBox.bindGroups[0] = this.shader.bindGroup(0, { sampler2d: this.videoSampler, testTexture: view });
             }
         }
     };

@@ -1,4 +1,4 @@
-import { Camera, Renderer, Transform, Orbit, createStorageBuffer, ComputeShader, createUniformBuffer, Geometry, RenderPipeline, Mesh, Quad, GUI, makeStructuredView } from 'ogpu';
+import { Camera, Renderer, Transform, Orbit, createStorageBuffer, ComputeShader, createUniformBuffer, Geometry, Shader, Mesh, Quad, GUI, makeStructuredView } from 'ogpu';
 
 import sim from './sim.wgsl?raw';
 import particles from './particles.wgsl?raw';
@@ -164,32 +164,18 @@ export class Particles {
             },
         });
 
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: 'particle-render-pipeline',
-            code: particles,
-            vertexBuffers: geometry.bufferLayouts,
-            cullMode: 'none',
-        });
+        const shader = new Shader(this.gpu, { label: 'particle-shader', code: particles });
 
-        let renderBGs;
-        this.particles = new Mesh(this.gpu, {
+        // one bind group per ping-pong state, swapped by index each frame
+        this.renderBGs = [this.positionBufferWrite, this.positionBufferRead].map((positionData) => shader.bindGroup(0, { positionData }));
+
+        this.particles = new Mesh({
             label: 'particles',
-            pipeline,
             geometry,
-            bindGroups: (uniformResource) => {
-                const makeBG = (posBuf) =>
-                    this.gpu.device.createBindGroup({
-                        layout: pipeline.bindGroupLayout(0),
-                        entries: [
-                            { binding: 0, resource: uniformResource },
-                            { binding: 1, resource: { buffer: posBuf } },
-                        ],
-                    });
-                renderBGs = [makeBG(this.positionBufferWrite), makeBG(this.positionBufferRead)];
-                return [renderBGs[0]];
-            },
+            shader,
+            state: { cullMode: 'none' },
+            bindGroups: [this.renderBGs[0]],
         });
-        this.renderBGs = renderBGs;
 
         this.scene.addChild(this.particles);
 

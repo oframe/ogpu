@@ -1,23 +1,16 @@
+// validate-prepend: ../../src/core/engine.wgsl
+// `camera` and `object` (group 1) come from the engine block Shader appends
 override shadowDepthTextureSize: f32 = 2048.0;
-
-struct Uniforms {
-  projectionMatrix : mat4x4f,
-  modelViewMatrix : mat4x4f,
-  modelMatrix : mat4x4f,
-  viewMatrix: mat4x4f,
-  normalMatrix : mat3x3f,
-}
 
 struct Shadow {
   projectionViewMatrix : mat4x4f
 }
 
-@group(0) @binding(0) var<uniform> uniforms : Uniforms;
-@group(0) @binding(1) var<uniform> shadowUniforms : Shadow;
-@group(0) @binding(2) var shadowSampler: sampler_comparison;
-@group(0) @binding(3) var shadowMap: texture_depth_2d;
-@group(0) @binding(4) var textureSampler: sampler;
-@group(0) @binding(5) var tMap: texture_2d<f32>;
+@group(0) @binding(0) var<uniform> shadowUniforms : Shadow;
+@group(0) @binding(1) var shadowSampler: sampler_comparison;
+@group(0) @binding(2) var shadowMap: texture_depth_2d;
+@group(0) @binding(3) var textureSampler: sampler;
+@group(0) @binding(4) var tMap: texture_2d<f32>;
 
 struct Vertex {
   @location(0) position : vec3f,
@@ -34,15 +27,15 @@ struct VertexOutput {
 }
 
 @vertex
-fn vs(v : Vertex) -> VertexOutput {
+fn vs(in : Vertex) -> VertexOutput {
   var out : VertexOutput;
 
-  let worldPos = uniforms.modelMatrix * vec4(v.position, 1.0);
+  let worldPos = object.modelMatrix * vec4(in.position, 1.0);
   out.vWorldPos = worldPos.xyz;
 
-  out.position = uniforms.projectionMatrix * uniforms.viewMatrix * worldPos;
-  out.vNormal = uniforms.normalMatrix * v.normal;
-  out.vUv = v.uv;
+  out.position = camera.projectionMatrix * camera.viewMatrix * worldPos;
+  out.vNormal = object.normalMatrix * in.normal;
+  out.vUv = in.uv;
 
   var shadowCoord = shadowUniforms.projectionViewMatrix * worldPos;
   shadowCoord = shadowCoord / shadowCoord.w;

@@ -1,4 +1,4 @@
-import { Camera, Renderer, Transform, Orbit, Skin, Animation, Mesh, Geometry, RenderPipeline, Texture, loadJSON, Plane } from 'ogpu';
+import { Camera, Renderer, Transform, Orbit, Skin, Animation, Mesh, Geometry, Shader, Texture, loadJSON, Plane } from 'ogpu';
 
 import skinnedmesh from './skinnedmesh.wgsl?raw';
 import shadowShader from './shadow.wgsl?raw';
@@ -58,26 +58,18 @@ export class Skinning {
         await colorTexture.ready;
         const colorView = colorTexture.createView();
 
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: 'skinned-mesh-pipeline',
-            code: skinnedmesh,
-            vertexBuffers: geometry.bufferLayouts,
-        });
+        const shader = new Shader(this.gpu, { label: 'skinned-mesh-shader', code: skinnedmesh });
 
-        this.mesh = new Mesh(this.gpu, {
+        this.mesh = new Mesh({
             label: 'dancer-mesh',
-            pipeline,
             geometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: pipeline.bindGroupLayout(0),
-                    entries: [
-                        { binding: 0, resource: uniformResource },
-                        { binding: 1, resource: { buffer: this.skin.skinnedPositionBuffer } },
-                        { binding: 2, resource: { buffer: this.skin.skinnedNormalBuffer } },
-                        { binding: 3, resource: sampler },
-                        { binding: 4, resource: colorView },
-                    ],
+            shader,
+            bindGroups: [
+                shader.bindGroup(0, {
+                    positionBuffer: this.skin.skinnedPositionBuffer,
+                    normalBuffer: this.skin.skinnedNormalBuffer,
+                    textureSampler: sampler,
+                    tMap: colorView,
                 }),
             ],
         });
@@ -94,27 +86,14 @@ export class Skinning {
         await shadowTexture.ready;
         const shadowView = shadowTexture.createView();
 
-        const shadowPipeline = new RenderPipeline(this.gpu, {
-            label: 'shadow-floor-pipeline',
-            code: shadowShader,
-            vertexBuffers: floorGeo.bufferLayouts,
-            transparent: true,
-        });
+        const floorShader = new Shader(this.gpu, { label: 'shadow-floor-shader', code: shadowShader });
 
-        this.floor = new Mesh(this.gpu, {
+        this.floor = new Mesh({
             label: 'shadow-floor',
-            pipeline: shadowPipeline,
             geometry: floorGeo,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: shadowPipeline.bindGroupLayout(0),
-                    entries: [
-                        { binding: 0, resource: uniformResource },
-                        { binding: 1, resource: sampler },
-                        { binding: 2, resource: shadowView },
-                    ],
-                }),
-            ],
+            shader: floorShader,
+            state: { transparent: true },
+            bindGroups: [floorShader.bindGroup(0, { shadowSampler: sampler, tMap: shadowView })],
         });
         this.floor.position.y = -1;
         this.scene.addChild(this.floor);

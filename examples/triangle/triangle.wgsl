@@ -1,10 +1,9 @@
+// validate-prepend: ../../src/core/engine.wgsl
 // Fullscreen-triangle screen shader — port of OGL's triangle-screen-shader.
 // Animated cos() color ramp over the screen uv. No camera uniforms needed.
 
 struct Uniforms {
     uColor: vec3f,
-    time: f32,
-    resolution: vec2f,
 }
 
 @group(0) @binding(0) var<uniform> uniforms : Uniforms;
@@ -29,6 +28,6 @@ fn vs(in: Vertex) -> VertexOutput {
 
 @fragment
 fn fs(in: VertexOutput) -> @location(0) vec4f {
-    let rgb = 0.5 + 0.3 * cos(vec3f(in.uv.x, in.uv.y, in.uv.x) + uniforms.time) + uniforms.uColor;
+    let rgb = 0.5 + 0.3 * cos(vec3f(in.uv.x, in.uv.y, in.uv.x) + camera.time) + uniforms.uColor;
     return vec4f(rgb, 1.0);
 }

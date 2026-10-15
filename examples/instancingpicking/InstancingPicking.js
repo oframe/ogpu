@@ -1,4 +1,4 @@
-import { Camera, Renderer, Orbit, Raycast, RenderPipeline, Mesh, Transform, Box, ComputeShader, createStorageBuffer, createUniformBuffer, makeStructuredView } from 'ogpu';
+import { Camera, Renderer, Orbit, Raycast, Shader, Mesh, Transform, Box, ComputeShader, createStorageBuffer, createUniformBuffer, makeStructuredView } from 'ogpu';
 
 import picking from './picking.wgsl?raw';
 import instances from './instances.wgsl?raw';
@@ -78,25 +78,13 @@ export class InstancingPicking {
         });
 
         // Render: instanced cubes, coloured by the hits buffer.
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: 'instancing-picking-pipeline',
-            code: instances,
-            vertexBuffers: geometry.bufferLayouts,
-        });
+        const shader = new Shader(this.gpu, { label: 'instancing-picking-shader', code: instances });
 
-        this.cubes = new Mesh(this.gpu, {
+        this.cubes = new Mesh({
             label: 'cubes',
-            pipeline,
             geometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: pipeline.bindGroupLayout(0),
-                    entries: [
-                        { binding: 0, resource: uniformResource },
-                        { binding: 1, resource: { buffer: this.hitsBuffer } },
-                    ],
-                }),
-            ],
+            shader,
+            bindGroups: [shader.bindGroup(0, { hits: this.hitsBuffer })],
         });
         this.scene.addChild(this.cubes);
 

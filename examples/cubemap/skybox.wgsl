@@ -1,12 +1,8 @@
-struct Uniforms {
-  projectionMatrix : mat4x4f,
-  modelViewMatrix : mat4x4f,
-}
-
-@group(0) @binding(0) var<uniform> uniforms : Uniforms;
-@group(0) @binding(1) var cubeSampler : sampler;
+// validate-prepend: ../../src/core/engine.wgsl
+// camera/object come from the engine block
+@group(0) @binding(0) var cubeSampler : sampler;
 // cube texture rather than a 2d texture; sampled by a direction vector
-@group(0) @binding(2) var tMap : texture_cube<f32>;
+@group(0) @binding(1) var tMap : texture_cube<f32>;
 
 struct Vertex {
   @location(0) position : vec3f,
@@ -21,7 +17,7 @@ struct VertexOutput {
 fn vs(in : Vertex) -> VertexOutput {
   var out : VertexOutput;
   out.vDir = normalize(in.position);
-  out.position = uniforms.projectionMatrix * uniforms.modelViewMatrix * vec4f(in.position, 1.0);
+  out.position = camera.projectionMatrix * object.modelViewMatrix * vec4f(in.position, 1.0);
   return out;
 }
 

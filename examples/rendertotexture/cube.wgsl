@@ -1,17 +1,5 @@
-struct Uniforms {
-  projectionMatrix : mat4x4f,
-  viewMatrix : mat4x4f,
-  modelViewMatrix : mat4x4f,
-  modelMatrix: mat4x4f,
-  normalMatrix : mat3x3f,
-  cameraPosition: vec3f,
-  resolution: vec2f,
-  uScale: f32,
-  uAlpha: f32
-}
-
-@group(0) @binding(0) var<uniform> uniforms : Uniforms;
-
+// validate-prepend: ../../src/core/engine.wgsl
+// camera/object come from the engine block
 struct Vertex {
   @location(0) position: vec3f,
   @location(1) normal: vec3f,
@@ -25,14 +13,14 @@ struct VertexOutput {
 }
 
 @vertex
-fn vs(v: Vertex) -> VertexOutput {
+fn vs(in: Vertex) -> VertexOutput {
   var vsOut: VertexOutput;
 
-  let localPos = v.position;
+  let localPos = in.position;
 
-  vsOut.position = uniforms.projectionMatrix * uniforms.modelViewMatrix * vec4f(localPos, 1.0);
-  vsOut.vNormal = uniforms.normalMatrix * v.normal;
-  vsOut.vUv = v.uv;
+  vsOut.position = camera.projectionMatrix * object.modelViewMatrix * vec4f(localPos, 1.0);
+  vsOut.vNormal = object.normalMatrix * in.normal;
+  vsOut.vUv = in.uv;
   return vsOut;
 }
 

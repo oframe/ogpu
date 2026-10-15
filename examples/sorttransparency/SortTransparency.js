@@ -1,4 +1,4 @@
-import { Camera, Renderer, Orbit, RenderPipeline, Mesh, Transform, Color, Texture, Plane } from 'ogpu';
+import { Camera, Renderer, Orbit, Shader, UniformBuffer, Mesh, Transform, Color, Texture, Plane } from 'ogpu';
 
 import sortTransparencyShader from './sorttransparency.wgsl?raw';
 
@@ -33,18 +33,12 @@ export class SortTransparency {
             subdivisionsDepth: 10,
         });
 
-        // one alpha-blended pipeline, shared across meshes. `transparent: true`
-        // lands every mesh in the renderer's transparent bucket (sorted
-        // back-to-front) and gives the pipeline src-alpha / one-minus-src-alpha
-        // blending. depthWrite off so far planes don't occlude nearer ones.
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: 'sort-transparency-pipeline',
-            code: sortTransparencyShader,
-            vertexBuffers: geometry.bufferLayouts,
-            transparent: true,
-            depthWrite: false,
-            cullMode: 'none',
-        });
+        // one shader + state shared across meshes. `transparent: true` lands every
+        // mesh in the renderer's transparent bucket (sorted back-to-front) and gives
+        // src-alpha / one-minus-src-alpha blending. depthWrite off so far planes
+        // don't occlude nearer ones.
+        const shader = new Shader(this.gpu, { label: 'sort-transparency-shader', code: sortTransparencyShader });
+        const state = { transparent: true, depthWrite: false, cullMode: 'none' };
 
         // leaf.jpg — same asset as the OGL example; green channel drives alpha.
         const sampler = this.gpu.device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
@@ -53,23 +47,18 @@ export class SortTransparency {
         const view = texture.createView();
 
         const color = new Color('#ffc219');
+        // tint is identical for every leaf: one buffer + bind group shared by all
+        const uniforms = new UniformBuffer(this.gpu, shader.uniforms, { color: [color[0], color[1], color[2]] }, { label: 'leaf-uniforms' });
+        const bindGroups = [shader.bindGroup(0, { uniforms, textureSampler: sampler, tMap: view })];
 
         this.meshes = [];
         for (let i = 0; i < 50; i++) {
-            const mesh = new Mesh(this.gpu, {
+            const mesh = new Mesh({
                 label: `leaf-${i}`,
-                pipeline,
                 geometry,
-                bindGroups: (uniformResource) => [
-                    this.gpu.device.createBindGroup({
-                        layout: pipeline.bindGroupLayout(0),
-                        entries: [
-                            { binding: 0, resource: uniformResource },
-                            { binding: 1, resource: sampler },
-                            { binding: 2, resource: view },
-                        ],
-                    }),
-                ],
+                shader,
+                state,
+                bindGroups,
             });
 
             mesh.position.set((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 3);
@@ -77,8 +66,6 @@ export class SortTransparency {
             const s = Math.random() * 0.5 + 0.2;
             mesh.scale.set(s, s, s);
             mesh.speed = Math.random() * 1.5 + 0.2;
-
-            mesh.uniforms.set({ color: [color[0], color[1], color[2]] });
 
             mesh.setParent(this.scene);
             this.meshes.push(mesh);

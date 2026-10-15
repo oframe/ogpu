@@ -1,13 +1,10 @@
+// validate-prepend: ../../src/core/engine.wgsl
+// camera/object come from the engine block (group 1)
+
 // Textured forest model — port of the OGL frustum-culling field shader. Samples
 // forest.jpg by uv, then fades toward white with distance fog + a ground mist on
 // the lower verts (exact OGL formulas).
 
-struct Uniforms {
-  projectionMatrix : mat4x4f,
-  modelViewMatrix : mat4x4f,
-}
-
-@group(0) @binding(0) var<uniform> uniforms : Uniforms;
 @group(0) @binding(1) var textureSampler : sampler;
 @group(0) @binding(2) var tMap : texture_2d<f32>;
 
@@ -26,8 +23,8 @@ struct VertexOutput {
 @vertex
 fn vs(in : Vertex) -> VertexOutput {
   var out : VertexOutput;
-  let mvPos = uniforms.modelViewMatrix * vec4f(in.position, 1.0);
-  out.position = uniforms.projectionMatrix * mvPos;
+  let mvPos = object.modelViewMatrix * vec4f(in.position, 1.0);
+  out.position = camera.projectionMatrix * mvPos;
   out.vUv = vec2f(in.uv.x, 1.0 - in.uv.y);
   out.vMVPos = mvPos.xyz;
   out.vPos = in.position;

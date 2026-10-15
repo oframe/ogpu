@@ -1,4 +1,4 @@
-import { Camera, Renderer, RenderPipeline, Mesh, Vec3, Box, Sphere, Torus, Cylinder, Cone, Disc, Plane } from 'ogpu';
+import { Camera, Renderer, Shader, Mesh, Vec3, Box, Sphere, Torus, Cylinder, Cone, Disc, Plane } from 'ogpu';
 
 // normal-shaded vs/fs, no textures — fine for every primitive here
 import primitiveShader from '@examples/primitives/primitives.wgsl?raw';
@@ -60,6 +60,9 @@ export class MultiCanvas {
             { root: this.grid }
         );
 
+        this.shader = new Shader(this.gpu, { label: 'multicanvas-primitives', code: primitiveShader });
+        this.noCull = { cullMode: 'none' };
+
         this.cells = CELLS.map((config, i) => this.addCell(config, i === 0 ? this.pageCanvas : document.createElement('canvas')));
 
         this.renderer.add(this.update);
@@ -70,23 +73,11 @@ export class MultiCanvas {
         this.grid.appendChild(canvas);
 
         const geometry = makeGeometry(this.gpu);
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: `${label}-pipeline`,
-            code: primitiveShader,
-            vertexBuffers: geometry.bufferLayouts,
-            cullMode,
-        });
-
-        const mesh = new Mesh(this.gpu, {
+        const mesh = new Mesh({
             label: `${label}-mesh`,
-            pipeline,
             geometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: pipeline.bindGroupLayout(0),
-                    entries: [{ binding: 0, resource: uniformResource }],
-                }),
-            ],
+            shader: this.shader,
+            state: cullMode === 'none' ? this.noCull : undefined,
         });
 
         const camera = new Camera({ aspect: 1, fov: 45 });

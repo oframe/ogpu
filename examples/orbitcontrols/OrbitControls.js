@@ -1,4 +1,4 @@
-import { Camera, Renderer, Orbit, RenderPipeline, Mesh, Transform, Geometry, Texture, loadJSON } from 'ogpu';
+import { Camera, Renderer, Orbit, Shader, Mesh, Transform, Geometry, Texture, loadJSON } from 'ogpu';
 
 import orbitShader from './orbit.wgsl?raw';
 
@@ -35,32 +35,19 @@ export class OrbitControls {
             },
         });
 
-        const pipeline = new RenderPipeline(this.gpu, {
-            label: 'orbit-macaw-pipeline',
-            code: orbitShader,
-            vertexBuffers: geometry.bufferLayouts,
-            cullMode: 'none',
-        });
+        const shader = new Shader(this.gpu, { label: 'orbit-macaw-shader', code: orbitShader });
 
         const sampler = this.gpu.device.createSampler();
         const texture = new Texture(this.gpu, { src: './assets/orbitcontrols/macaw.jpg' });
         await texture.ready;
         const view = texture.createView();
 
-        this.macaw = new Mesh(this.gpu, {
+        this.macaw = new Mesh({
             label: 'macaw',
-            pipeline,
             geometry,
-            bindGroups: (uniformResource) => [
-                this.gpu.device.createBindGroup({
-                    layout: pipeline.bindGroupLayout(0),
-                    entries: [
-                        { binding: 0, resource: uniformResource },
-                        { binding: 1, resource: sampler },
-                        { binding: 2, resource: view },
-                    ],
-                }),
-            ],
+            shader,
+            state: { cullMode: 'none' },
+            bindGroups: [shader.bindGroup(0, { textureSampler: sampler, tMap: view })],
         });
         this.scene.addChild(this.macaw);
 

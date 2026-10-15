@@ -1,10 +1,10 @@
-import { Camera, Renderer, RenderPipeline, Mesh, Transform, Box } from 'ogpu';
+import { Camera, Renderer, Shader, Mesh, Transform, Box } from 'ogpu';
 import { GUI } from '@modules/GUI';
 
 import highMeshCountShader from './highmeshcount.wgsl?raw';
 
-// One pipeline, one shared box geometry — every mesh owns its own uniform buffer
-// + bind group. Stress test for high draw-call counts; mesh count is live-tunable.
+// One shader, one shared box geometry, no per-mesh resources — engine uniforms only.
+// Stress test for high draw-call counts; mesh count is live-tunable.
 export class HighMeshCount {
     count = 1000;
 
@@ -14,8 +14,8 @@ export class HighMeshCount {
 
     async init() {
         const canvas = document.getElementById('web-gpu-canvas');
-        // 256 B worst-case per-draw slice × gui max mesh count
-        this.renderer = new Renderer({ canvas, dpr: 2, perDrawSize: 50000 * 256 });
+        // one 256 B object slice per mesh (gui max count) + the pass's camera slice
+        this.renderer = new Renderer({ canvas, dpr: 2, perDrawSize: (50000 + 1) * 256 });
         await this.renderer.ready;
 
         this.gpu = this.renderer.gpu;
@@ -30,11 +30,7 @@ export class HighMeshCount {
         this.scene = new Transform();
         this.geometry = new Box(this.gpu);
 
-        this.pipeline = new RenderPipeline(this.gpu, {
-            label: 'high-mesh-count-pipeline',
-            code: highMeshCountShader,
-            vertexBuffers: this.geometry.bufferLayouts,
-        });
+        this.shader = new Shader(this.gpu, { label: 'high-mesh-count-shader', code: highMeshCountShader });
 
         this.meshes = [];
         this.setMeshCount(this.count);
@@ -56,16 +52,10 @@ export class HighMeshCount {
         this.meshes = [];
 
         for (let i = 0; i < count; i++) {
-            const mesh = new Mesh(this.gpu, {
+            const mesh = new Mesh({
                 label: `mesh-${i}`,
-                pipeline: this.pipeline,
                 geometry: this.geometry,
-                bindGroups: (uniformResource) => [
-                    this.gpu.device.createBindGroup({
-                        layout: this.pipeline.bindGroupLayout(0),
-                        entries: [{ binding: 0, resource: uniformResource }],
-                    }),
-                ],
+                shader: this.shader,
             });
 
             mesh.position.set(-100 + Math.random() * 200, -100 + Math.random() * 200, -100 + Math.random() * 200);

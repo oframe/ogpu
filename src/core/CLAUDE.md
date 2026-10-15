@@ -239,7 +239,7 @@ rect changes, so a scene without scissors costs no extra calls. It applies to
 `bindGroupLayout(i)`, `pipelineLayout` with the engine layout at slot 1). Empty
 group slots below the highest used group get `renderer.emptyLayout`, and a
 mesh without `bindGroups[0]` (or a hole at 2–3) gets `renderer.emptyBindGroup`
-there. `shader.bindGroup(group, { name: resource })` maps WGSL names to
+there. `shader.createBindGroup(group, { name: resource })` maps WGSL names to
 bindings: it throws on a name the WGSL doesn't declare in that group (and on
 group 1) and silently drops a declared one no entry point uses (it's absent
 from the derived layout, so commenting out a read while debugging doesn't
@@ -331,7 +331,7 @@ callbacks get no pass.
 
 **Texture resize:** destroying/recreating a `Texture` invalidates its
 `GPUTextureView`s, so any bind group holding them is stale. Rebuild the affected
-group: `mesh.bindGroups[0] = shader.bindGroup(0, { …fresh views })`. For a
+group: `mesh.bindGroups[0] = shader.createBindGroup(0, { …fresh views })`. For a
 per-frame ping-pong, prebuild the variants and swap the slot:
 `mesh.bindGroups[0] = variants[t % 2]`.
 

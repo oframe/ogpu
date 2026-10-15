@@ -277,7 +277,7 @@ export class GLTFLoader {
         );
 
         // iblEntries come in by binding number, so this group is built raw against
-        // the shader's layout rather than through shader.bindGroup()
+        // the shader's layout rather than through shader.createBindGroup()
         const m = new Mesh({
             label: `${name}-mesh`,
             geometry,
@@ -598,7 +598,7 @@ export class GLTFLoader {
             geometry,
             shader,
             bindGroups: [
-                shader.bindGroup(0, {
+                shader.createBindGroup(0, {
                     positionBuffer: skin.skinnedPositionBuffer,
                     normalBuffer: skin.skinnedNormalBuffer,
                     tSpecular: ibl.specView,

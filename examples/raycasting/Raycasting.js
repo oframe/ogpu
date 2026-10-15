@@ -42,7 +42,7 @@ export class Raycasting {
                 geometry,
                 shader,
                 state,
-                bindGroups: [shader.bindGroup(0, { uniforms: hit })],
+                bindGroups: [shader.createBindGroup(0, { uniforms: hit })],
             });
             if (position) mesh.position.set(...position);
             mesh.onBeforeRender(({ mesh }) => hit.set({ uHit: mesh.isHit ? 1 : 0 }));

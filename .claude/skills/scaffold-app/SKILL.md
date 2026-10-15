@@ -55,7 +55,7 @@ examples/<name>/cube.wgsl` (runs `naga`). The generated cube always
   parented to the scene. A `Mesh` takes no `gpu` and no pipeline; the renderer
   derives the pipeline from shader + `state` + the pass. The template builds a
   `UniformBuffer` (`uScale`) and binds it by WGSL name with
-  `shader.bindGroup(0, { uniforms })`; group(1) is the engine's.
+  `shader.createBindGroup(0, { uniforms })`; group(1) is the engine's.
 - Drives the loop via `this.gpu.renderer.add(this.update)` — OGPU owns the
   rAF tick and calls back with `{ time, deltaTime }`. The cube spins in
   `update`, which then calls `renderer.render({ scene, camera })`.

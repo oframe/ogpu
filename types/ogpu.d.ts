@@ -824,7 +824,7 @@ export const NEEDS_NORMAL: 1;
 export const NEEDS_OBJECT: 2;
 
 /**
- * A resource for Shader.bindGroup: a UniformBuffer or GPUBuffer binds whole;
+ * A resource for Shader.createBindGroup: a UniformBuffer or GPUBuffer binds whole;
  * `{ buffer, offset, size }`, texture views, samplers and external textures
  * pass through.
  */
@@ -855,8 +855,9 @@ export class Shader {
     /**
      * Bind group at `group` from resources keyed by WGSL name. Names declared but
      * unused by vs/fs are dropped; names not declared in the group throw. Group 1 throws.
+     * Allocates a new GPUBindGroup per call: build once, not per frame.
      */
-    bindGroup(group: number, resources: Record<string, ShaderResource>, options?: { label?: string }): GPUBindGroup;
+    createBindGroup(group: number, resources: Record<string, ShaderResource>, options?: { label?: string }): GPUBindGroup;
     reload(code: string): void;
     /** Unregisters from the hot-reload registry. */
     destroy(): void;

@@ -40,7 +40,7 @@ export class MSAA {
 
         this.leafShader = new Shader(this.gpu, { label: 'msaa-leaf', code: leafShader });
         const leafUniforms = new UniformBuffer(this.gpu, this.leafShader.uniforms, { color: [this.color[0], this.color[1], this.color[2]] }, { label: 'leaf-uniforms' });
-        this.leafBindGroups = [this.leafShader.bindGroup(0, { uniforms: leafUniforms, textureSampler: sampler, tMap: this.leafView })];
+        this.leafBindGroups = [this.leafShader.createBindGroup(0, { uniforms: leafUniforms, textureSampler: sampler, tMap: this.leafView })];
 
         this.buildTarget(this.params.sampleCount);
         this.initDisplay();
@@ -103,7 +103,7 @@ export class MSAA {
     }
 
     displayBindGroup() {
-        return this.displayShader.bindGroup(0, { textureSampler: this.displaySampler, tMap: this.target.createView(0) });
+        return this.displayShader.createBindGroup(0, { textureSampler: this.displaySampler, tMap: this.target.createView(0) });
     }
 
     bindDisplay() {

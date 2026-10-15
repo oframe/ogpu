@@ -84,7 +84,7 @@ export class InstancingPicking {
             label: 'cubes',
             geometry,
             shader,
-            bindGroups: [shader.bindGroup(0, { hits: this.hitsBuffer })],
+            bindGroups: [shader.createBindGroup(0, { hits: this.hitsBuffer })],
         });
         this.scene.addChild(this.cubes);
 

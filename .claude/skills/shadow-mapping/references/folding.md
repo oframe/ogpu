@@ -194,12 +194,12 @@ this.shadowMesh = new Mesh({
     shader: casterShader,
     state: { depthBias: 1, depthBiasSlopeScale: 1.75, depthBiasClamp: 0.0 },
     // skinned only: bind the Skin's storage buffer by WGSL name
-    // bindGroups: [casterShader.bindGroup(0, { positionBuffer: skin.skinnedPositionBuffer })],
+    // bindGroups: [casterShader.createBindGroup(0, { positionBuffer: skin.skinnedPositionBuffer })],
 });
 this.shadowMesh.frustumCulled = false; // skinned/storage-positioned casters
 ```
 
-Receiver mesh — add the three shadow resources to its group-0 `bindGroup` call, by
+Receiver mesh — add the three shadow resources to its group-0 `createBindGroup` call, by
 WGSL name:
 
 ```js
@@ -209,7 +209,7 @@ const receiver = new Mesh({
     shader: receiverShader,
     state: { cullMode: 'back' },
     bindGroups: [
-        receiverShader.bindGroup(0, {
+        receiverShader.createBindGroup(0, {
             shadowUniforms,
             shadowSampler: shadowMapSampler,
             shadowMap: shadowDepthView,

@@ -28,7 +28,7 @@ export class Triangle {
             geometry,
             shader,
             state: { cullMode: 'none' },
-            bindGroups: [shader.bindGroup(0, { uniforms: ub })],
+            bindGroups: [shader.createBindGroup(0, { uniforms: ub })],
         });
         this.mesh.setParent(this.scene);
 

@@ -102,12 +102,13 @@ export class Shader {
         return this._layouts[group];
     }
 
-    // Resources by WGSL name: shader.bindGroup(0, { uniforms, tMap: view, samp: sampler }).
+    // Resources by WGSL name: shader.createBindGroup(0, { uniforms, tMap: view, samp: sampler }).
     // A UniformBuffer or GPUBuffer binds whole; `{ buffer, offset, size }` and
     // views/samplers/external textures pass through. A name declared in this group
     // but unused by vs/fs is dropped (it's absent from the derived layout); a name
     // the WGSL doesn't declare in this group throws.
-    bindGroup(group, resources, { label } = {}) {
+    // Allocates a new GPUBindGroup per call: build once, not per frame.
+    createBindGroup(group, resources, { label } = {}) {
         if (group === ENGINE_GROUP) throw new Error(`[shader ${this.label}] group(1) is the engine's`);
         const layout = this._layouts[group];
         if (!layout) throw new Error(`[shader ${this.label}] has no group(${group})`);

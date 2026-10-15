@@ -77,7 +77,7 @@ export class FeedbackTrails {
         const view = texture.createView();
         const color = new Color('#ffc219');
         const uniforms = new UniformBuffer(this.gpu, shader.uniforms, { color: [color[0], color[1], color[2]] }, { label: 'leaf-uniforms' });
-        const bindGroups = [shader.bindGroup(0, { uniforms, textureSampler: sampler, tMap: view })];
+        const bindGroups = [shader.createBindGroup(0, { uniforms, textureSampler: sampler, tMap: view })];
 
         this.meshes = [];
         for (let i = 0; i < 50; i++) {

@@ -65,7 +65,7 @@ export class Skinning {
             geometry,
             shader,
             bindGroups: [
-                shader.bindGroup(0, {
+                shader.createBindGroup(0, {
                     positionBuffer: this.skin.skinnedPositionBuffer,
                     normalBuffer: this.skin.skinnedNormalBuffer,
                     textureSampler: sampler,
@@ -93,7 +93,7 @@ export class Skinning {
             geometry: floorGeo,
             shader: floorShader,
             state: { transparent: true },
-            bindGroups: [floorShader.bindGroup(0, { shadowSampler: sampler, tMap: shadowView })],
+            bindGroups: [floorShader.createBindGroup(0, { shadowSampler: sampler, tMap: shadowView })],
         });
         this.floor.position.y = -1;
         this.scene.addChild(this.floor);

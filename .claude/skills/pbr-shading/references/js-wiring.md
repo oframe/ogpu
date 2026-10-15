@@ -210,7 +210,7 @@ const materialUniforms = new UniformBuffer(
 
 ## Bind group (stock pbr.wgsl layout)
 
-Bind by WGSL name with `shader.bindGroup(0, {...})` (unknown names throw; names the
+Bind by WGSL name with `shader.createBindGroup(0, {...})` (unknown names throw; names the
 entry points don't use are dropped). A `Mesh` takes no `gpu` and no pipeline; group(1)
 is the engine's, so don't put anything there:
 
@@ -221,7 +221,7 @@ const mesh = new Mesh({
     shader,
     state: {}, // e.g. { transparent: true, depthWrite: false } for alpha blend
     bindGroups: [
-        shader.bindGroup(0, {
+        shader.createBindGroup(0, {
             tSpecular: ibl.specView, // cube
             shConstants: ibl.shBuffer, // SHConstants
             tBrdf: ibl.lutTexture.createView(),
@@ -243,7 +243,7 @@ The renderer uploads `camera`/`object` itself; the `material` buffer is yours to
 update (`materialUniforms.set({...})`).
 
 If the shader was folded into a custom layout (different binding numbers), nothing
-changes — `shader.bindGroup` resolves bindings by name.
+changes — `shader.createBindGroup` resolves bindings by name.
 
 ## GLTFLoader path
 

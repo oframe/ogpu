@@ -130,7 +130,7 @@ export class ComputeFrustumCulling {
             shader,
             frustumCulled: false,
             // group(1) is the engine's; the instance buffers live at group(2)
-            bindGroups: [shader.bindGroup(0, { textureSampler: sampler, tMap: textureView }), null, shader.bindGroup(2, { models: this.modelBuffer, visible: this.visibleBuffer })],
+            bindGroups: [shader.createBindGroup(0, { textureSampler: sampler, tMap: textureView }), null, shader.createBindGroup(2, { models: this.modelBuffer, visible: this.visibleBuffer })],
         });
         this.field.setParent(this.scene);
     }

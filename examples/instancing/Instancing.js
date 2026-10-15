@@ -59,7 +59,7 @@ export class Instancing {
             label: 'acorns',
             geometry,
             shader,
-            bindGroups: [shader.bindGroup(0, { textureSampler: sampler, tMap: view })],
+            bindGroups: [shader.createBindGroup(0, { textureSampler: sampler, tMap: view })],
         });
         this.scene.addChild(this.acorns);
 

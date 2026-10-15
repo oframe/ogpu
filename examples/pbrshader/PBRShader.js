@@ -227,7 +227,7 @@ export class PBRShader {
             shader,
             state: transparent ? this.carGlassState : undefined,
             bindGroups: [
-                shader.bindGroup(0, {
+                shader.createBindGroup(0, {
                     tSpecular: ibl.specView,
                     shConstants: ibl.shBuffer,
                     tBrdf: ibl.lutTexture.createView(),
@@ -268,7 +268,7 @@ export class PBRShader {
             geometry,
             shader,
             state: { transparent: true, cullMode: 'none' },
-            bindGroups: [shader.bindGroup(0, { shadowSampler: sampler, tMap: view })],
+            bindGroups: [shader.createBindGroup(0, { shadowSampler: sampler, tMap: view })],
         });
         mesh.setParent(this.sceneOne);
     }
@@ -296,7 +296,7 @@ export class PBRShader {
                 geometry,
                 shader,
                 bindGroups: [
-                    shader.bindGroup(
+                    shader.createBindGroup(
                         0,
                         {
                             uniforms,

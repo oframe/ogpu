@@ -134,7 +134,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - constructor(gpu, { label = 'shader', code, constants = {} } = {})
   - build(code)
   - bindGroupLayout(group = 0)
-  - bindGroup(group, resources, { label } = {})
+  - createBindGroup(group, resources, { label } = {})
   - reload(code)
   - destroy()
 - const `ENGINE_GROUP`, `NEEDS_NORMAL`, `NEEDS_OBJECT`

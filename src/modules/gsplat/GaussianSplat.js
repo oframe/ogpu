@@ -182,7 +182,7 @@ export class GaussianSplat extends Mesh {
                 },
             },
             bindGroups: [
-                shader.bindGroup(
+                shader.createBindGroup(
                     0,
                     {
                         uniforms,

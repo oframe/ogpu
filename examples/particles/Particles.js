@@ -167,7 +167,7 @@ export class Particles {
         const shader = new Shader(this.gpu, { label: 'particle-shader', code: particles });
 
         // one bind group per ping-pong state, swapped by index each frame
-        this.renderBGs = [this.positionBufferWrite, this.positionBufferRead].map((positionData) => shader.bindGroup(0, { positionData }));
+        this.renderBGs = [this.positionBufferWrite, this.positionBufferRead].map((positionData) => shader.createBindGroup(0, { positionData }));
 
         this.particles = new Mesh({
             label: 'particles',

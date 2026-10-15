@@ -2,7 +2,7 @@ import { StructView } from './reflect/StructView.js';
 
 // A struct view plus the GPUBuffer it uploads to. Knows no shader or pipeline:
 // build it from any reflected struct (usually `shader.uniforms`) and bind it by
-// name — `shader.bindGroup(0, { uniforms: ub })`. `set()` writes the view and
+// name — `shader.createBindGroup(0, { uniforms: ub })`. `set()` writes the view and
 // queues the upload immediately, so values are shared by every pass in a submit
 // (last write wins); use one UniformBuffer per view for per-pass values.
 export class UniformBuffer {

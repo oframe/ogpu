@@ -179,7 +179,7 @@ export class SkinningGLTF {
             geometry,
             shader,
             bindGroups: [
-                shader.bindGroup(0, {
+                shader.createBindGroup(0, {
                     positionBuffer: this.skin.skinnedPositionBuffer,
                     normalBuffer: this.skin.skinnedNormalBuffer,
                     tSpecular: ibl.specView,
@@ -217,7 +217,7 @@ export class SkinningGLTF {
             geometry: floorGeo,
             shader: floorShaderModule,
             bindGroups: [
-                floorShaderModule.bindGroup(0, {
+                floorShaderModule.createBindGroup(0, {
                     shadowUniforms,
                     shadowSampler: shadowMapSampler,
                     shadowMap: shadowDepthView,
@@ -234,7 +234,7 @@ export class SkinningGLTF {
             geometry,
             shader: casterShader,
             state: { depthBias: 1, depthBiasSlopeScale: 1.75 },
-            bindGroups: [casterShader.bindGroup(0, { positionBuffer: this.skin.skinnedPositionBuffer })],
+            bindGroups: [casterShader.createBindGroup(0, { positionBuffer: this.skin.skinnedPositionBuffer })],
         });
         this.shadowMesh.frustumCulled = false;
 

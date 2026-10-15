@@ -22,7 +22,7 @@ AABB when both exist.
 ## GUI.js
 
 `gui.uniform(ub, key)` takes a `UniformBuffer` (the same one you bind via
-`shader.bindGroup`): it keeps a local proxy object, seeds it from the buffer's
+`shader.createBindGroup`): it keeps a local proxy object, seeds it from the buffer's
 current value, and calls `ub.set({[key]: value})` on every Tweakpane change — and
 `set` uploads immediately, so there is no per-draw upload to wait for. Scalar
 uniforms (length-1 typed-array view) are unwrapped to a number for the proxy; vec

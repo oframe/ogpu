@@ -1,5 +1,96 @@
 # Changelog
 
+## 0.12.0
+
+Engine uniforms live in fixed slots written only when they change, live draws skip redundant
+state, a `RecordedGroup` replays a static subtree from a render bundle, and a pipeline that
+can't be built is skipped by every mesh that uses it. Ported from dgpu 0.11.0, plus the
+equivalent of dgpu 0.11.1's pipeline-cache fix.
+
+### Added
+
+- **`RecordedGroup`** (`@core/RecordedGroup`, also from `ogpu`) — a `Transform` whose Mesh
+  descendants are drawn from a `GPURenderBundle`. `record()` is the explicit capture (visible
+  meshes, sorted by shader, state, geometry, first bind group); the renderer encodes a bundle
+  per pass kind + camera slot on first use (16 kept per group) and replays it before the live
+  opaque draws. Children may move (their engine slots update; the bundle reads them by frozen
+  offset); anything else that changes makes `stale` true, warned once, and the old recording
+  keeps replaying until you call `record()`. Engine-side changes (buffer growth, device
+  restore, a recorded mesh's slot changing, a pipeline arriving or failing) re-encode the same
+  recording. Each group replays under its own resolved scissor; a child's own scissor warns at
+  `record()`. Indirect draws stay GPU-driven (`drawBuffer` + `drawBufferOffset` are recorded,
+  their contents are not). The group is not frustum culled or sorted. When it fits and when it
+  doesn't: `src/core/CLAUDE.md`.
+- **`examples/highmeshcount`: live / recorded `mode`** (`?src=highmeshcount&mode=recorded`) and
+  an `animate` toggle. The meshes live under one holder, so a mode switch reparents one node.
+- **`Mesh.destroy()`** — frees the mesh's engine slot (a mesh holds no GPU objects);
+  `GaussianSplat.destroy()` calls it.
+- **`Geometry.drawBufferOffset`** (option + property, bytes) — where this geometry's indirect
+  args start inside `drawBuffer`, so geometries can share one packed args buffer.
+- **`BoundState`** and `drawGeometry(pass, geometry, bound)` exported from `@core/Mesh`.
+- `Transform.structureVersion` — bumped up the ancestor chain when a child is added or removed.
+- `Shader.device` — the device the shader was built on.
+
+### Changed
+
+- **`PerDrawBuffer` uses fixed slots.** Every mesh owns an object slot from its first draw and
+  rewrites it only when its `worldVersion` moves (or its shader starts reading more matrices);
+  each `render()` takes the frame's next camera slot. `flush()` uploads the dirty slots as one
+  span while it is at most 4× the dirty count, else one `writeBuffer` per run (crossover
+  re-measured here: a span wins frame time up to 4× and loses past ~8×). The buffer doubles
+  when full (`perDrawSize` is the starting size; growth bumps `generation` and
+  `renderer.engineBindGroup` — now a getter — rebuilds). Slots come back through
+  `mesh.destroy()` or a `FinalizationRegistry`, reusable after the next frame start. One value
+  per slot per submit: a mesh moved between two passes of one external-encoder submit shows its
+  last transform in both (warned once). `alloc()` / `write()` / `pointer` / `flushed` are gone;
+  `pending`, `release()`, `destroy()` are new.
+- **Live draws skip redundant state.** One `BoundState` per `render()`: a draw re-sets only the
+  pipeline, bind groups and vertex/index buffers that differ from the previous draw's. (dgpu
+  shares one tracker across renders; ogpu makes one per `render()` because a callback may
+  render into another pass mid-loop.)
+
+### Fixed
+
+- **A failed pipeline key no longer leaks an invalid pipeline.** After `forceDeviceLoss()` with
+  a shader that wasn't rebuilt, the first mesh's report fired once but every other mesh with the
+  same key drew with the invalid pipeline (and a `RecordedGroup` baked it into its bundle, then
+  never re-encoded after the app rebuilt the shader). The cache now refuses a shader from another
+  device synchronously and stores `null`, so every mesh with that key skips; it is reported once
+  per key and retried on a shader `version` bump or a cache clear. An async validation failure
+  nulls its key even when another key failed in the same frame (one stayed invalid for good
+  before). `RecordedGroup` leaves pipeline-less meshes out (warned once) and re-encodes when
+  they get one.
+
+### Measured
+
+`highmeshcount`, seeded scene and pinned camera (581 of 1000 / 5780 of 10000 meshes drawn by the
+live path), Apple M1 Pro, headless Chromium, against 0.10.1: medians of 4 interleaved page
+loads, best of 5 × 300 frames (× 40 at 10000). CPU = synchronous `render()`, wall = pipelined
+frame time to `onSubmittedWorkDone`, GPU = frames batched into one submit, timed to
+`onSubmittedWorkDone` (6 interleaved loads; includes the uniform uploads).
+
+| case                     | CPU ms        | wall ms       | GPU ms        |
+| ------------------------ | ------------- | ------------- | ------------- |
+| 1000 static              | 0.497 → 0.345 | 0.501 → 0.349 | 0.253 → 0.239 |
+| 1000 every mesh moving   | 0.820 → 0.697 | 0.824 → 0.702 | 0.270 → 0.226 |
+| 1000 camera orbiting     | 0.500 → 0.347 | 0.504 → 0.351 |               |
+| 1000 50-mesh churn       | 0.574 → 0.438 | 0.578 → 0.442 |               |
+| 10000 static             | 7.91 → 6.12   | 8.00 → 6.19   | 2.01 → 1.78   |
+| 10000 every mesh moving  | 11.8 → 11.0   | 11.9 → 11.1   | 1.91 → 1.92   |
+| 10000 camera orbiting    | 8.49 → 6.47   | 8.58 → 6.54   |               |
+| 10000 50-mesh churn      | 8.59 → 6.63   | 8.69 → 6.71   |               |
+| 1000 static, recorded    | 0.504 → 0.045 | 0.508 → 0.246 | 0.223 → 0.275 |
+| 1000 moving, recorded    | 0.829 → 0.536 | 0.832 → 0.540 | 0.210 → 0.283 |
+| 10000 static, recorded   | 8.11 → 0.67   | 8.21 → 2.12   | 1.86 → 2.56   |
+| 10000 moving, recorded   | 11.9 → 7.94   | 12.0 → 8.05   | 1.84 → 2.68   |
+| 10000 orbiting, recorded | 8.43 → 0.66   | 8.53 → 2.13   |               |
+
+The main-pass timestamp is unchanged (0.586 → 0.587 ms at 10000). The recorded rows draw every
+mesh (no frustum culling: 1000 / 10000 against 581 / 5780), hence the higher GPU time; the
+frame wall still drops 26–75%. Per-view frame wall and summed GPU pass time of `skinning`,
+`skinninggltf`, `gltf`, `instancing`, `pbrshader`, `highmeshcount` (−14% wall), `multicanvas`
+and `shadowmapping` are unchanged within noise. Screenshots of every example match 0.10.1.
+
 ## 0.11.0
 
 The engine object block no longer depends on the camera. Breaking for shaders that read

@@ -588,10 +588,9 @@ export class Renderer {
             const ui = []; // depthTest false
 
             this.renderQueue.forEach((node) => {
-                // transitional: legacy meshes carry these on their pipeline
-                const state = node.state ?? node.pipeline;
+                const state = node.state;
                 const depthTest = state.depthTest !== false;
-                node._sortId = node.shader?.id ?? node.pipeline?.id ?? 0;
+                node._sortId = node.shader.id;
                 if (!state.transparent) {
                     opaque.push(node);
                 } else if (depthTest) {
@@ -790,7 +789,7 @@ export class Renderer {
         const passInfo = target ? this._targetPassInfo(target) : this._canvasPassInfo(this.depth ? TextureFormat.DEPTH24PLUS : null);
         const pending = [];
         scene.traverse((node) => {
-            if (node.shader && node.geometry && !node._legacy) {
+            if (node.shader && node.geometry) {
                 pending.push(this.pipelines.compileAsync(node, passInfo));
             }
         });
@@ -860,8 +859,7 @@ export class Renderer {
 
             this.getRenderQueue({ scene, camera, frustumCull });
 
-            // time/resolution feed legacy meshes; the rest is the Mesh engine path
-            const args = { camera, pass, passInfo, renderer: this, cameraOffset, time: this.time, resolution: [width, height] };
+            const args = { camera, pass, passInfo, renderer: this, cameraOffset };
             this.renderQueue?.forEach?.((node) => {
                 node.draw(args);
             });

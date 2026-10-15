@@ -43,11 +43,9 @@ export class GUI {
 
     /**
      * Bind a uniform field. `target` is a UniformBuffer (`.view` + `.set`, uploads
-     * on set), or any object that owns a structured uniform view (a legacy `Mesh`,
-     * or a pass that owns its uniforms): `.uniforms` + `.gpu`, with an optional
-     * `.uniformBuffer` — present on passes that own a private buffer, absent on
-     * legacy Meshes (uploaded at next draw instead). Tweakpane edits a local
-     * proxy; every change pushes the value through.
+     * on set) or a pass that owns its uniforms (`.uniforms` struct view + `.gpu`,
+     * optional `.uniformBuffer` written on change). Tweakpane edits a local proxy;
+     * every change pushes the value through.
      */
     uniform(target, key, opts = {}) {
         if (target instanceof UniformBuffer) return this._uniformBuffer(target, key, opts);

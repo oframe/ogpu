@@ -13,8 +13,6 @@ struct VertexOutput {
 
 // Fullscreen triangle from gpu.TRIANGLE. Same top-origin uv.y flip as feedback.wgsl
 // so tFeedback samples at a raw texel-identity read (fb is already screen-oriented).
-// No uniforms here — so blit skips the dynamic offset (pipeline.hasDynamicUniform is
-// false), and binding 0 is the sampler, not the engine's per-draw uniform slot.
 @vertex
 fn vs(v : Vertex) -> VertexOutput {
   var o : VertexOutput;

@@ -1,7 +1,5 @@
 // Blit a fullscreen geometry (pass gpu.TRIANGLE, or gpu.QUAD for depth-reconstruction)
-// through a RenderPipeline into targetView. Pass the RenderPipeline WRAPPER, not the
-// raw .pipeline: blit reads .hasDynamicUniform to decide whether group(0)/binding(0)
-// takes the per-draw dynamic offset ([0]) or none — passes with no uniform skip it.
+// through a RenderPipeline (the wrapper, not the raw .pipeline) into targetView.
 // clearValue is inert — the geometry covers every pixel — so it's not exposed.
 // depthView is for pipelines whose fragment writes frag_depth (the spec requires
 // a depth attachment for that); omit it for plain colour blits.
@@ -26,7 +24,7 @@ export function blit(encoder, { pipeline, geometry, targetView, depthView, bindG
         }),
     });
     pass.setPipeline(pipeline.pipeline);
-    pass.setBindGroup(0, bindGroup, pipeline.hasDynamicUniform ? [0] : []);
+    pass.setBindGroup(0, bindGroup);
 
     const verts = geometry.nonInstancedVerts;
     verts.buffers.forEach((buffer, i) => pass.setVertexBuffer(i, buffer));

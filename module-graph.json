@@ -1,9 +1,9 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 158,
-    "edges": 289,
-    "modules": 103,
+    "nodes": 157,
+    "edges": 286,
+    "modules": 102,
     "shaders": 48,
     "external": 7
   },
@@ -21,16 +21,16 @@
       "inDegree": 8
     },
     {
-      "id": "src/core/reflect/index.js",
-      "inDegree": 6
-    },
-    {
       "id": "src/core/Texture.js",
       "inDegree": 6
     },
     {
       "id": "src/modules/gsplat/SplatLoader.js",
       "inDegree": 6
+    },
+    {
+      "id": "src/core/reflect/index.js",
+      "inDegree": 5
     },
     {
       "id": "src/core/Transform.js",
@@ -457,7 +457,7 @@
     {
       "id": "pkg:@math",
       "type": "external",
-      "inDegree": 13,
+      "inDegree": 12,
       "outDegree": 0
     },
     {
@@ -527,16 +527,10 @@
       "outDegree": 18
     },
     {
-      "id": "src/core/legacyMesh.js",
-      "type": "module",
-      "inDegree": 1,
-      "outDegree": 2
-    },
-    {
       "id": "src/core/Mesh.js",
       "type": "module",
       "inDegree": 3,
-      "outDegree": 4
+      "outDegree": 3
     },
     {
       "id": "src/core/PerDrawBuffer.js",
@@ -619,7 +613,7 @@
     {
       "id": "src/core/reflect/index.js",
       "type": "module",
-      "inDegree": 6,
+      "inDegree": 5,
       "outDegree": 3
     },
     {
@@ -1389,20 +1383,8 @@
       "to": "src/core/UniformBuffer.js"
     },
     {
-      "from": "src/core/legacyMesh.js",
-      "to": "pkg:@math"
-    },
-    {
-      "from": "src/core/legacyMesh.js",
-      "to": "src/core/reflect/index.js"
-    },
-    {
       "from": "src/core/Mesh.js",
       "to": "pkg:@math"
-    },
-    {
-      "from": "src/core/Mesh.js",
-      "to": "src/core/legacyMesh.js"
     },
     {
       "from": "src/core/Mesh.js",

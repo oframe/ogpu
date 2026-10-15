@@ -42,11 +42,11 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 
 ### src/core/Mesh.js
 - **class Mesh** extends Transform
-  - constructor(options = {}, legacyOptions)
+  - constructor({ label = 'mesh', geometry, shader, state = NO_STATE, bindGroups = [], manualRender = fal…)
   - onBeforeRender(f)
   - onAfterRender(f)
   - updateDerived()
-  - draw(args)
+  - draw({ pass, passInfo, renderer, camera, cameraOffset })
 - fn `drawGeometry(pass, geometry)`
 
 ### src/core/PerDrawBuffer.js
@@ -180,10 +180,6 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { Skin } from './skin/Skin.js'
 - re-export * from './GPUEnums.js'
 - re-export { StructView, makeStructuredView, reflect } from './reflect/index.js'
-
-### src/core/legacyMesh.js
-- fn `initLegacyMesh(mesh, gpu, { label, pipeline, geometry, bindGroups })`
-- fn `drawLegacyMesh(mesh, { camera = null, pass, time = 0, resolution = null } = {})`
 
 ### src/core/primitives/Box.js
 - **class Box** extends Geometry

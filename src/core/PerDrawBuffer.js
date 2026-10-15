@@ -11,8 +11,7 @@ const _modelView = /* @__PURE__ */ new Mat4(); // one scratch for every mesh, co
 
 // Shared per-draw uniform buffer (Unity's UnityPerDraw analogue) behind the
 // engine's group(1): one camera slice per render() pass and one object slice per
-// draw, in an aligned CPU mirror, bound through dynamic offsets. Legacy meshes
-// copy their whole uniforms struct into a slice via write(). Renderer.render
+// draw, in an aligned CPU mirror, bound through dynamic offsets. Renderer.render
 // flushes the slices it allocated in ONE writeBuffer; Renderer owns one and
 // resets the pointer each frame. Queue ordering makes flush-before-submit and
 // cross-frame reuse safe.
@@ -37,10 +36,9 @@ export class PerDrawBuffer {
     alloc(byteLength) {
         const offset = this.pointer;
         this.pointer += Math.ceil(byteLength / this.align) * this.align;
-        // No growth — growing invalidates the engine bind group (and legacy
-        // group(0)s); raise the renderer's perDrawSize instead if this ever
-        // fires. Reported once per frame: this runs per draw and would
-        // otherwise flood the console.
+        // No growth — growing invalidates the engine bind group; raise the renderer's
+        // perDrawSize instead if this ever fires. Reported once per frame: this
+        // runs per draw and would otherwise flood the console.
         if (this.pointer > this.size && !this._overflowReported) {
             this._overflowReported = true;
             console.error(`per-draw uniform buffer overflow (${this.pointer} > ${this.size}) — raise Renderer's perDrawSize; draws past the end are skipped`);

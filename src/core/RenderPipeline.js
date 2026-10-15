@@ -5,9 +5,11 @@ import { registerShader } from './ShaderReload';
 import { applyOverrideConstants } from '@utils/wgslOverrides';
 import { TextureFormat, BlendFactor } from './GPUEnums.js';
 
-// Wraps GPURenderPipeline: reflects raw WGSL (@core/reflect) into bind-group layouts
-// and a compiled GPURenderPipeline. Does NOT own uniform buffers or bind groups —
-// those are per-mesh concerns managed by each Mesh instance.
+// An explicit GPURenderPipeline for fullscreen passes and other non-Mesh draws
+// (fixed geometry + fixed target, so the renderer's pipeline cache buys nothing).
+// No engine block, a fully reflected layout, nothing dynamic: callers own their
+// uniform buffers and bind groups (against bindGroupLayout(i)). Meshes use
+// Shader + state instead and never see one of these.
 
 export class RenderPipeline {
     constructor(
@@ -39,10 +41,8 @@ export class RenderPipeline {
         this.transparent = transparent;
         this.cullMode = cullMode;
         this.id = ID++;
-        // vertex buffer layout(s) only — never the geometry instance. the layout
-        // is baked into the pipeline at compile; the actual buffers are bound
-        // per-draw by the Mesh that owns the geometry. typically sourced from a
-        // geometry via `geo.bufferLayouts`, or a standalone descriptor.
+        // vertex buffer layout(s) only, e.g. gpu.TRIANGLE.bufferLayouts — the
+        // caller binds the actual buffers per draw
         this.vertexBuffers = vertexBuffers;
 
         // stash everything build() needs so a hot-reload can rebuild the
@@ -60,8 +60,6 @@ export class RenderPipeline {
 
     // (Re)compiles the shader module and (re)creates the GPURenderPipeline.
     // Called once from the constructor and again on each hot-reload.
-    // Meshes detect a reload by comparing their cached `_defs` reference
-    // against `pipeline.defs` — swapping `this.defs` here is the signal.
     build(code) {
         this.code = code;
 
@@ -127,14 +125,6 @@ export class RenderPipeline {
 
         const descriptors = bindGroupLayoutDescriptors(this.defs, pipelineDesc.fragment ? ['vs', 'fs'] : ['vs']);
 
-        // uniforms live at group(0) binding(0) by engine convention — mark dynamic so
-        // Mesh.draw can re-base the binding per draw into the shared per-draw buffer
-        const uni = descriptors[0]?.entries?.find((e) => e.binding === 0 && e.buffer);
-        if (uni) uni.buffer.hasDynamicOffset = true;
-        // false when the shader declares no (used) uniforms at group(0) binding(0) —
-        // Mesh.draw must then bind group 0 without a dynamic offset.
-        this.hasDynamicUniform = !!uni;
-
         // Keep the explicit BGLs around so callers can build bind groups against
         // them via bindGroupLayout(i) instead of reaching into the compiled
         // pipeline (pipeline.getBindGroupLayout). Explicit layouts from identical
@@ -184,8 +174,8 @@ export class RenderPipeline {
         return this._bindGroupLayouts[groupIndex];
     }
 
-    // Hot-reload entry point. Mesh.draw detects the reload by comparing its
-    // cached `_defs` reference against `pipeline.defs` on each draw call.
+    // Hot-reload entry point; bind groups built against bindGroupLayout(i) stay
+    // valid (identical descriptors give group-equivalent layouts).
     reload(code) {
         try {
             this.build(code);

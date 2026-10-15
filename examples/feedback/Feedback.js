@@ -121,8 +121,7 @@ export class FeedbackTrails {
             depthStencil: false,
         });
 
-        // feedback owns binding 0 (dynamic uniform, per the engine's per-draw model):
-        // uDecay drives trail length. present has no uniform at all (see present.wgsl).
+        // feedback's uniform at binding 0: uDecay drives trail length. present has no uniform at all (see present.wgsl).
         this.feedbackUniforms = makeStructuredView(this.feedbackPipeline.defs.uniforms.uniforms);
         this.feedbackUniformBuffer = createUniformBuffer(this.gpu, { label: 'feedback-uniforms', size: this.feedbackUniforms.arrayBuffer.byteLength });
         this.feedbackUniforms.set({ uDecay: 0.993 });
@@ -161,7 +160,7 @@ export class FeedbackTrails {
         );
 
         // present slot t shows fb[t] (the one just written this frame). No uniform
-        // here — sampler is binding 0, texture binding 1; blit skips the offset.
+        // here — sampler is binding 0, texture binding 1.
         this.presentBindGroups = [0, 1].map((t) =>
             this.gpu.device.createBindGroup({
                 layout: this.presentPipeline.bindGroupLayout(0),

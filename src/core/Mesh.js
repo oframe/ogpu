@@ -1,7 +1,6 @@
 import { Transform } from './Transform';
 import { Mat3, Mat4 } from '@math';
 import { ENGINE_GROUP } from './Shader.js';
-import { initLegacyMesh, drawLegacyMesh } from './legacyMesh.js';
 
 const NO_STATE = Object.freeze({});
 const _offsets = [0, 0]; // group(1) dynamic offsets: camera slice, object slice
@@ -13,12 +12,12 @@ const _offsets = [0, 0]; // group(1) dynamic offsets: camera slice, object slice
 // `shader`, `state` and `bindGroups` are all swappable; bind groups belong to
 // the shader, so a new shader needs new bind groups.
 export class Mesh extends Transform {
-    constructor(options = {}, legacyOptions) {
+    constructor({ label = 'mesh', geometry, shader, state = NO_STATE, bindGroups = [], manualRender = false, renderOrder = 0, frustumCulled = true, ...rest } = {}) {
         super();
 
-        // transitional: Mesh(gpu, { pipeline, … })
-        const legacy = !!options.device;
-        const { label = 'mesh', geometry, shader, state = NO_STATE, bindGroups = [], manualRender = false, renderOrder = 0, frustumCulled = true } = legacy ? legacyOptions : options;
+        if (rest.device) {
+            throw new Error(`[mesh] Mesh takes no gpu: new Mesh({ geometry, shader, state, bindGroups }) (ogpu 0.9)`);
+        }
 
         this.label = label;
         this.visible = true;
@@ -27,12 +26,6 @@ export class Mesh extends Transform {
         this.frustumCulled = frustumCulled;
         this.beforeRenderCallbacks = new Set();
         this.afterRenderCallbacks = new Set();
-
-        if (legacy) {
-            this._legacy = true;
-            initLegacyMesh(this, options, { ...legacyOptions, label });
-            return;
-        }
 
         if (!geometry) throw new Error(`[mesh ${label}] no geometry provided`);
         if (!shader) throw new Error(`[mesh ${label}] no shader provided`);
@@ -65,7 +58,7 @@ export class Mesh extends Transform {
     }
 
     set bindGroups(groups) {
-        if (groups[ENGINE_GROUP] && !this._legacy) {
+        if (groups[ENGINE_GROUP]) {
             throw new Error(`[mesh ${this.label}] bindGroups[1] must be empty — group(1) is the engine's`);
         }
         this._bindGroups = groups;
@@ -88,10 +81,8 @@ export class Mesh extends Transform {
         this._derivedVersion = this.worldVersion;
     }
 
-    draw(args) {
-        if (this._legacy) return drawLegacyMesh(this, args);
-        const { pass, passInfo, renderer, camera, cameraOffset } = args;
-
+    // called by Renderer.render for every queued mesh, inside its pass
+    draw({ pass, passInfo, renderer, camera, cameraOffset }) {
         this.beforeRenderCallbacks.forEach((cb) => cb && cb({ mesh: this, camera }));
 
         const pipeline = renderer.pipelines.get(this, passInfo);

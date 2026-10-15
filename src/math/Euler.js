@@ -1,4 +1,4 @@
-import { mat4 } from 'wgpu-matrix';
+import { mat4 } from './functions';
 import { fromRotationMatrix } from '@utils/EulerUtils';
 import { Quat } from './Quat';
 

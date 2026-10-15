@@ -1,8 +1,8 @@
-import { quat } from 'wgpu-matrix';
+import { quat } from './functions';
 
 /**
- * Quaternion (x, y, z, w). Subclasses Float32Array for drop-in wgpu-matrix
- * interop plus a chainable three.js-style API.
+ * Quaternion (x, y, z, w). Subclasses Float32Array so it passes straight to
+ * the @math/functions out params, plus a chainable three.js-style API.
  */
 export class Quat extends Float32Array {
     constructor(x = 0, y = 0, z = 0, w = 1) {
@@ -98,7 +98,8 @@ export class Quat extends Float32Array {
         return this;
     }
 
-    // shortest-arc rotation between two unit vectors (antiparallel-safe)
+    // shortest-arc rotation between two unit vectors (antiparallel input: a 180°
+    // turn about an axis ⊥ from, see quat.rotationTo)
     setFromUnitVectors(from, to) {
         quat.rotationTo(from, to, this);
         this.onChange();

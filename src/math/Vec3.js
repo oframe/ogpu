@@ -1,8 +1,8 @@
-import { vec3 } from 'wgpu-matrix';
+import { vec3 } from './functions';
 
 /**
  * 3-component vector. Subclasses Float32Array so it stays a drop-in
- * argument for any wgpu-matrix call, while adding a three.js-style
+ * argument for any @math/functions call, while adding a three.js-style
  * chainable API: `v.set(1, 2, 3).add(other).normalize()`.
  */
 export class Vec3 extends Float32Array {

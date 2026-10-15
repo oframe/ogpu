@@ -1,6 +1,4 @@
-import { vec3 } from 'wgpu-matrix';
-import { mat4 } from 'wgpu-matrix';
-import { quat } from 'wgpu-matrix';
+import { vec3, mat4, quat } from '@math/functions';
 
 /**
  * From glTF-Transform

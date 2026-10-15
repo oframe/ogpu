@@ -1,8 +1,8 @@
-import { mat3, mat4 } from 'wgpu-matrix';
+import { mat3, mat4 } from './functions';
 import { adjugate } from '@utils/Mat3Utils';
 
 /**
- * 3x3 column-major matrix (wgpu-matrix pads to 12 floats). Subclasses
+ * 3x3 column-major matrix, padded to 12 floats (= WGSL mat3x3f). Subclasses
  * Float32Array for drop-in interop plus a chainable API. Defaults to
  * identity.
  */

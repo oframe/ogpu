@@ -27,7 +27,7 @@ export class Camera extends Transform {
 
     perspective({ near = this.near, far = this.far, fov = this.fov, aspect = this.aspect } = {}) {
         Object.assign(this, { near, far, fov, aspect });
-        // fov is stored in degrees; wgpu-matrix's perspective wants radians.
+        // fov is stored in degrees; mat4.perspective wants radians.
         this.projectionMatrix.perspective((fov * Math.PI) / 180, aspect, near, far);
         this.type = 'perspective';
         return this;

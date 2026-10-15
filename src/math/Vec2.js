@@ -1,8 +1,8 @@
-import { vec2 } from 'wgpu-matrix';
+import { vec2 } from './functions';
 
 /**
- * 2-component vector. Subclasses Float32Array for drop-in wgpu-matrix
- * interop plus a chainable three.js-style API.
+ * 2-component vector. Subclasses Float32Array so it passes straight to the
+ * @math/functions out params, plus a chainable three.js-style API.
  */
 export class Vec2 extends Float32Array {
     constructor(x = 0, y = 0) {

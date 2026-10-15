@@ -1,9 +1,9 @@
-import { mat4, quat } from 'wgpu-matrix';
+import { mat4, quat } from './functions';
 import { compose, decompose } from '@utils/Mat4Utils';
 
 /**
- * 4x4 column-major matrix. Subclasses Float32Array for drop-in
- * wgpu-matrix interop plus a chainable three.js-style API.
+ * 4x4 column-major matrix. Subclasses Float32Array so it passes straight to
+ * the @math/functions out params, plus a chainable three.js-style API.
  * Defaults to identity.
  */
 export class Mat4 extends Float32Array {

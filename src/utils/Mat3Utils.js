@@ -1,4 +1,4 @@
-import { mat3, mat4, vec3 } from 'wgpu-matrix';
+import { mat3, mat4, vec3 } from '@math/functions';
 
 /**
  * Based on https://www.shadertoy.com/view/3s33zj

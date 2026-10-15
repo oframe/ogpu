@@ -103,10 +103,10 @@ its own depth texture (`context.depthTexture`), and `setContext` swaps
   fullscreen `RenderPipeline` blitting into that canvas must be built with
   `targets: [{format}]` — its default targets `presentationFormat` and fails
   attachment validation against a differently-formatted canvas.
-- Meshes are shared, no per-canvas buffers needed — each pass writes its own
-  camera slice and each draw its own object slice of the `PerDrawBuffer` (see
-  below), so one scene can be drawn into N canvases within a frame.
-  `UniformBuffer` values are NOT per pass (see below).
+- Meshes are shared, no per-canvas buffers needed — each render() takes its own
+  camera slot and each mesh has one object slot of the `PerDrawBuffer` (see
+  below), so one scene can be drawn into N canvases within a frame. Object
+  slots and `UniformBuffer` values are NOT per pass (see below).
 - After a device loss an extra context still holds the dead device, so it's
   reconfigured (and its depth texture remade) on the next bind.
 
@@ -176,7 +176,7 @@ of modelView) — correct for non-uniform scale, but only valid in world space.
 of `worldMatrix` — anything else that writes it must bump the counter), and
 only if the mesh's shader reads them: `Shader.needs` is a text check of the
 user code for `normalMatrix` / `objectMatrix` (comments count — it errs toward
-computing). Unread ones are neither computed nor written to the slice, so
+computing). Unread ones are neither computed nor written to the slot, so
 `mesh.normalMatrix`/`objectMatrix` can be stale on the CPU — call
 `mesh.updateDerived()` (no argument computes both) before reading them in JS.
 
@@ -269,22 +269,44 @@ invalidates every memo. Hot reload bumps `shader.version`, so pipelines rebuild
 lazily on the next draw. The fragment stage is emitted only if the module has
 an `fs` entry point, so a vertex-only shader is a depth-only pipeline.
 
-**PerDrawBuffer** (`renderer.perDraw`): `Renderer.render` writes one camera
-slice per pass (`writeCamera`) and every draw one object slice
-(`writeObject`) into an aligned CPU mirror, and uploads every slice it
-allocated in ONE `writeBuffer` (`perDraw.flush()`, right after `pass.end()` and
-before the external-encoder early return), so the write is queued ahead of
-whichever submit carries the pass. **A `mesh.draw()` issued outside `render()`
-must call `renderer.perDraw.flush()` before its submit** (`update()` warns once
-when it finds unflushed slices). The `pointer` resets once per rendered frame
-(`Renderer.update`, after the paused early-return) and accumulates across every
-`render()` in the frame — that's what lets one mesh draw into multiple chained
-passes (shadow + main) without the second draw clobbering the first.
-Overflowing (`perDrawSize`, default 1 MiB, set via the `Renderer` constructor)
-logs once per frame and skips the draws that don't fit (a camera-slice overflow
-skips that pass's Mesh draws; the pass still runs) — binding an offset past the
-end would invalidate the whole pass. It doesn't grow: growing would invalidate
-the engine bind group.
+**PerDrawBuffer** (`renderer.perDraw`) — fixed slots, written only when they
+change:
+
+- Every mesh gets a permanent object slot on its first draw (`mesh._slot`) and
+  rewrites it only when its `worldVersion` moved or its shader's `needs` grew. A
+  static mesh costs no upload at all; each `render()` uploads its camera slot.
+- Each `render()` takes the frame's next camera slot (sequential, restarted by
+  `reset()` at each `Renderer.update`, after the paused early-return), rewritten
+  every pass. Offsets are stable frame to frame only while the frame's render()
+  sequence is — a conditional render() shifts the camera slots of every later
+  one. Driving render() outside `Renderer.update` means calling
+  `perDraw.reset()` per frame yourself, or camera slots pile up (warned at 1024).
+- `flush()` (end of `render()`, right after `pass.end()` and before the
+  external-encoder early return) uploads the dirty slots: one `writeBuffer` over
+  the dirty span while it is at most 4× the dirty count, else one per contiguous
+  run. **A `mesh.draw()` issued outside `render()` must call
+  `renderer.perDraw.flush()` before its submit** (`update()` warns once when it
+  finds pending slots).
+- **One value per slot per submit.** Writes are mirrored and uploaded before the
+  submit, so a mesh drawn twice in one external-encoder chain with a different
+  transform in between shows the last one in both passes (warned once per
+  buffer). Drawing an unmoved mesh into several passes of one submit (shadow +
+  main) is fine — the object block holds no camera data — and self-submitting
+  `render()`s are fine whatever moves: queue order separates them — but one
+  in the middle of an open external-encoder chain bumps the epoch, so a move
+  across it inside that chain isn't warned.
+- Slots come back through `mesh.destroy()`, or a `FinalizationRegistry` when a
+  mesh is dropped without it. Not "unseen for N frames": a hidden mesh must
+  keep its slot (anything that bakes the offset relies on it), and GC is the
+  only signal that nothing can draw it again. A released slot is reusable only
+  after the next `reset()` — an encoded, unsubmitted draw may still read it.
+- The buffer doubles when it runs out (`perDrawSize`, default 1 MiB, is the
+  starting size). Growth bumps `generation`: `renderer.engineBindGroup` (a
+  getter) is rebuilt on next read, draws already encoded keep the old buffer
+  (its pending slots are uploaded first; it's destroyed at the next frame
+  start). There is no cap below `maxBufferSize`.
+- After a device restore a mesh that never draws again still points at the old
+  buffer (`_slotOwner`), keeping its CPU mirror alive; drawing it moves it over.
 
 **Texture resize:** destroying/recreating a `Texture` invalidates its
 `GPUTextureView`s, so any bind group holding them is stale. Rebuild the affected

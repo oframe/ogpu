@@ -22,9 +22,9 @@ silently shades garbage or fails construction:
 - Do NOT declare matrices/time/resolution in a `Uniforms` struct. `Shader`
   appends the engine block (`src/core/engine.wgsl`): `@group(1) camera`
   (`projectionMatrix`, `viewMatrix`, `cameraPosition`, `time`,
-  `cameraQuaternion`, `resolution`; one slice per pass) and `@group(1) object`
+  `cameraQuaternion`, `resolution`; one slot per render()) and `@group(1) object`
   (`modelMatrix`, `normalMatrix` (mat3x3f), `objectMatrix` (inverse model); one
-  slice per draw). Read `camera.*` / `object.*`. There is no stored modelView;
+  fixed slot per mesh). Read `camera.*` / `object.*`. There is no stored modelView;
   per vertex write
   `camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * p))`
   (WGSL `*` is left-associative, so `P * V * M * p` does mat-mat products per

@@ -330,6 +330,7 @@ export class GaussianSplat extends Mesh {
      * the sort shaders out of the hot-reload registry. Remove it from the scene first.
      */
     destroy() {
+        super.destroy(); // the engine slot
         this._worker?.terminate();
         this._worker = null;
         this._sortCompute?.destroy();

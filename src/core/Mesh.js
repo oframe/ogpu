@@ -3,12 +3,12 @@ import { Mat3, Mat4 } from '@math';
 import { ENGINE_GROUP, NEEDS_NORMAL, NEEDS_OBJECT } from './Shader.js';
 
 const NO_STATE = Object.freeze({});
-const _offsets = [0, 0]; // group(1) dynamic offsets: camera slice, object slice
+const _offsets = [0, 0]; // group(1) dynamic offsets: camera slot, object slot
 
 // Renderable node: geometry + Shader + plain `state` + bind groups. Holds no GPU
 // objects of its own — the renderer derives the GPURenderPipeline from
 // (shader, state, geometry layout, pass formats) and binds its engine group at
-// group(1) (camera + object slices of the shared PerDrawBuffer). `geometry`,
+// group(1) (camera + object slots of the shared PerDrawBuffer). `geometry`,
 // `shader`, `state` and `bindGroups` are all swappable; bind groups belong to
 // the shader, so a new shader needs new bind groups.
 export class Mesh extends Transform {
@@ -67,6 +67,13 @@ export class Mesh extends Transform {
         this._bindGroups = groups;
     }
 
+    // Frees the mesh's engine slot (it holds no GPU objects). A destroyed mesh
+    // that draws again takes a new slot. Dropping a mesh without destroy() frees
+    // the slot when it's garbage collected.
+    destroy() {
+        this._slotOwner?.release(this);
+    }
+
     onBeforeRender(f) {
         this.beforeRenderCallbacks.add(f);
         return this;
@@ -94,19 +101,17 @@ export class Mesh extends Transform {
         this.beforeRenderCallbacks.forEach((cb) => cb && cb({ mesh: this, camera }));
 
         const pipeline = renderer.pipelines.get(this, passInfo);
-        if (!pipeline || cameraOffset < 0) return; // reported by the cache / buffer overflow
-        this.updateDerived(this.shader.needs);
-        // object slice lands in the CPU mirror; Renderer.render uploads the
-        // frame's slices in one writeBuffer after the pass
+        if (!pipeline) return; // reported by the cache
+        // this mesh's fixed slot, rewritten only if it moved; Renderer.render
+        // uploads the dirty slots after the pass
         const objectOffset = renderer.perDraw.writeObject(this);
-        if (objectOffset < 0) return; // per-draw buffer full: drop the draw, keep the pass valid
 
         pass.setPipeline(pipeline);
         const groups = this._bindGroups;
         pass.setBindGroup(0, groups[0] ?? renderer.emptyBindGroup);
         _offsets[0] = cameraOffset;
         _offsets[1] = objectOffset;
-        pass.setBindGroup(ENGINE_GROUP, renderer.engineBindGroup, _offsets);
+        pass.setBindGroup(ENGINE_GROUP, renderer.engineBindGroup, _offsets); // after writeObject: it may grow the buffer
         for (let i = 2; i < groups.length; i++) {
             pass.setBindGroup(i, groups[i] ?? renderer.emptyBindGroup);
         }

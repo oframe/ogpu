@@ -48,8 +48,8 @@ The framework is split into **Core**, **Math**, and **Modules**.
 
 The **Core** (`src/core/`) holds the engine primitives. A drawable is a `Mesh`: geometry + `Shader` + a plain `state` object + bind groups. You never build a render pipeline for it — the renderer derives one and caches it.
 
-- **`Shader`** — wraps a WGSL module with a `vs`/`fs` entry pair. It appends the engine block (`engine.wgsl`), reflects the result with the in-house `reflect/` (on [`wgsl_reflect`](https://github.com/brendan-duncan/wgsl_reflect)), and serves the bind group layouts. `shader.bindGroup(0, { name: resource })` binds by WGSL name. Group(1) is the engine's: `camera.*` (projection/view matrices, `cameraPosition`, `cameraQuaternion`, `time`, `resolution`) and `object.*` (`modelMatrix`, `normalMatrix`, `objectMatrix`; view space is `camera.viewMatrix * (object.modelMatrix * p)`, or `modelViewMatrix()` for the matrix) are written per pass and per draw into one renderer-owned `PerDrawBuffer` and bound by dynamic offset, so one mesh can draw into several passes of one submit (shadow + main) without stomping itself.
-- **`Mesh`** — a `Transform` holding `geometry`, `shader`, `state` and `bindGroups`; no `gpu`, no GPU objects of its own. `state` (`transparent`, `depthWrite`, `cullMode`, `topology`, `blending`, …) is frozen — swap the object to change it. The renderer's `PipelineCache` builds a pipeline per (shader, state, vertex layout, pass formats), so the same mesh renders into the canvas, an MSAA target or a depth-only shadow map with no per-target setup.
+- **`Shader`** — wraps a WGSL module with a `vs`/`fs` entry pair. It appends the engine block (`engine.wgsl`), reflects the result with the in-house `reflect/` (on [`wgsl_reflect`](https://github.com/brendan-duncan/wgsl_reflect)), and serves the bind group layouts. `shader.bindGroup(0, { name: resource })` binds by WGSL name. Group(1) is the engine's: `camera.*` (projection/view matrices, `cameraPosition`, `cameraQuaternion`, `time`, `resolution`) and `object.*` (`modelMatrix`, `normalMatrix`, `objectMatrix`; view space is `camera.viewMatrix * (object.modelMatrix * p)`, or `modelViewMatrix()` for the matrix) live in one renderer-owned `PerDrawBuffer` and are bound by dynamic offset: a camera slot per `render()` and a fixed object slot per mesh, so one mesh can draw into several passes of one submit (shadow + main). The object slot holds one value per submit — move the mesh between those passes and both see the last transform.
+- **`Mesh`** — a `Transform` holding `geometry`, `shader`, `state` and `bindGroups`; no `gpu`, no GPU objects of its own. `state` (`transparent`, `depthWrite`, `cullMode`, `topology`, `blending`, …) is frozen — swap the object to change it. The renderer's `PipelineCache` builds a pipeline per (shader, state, vertex layout, pass formats), so the same mesh renders into the canvas, an MSAA target or a depth-only shadow map with no per-target setup. Each mesh owns one fixed slot of the engine buffer, rewritten only when it moves; `mesh.destroy()` gives it back (a dropped mesh frees it when collected).
 - **`ComputeShader`** — the compute counterpart. Every entry point in a WGSL compute module becomes a dispatchable kernel keyed by its name, with optional timestamp-query timing. This is the path for GPU compute work — simulation, culling, image processing — without leaving the framework.
 
 ```wgsl
@@ -110,7 +110,7 @@ The rest of Core:
 - `Geometry.js` — builds its own vertex/index buffers; `layoutKey` feeds the pipeline cache
 - `UniformBuffer.js` — a reflected struct view + the GPU buffer it uploads to
 - `PipelineCache.js` — the renderer-owned, derived pipeline cache (`renderer.pipelines`)
-- `PerDrawBuffer.js` — the shared dynamic-offset buffer behind the engine group
+- `PerDrawBuffer.js` — the engine group's dynamic-offset buffer: a fixed slot per mesh, rewritten only when it moves
 - `RenderPipeline.js` — a hand-built pipeline for fullscreen passes and other non-`Mesh` draws (fully reflected layout, no engine block)
 - `Texture.js`
 - `RenderTarget.js`
@@ -154,7 +154,7 @@ for (const view of views) {
 renderer.render({ scene, camera }); // back on the default canvas
 ```
 
-Each extra canvas is configured on first bind and keeps its own depth texture; meshes and the scene are shared, since every pass writes its own camera slice and every draw its own object slice of the renderer's `PerDrawBuffer` (a canvas with a custom format just gets its own cached pipelines). `UniformBuffer` values are not per pass — give a view its own buffer when they must differ. Extra canvases aren't observed — set `canvas.width/height` yourself, and give each one its own camera aspect.
+Each extra canvas is configured on first bind and keeps its own depth texture; meshes and the scene are shared, since every render() takes its own camera slot and every mesh owns one object slot of the renderer's `PerDrawBuffer` (a canvas with a custom format just gets its own cached pipelines). `UniformBuffer` values are not per pass — give a view its own buffer when they must differ. Extra canvases aren't observed — set `canvas.width/height` yourself, and give each one its own camera aspect.
 
 The `multicanvas` example (`?example=multicanvas`) puts eight primitives on eight canvases in a scrollable 2×2 CSS grid — one `ResizeObserver` drives every backing store off its laid-out box, an `IntersectionObserver` skips cells scrolled out of view, and all eight cells record into a single command encoder, so the grid costs one submit per frame.
 

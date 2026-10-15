@@ -1,7 +1,7 @@
 // validate-prepend: ../../../../src/core/engine.wgsl
 // Annotated reference of what scaffold.py emits (it writes the prepend path
 // relative to the generated file, e.g. ../../src/core/engine.wgsl in examples/<name>/).
-// `camera` (per pass) and `object` (per draw) at group(1) come from the engine block
+// `camera` (per pass) and `object` (per mesh) at group(1) come from the engine block
 // Shader appends: read camera.projectionMatrix / viewMatrix / cameraPosition / time /
 // cameraQuaternion / resolution and object.modelMatrix / normalMatrix / objectMatrix
 // instead of declaring them. View space is camera.viewMatrix * (object.modelMatrix * p),

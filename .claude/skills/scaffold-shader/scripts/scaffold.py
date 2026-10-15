@@ -4,7 +4,7 @@
 Writes a vs/fs shader following the engine's conventions (`vs`/`fs` entry
 points, attribute order position/normal/uv). Camera/object matrices are NOT
 declared: the engine block `Shader` appends supplies `camera.*` (group 1,
-per pass) and `object.*` (group 1, per draw), so the file starts with a
+per pass) and `object.*` (group 1, per mesh), so the file starts with a
 `// validate-prepend:` line pointing at src/core/engine.wgsl for the validator.
 The fragment stage outputs the normal mapped to 0..1. Custom uniforms are
 opt-in (`--uniforms`). The output is a STARTING POINT -- the caller layers any

@@ -43,6 +43,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/core/Mesh.js
 - **class Mesh** extends Transform
   - constructor({ label = 'mesh', geometry, shader, state = NO_STATE, bindGroups = [], manualRender = fal…)
+  - destroy()
   - onBeforeRender(f)
   - onAfterRender(f)
   - updateDerived(needs = NEEDS_NORMAL | NEEDS_OBJECT)
@@ -52,12 +53,12 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/core/PerDrawBuffer.js
 - **class PerDrawBuffer**
   - constructor(gpu, { label = 'per-draw-uniforms', size = 1 << 20 } = {})
-  - alloc(byteLength)
-  - write(bytes)
   - writeCamera(camera, time, width, height)
   - writeObject(mesh)
+  - release(mesh)
   - flush()
   - reset()
+  - destroy()
 - const `CAMERA_SIZE`, `OBJECT_SIZE`
 
 ### src/core/PipelineCache.js

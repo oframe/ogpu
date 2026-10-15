@@ -803,7 +803,7 @@ export interface ShaderOptions {
     constants?: Record<string, number>;
 }
 
-/** Index of the bind group the engine owns (camera + object slices). Not in the barrel — import via `@core/Shader`. */
+/** Index of the bind group the engine owns (camera + object slots). Not in the barrel — import via `@core/Shader`. */
 export const ENGINE_GROUP: 1;
 /** `Shader.needs` bit: the user code reads `normalMatrix`. Import via `@core/Shader`. */
 export const NEEDS_NORMAL: 1;
@@ -898,9 +898,9 @@ export class PipelineCache {
 }
 
 // =============================================================================
-// @core/PerDrawBuffer — shared per-draw uniform buffer behind the engine group(1).
-// One camera slice per render() pass and one object slice per Mesh draw, bound via
-// dynamic offsets; Renderer owns one and resets the pointer each frame.
+// @core/PerDrawBuffer — engine uniform buffer behind group(1), in fixed slots bound
+// via dynamic offsets: one permanent object slot per Mesh (rewritten only when it
+// moves) and the frame's next camera slot per render(). Doubles when full.
 // =============================================================================
 
 /** Byte size of the engine camera block (group(1) binding 0). Not in the barrel — import via `@core/PerDrawBuffer`. */
@@ -911,30 +911,37 @@ export const OBJECT_SIZE: number;
 export class PerDrawBuffer {
     constructor(gpu: GPU, options?: { label?: string; size?: number });
     gpu: GPU;
-    size: number;
+    /** Replaced when the buffer grows (see `generation`). */
+    buffer: GPUBuffer;
     /** minUniformBufferOffsetAlignment of the device. */
     align: number;
-    buffer: GPUBuffer;
-    /** CPU copy of `buffer`; draws write here, `flush` uploads. */
+    /** Bytes per slot (block size rounded up to `align`). */
+    stride: number;
+    /** Slots the buffer holds now. */
+    capacity: number;
+    size: number;
+    /** Bumped when `buffer` is replaced; bind groups over the old one are stale. */
+    generation: number;
+    /** Bumped at each frame start and renderer-owned submit. */
+    epoch: number;
+    /** CPU copy of `buffer`; writes land here, `flush` uploads the dirty slots. */
     mirror: Uint8Array;
     /** Float32 view over `mirror`. */
     f32: Float32Array;
-    pointer: number;
-    /** Bytes already uploaded this frame; `[flushed, pointer)` is pending. */
-    flushed: number;
+    /** Dirty slots not yet uploaded. */
+    readonly pending: number;
 
-    /** Next aligned slice; caller writes its uniforms at the returned offset. */
-    alloc(byteLength: number): number;
-    /** alloc + copy into the mirror. Returns the dynamic offset, or -1 when the slice doesn't fit (skip the draw). */
-    write(bytes: Uint8Array): number;
-    /** Write the engine camera block (matrices, position, quaternion, time, resolution). Returns its dynamic offset, or -1 when it doesn't fit. A null camera writes identity matrices. */
+    /** Camera block in the frame's next camera slot; returns its dynamic offset. A null camera writes identity matrices. */
     writeCamera(camera: Camera | null | undefined, time: number, width: number, height: number): number;
-    /** Write the engine object block for `mesh` (model, plus normal/object matrices when `mesh.shader.needs` them; camera-independent). Returns its dynamic offset, or -1 when it doesn't fit. */
+    /** `mesh`'s object slot (acquired on first use, rewritten only when it moved or its shader needs more); returns its dynamic offset. */
     writeObject(mesh: Mesh): number;
-    /** Upload every slice since the last flush in one writeBuffer. Renderer.render calls it; a draw outside render() must too. */
+    /** Give `mesh`'s slot back (Mesh.destroy calls this). */
+    release(mesh: Mesh): void;
+    /** Upload the dirty slots. Renderer.render calls it; a draw outside render() must too. */
     flush(): void;
-    /** Rewind the pointer — Renderer calls this once per rendered frame. */
+    /** Frame boundary: camera slots restart, released slots become reusable, retired buffers are destroyed. Renderer.update calls it. */
     reset(): void;
+    destroy(): void;
 }
 
 // =============================================================================
@@ -985,7 +992,7 @@ export interface DrawArgs {
     passInfo: PassInfo;
     renderer: Renderer;
     camera?: Camera | null;
-    /** Dynamic offset of this pass's camera slice in the PerDrawBuffer; < 0 skips the draw. */
+    /** Dynamic offset of this render()'s camera slot in the PerDrawBuffer. */
     cameraOffset: number;
 }
 
@@ -1010,6 +1017,8 @@ export class Mesh extends Transform {
     /** Reused result object populated by Raycast — copy what you need. */
     hit?: any;
 
+    /** Frees the mesh's engine slot (a mesh holds no GPU objects). A destroyed mesh that draws again takes a new slot. */
+    destroy(): void;
     onBeforeRender(f: (args: { mesh: Mesh; camera: Camera | null }) => void): this;
     onAfterRender(f: (args: { mesh: Mesh; camera: Camera | null }) => void): this;
     /** Make the `needs` matrices (default: both) current for this worldVersion. */
@@ -1260,7 +1269,7 @@ export interface RendererOptions {
     dpr?: number | null;
     transparent?: boolean;
     depth?: boolean;
-    /** Byte size of the shared per-draw uniform buffer (default 1 MiB). */
+    /** Starting byte size of the engine's PerDrawBuffer (default 1 MiB); it doubles when full. */
     perDrawSize?: number;
 }
 
@@ -1317,9 +1326,10 @@ export class Renderer {
     presentationFormat: GPUTextureFormat;
     /** Shared per-draw uniform buffer (null after destroy()). */
     perDraw: PerDrawBuffer | null;
-    /** Layout of the engine's group(1): dynamic camera + object slices of `perDraw`. */
+    /** Layout of the engine's group(1): dynamic camera + object slots of `perDraw`. */
     engineLayout: GPUBindGroupLayout;
-    engineBindGroup: GPUBindGroup;
+    /** Getter: rebuilt when `perDraw` grows (its `generation` moves); null after destroy(). */
+    readonly engineBindGroup: GPUBindGroup | null;
     /** Shared layout/bind group for empty slots in a Shader's pipeline layout. */
     emptyLayout: GPUBindGroupLayout;
     emptyBindGroup: GPUBindGroup;

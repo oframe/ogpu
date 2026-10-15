@@ -18,8 +18,8 @@ struct Object {
   objectMatrix: mat4x4f,
 }
 
-@group(1) @binding(0) var<uniform> camera: Camera; // 176 B, one slice per pass
-@group(1) @binding(1) var<uniform> object: Object; // 176 B, one slice per draw
+@group(1) @binding(0) var<uniform> camera: Camera; // 176 B, one slot per render()
+@group(1) @binding(1) var<uniform> object: Object; // 176 B, one fixed slot per mesh
 
 // view * model. Per vertex, prefer camera.viewMatrix * (object.modelMatrix * p):
 // two mat-vec products instead of a mat-mat one.

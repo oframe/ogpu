@@ -264,10 +264,28 @@ export class Renderer {
         console.log('[webgpu] device restored');
     }
 
+    // group(1) bind group over the PerDrawBuffer; remade when the buffer grows
+    get engineBindGroup() {
+        const pd = this.perDraw;
+        if (!pd) return null;
+        if (this._engineGeneration !== pd.generation) {
+            this._engineGeneration = pd.generation;
+            this._engineBindGroup = this.gpu.device.createBindGroup({
+                label: 'engine-bind-group',
+                layout: this.engineLayout,
+                entries: [
+                    { binding: 0, resource: { buffer: pd.buffer, size: CAMERA_SIZE } },
+                    { binding: 1, resource: { buffer: pd.buffer, size: OBJECT_SIZE } },
+                ],
+            });
+        }
+        return this._engineBindGroup;
+    }
+
     // Engine-owned GPU state for Mesh draws: the PerDrawBuffer, the fixed group(1)
-    // layout + bind group over it (camera slice at binding 0, object slice at
-    // binding 1, both dynamic), the shared empty group, and the pipeline cache.
-    // Runs on boot and on every device restore.
+    // layout over it (camera slot at binding 0, object slot at binding 1, both
+    // dynamic; the bind group is the engineBindGroup getter), the shared empty
+    // group, and the pipeline cache. Runs on boot and on every device restore.
     _createEngineResources() {
         const { device } = this.gpu;
         this.perDraw = new PerDrawBuffer(this.gpu, { size: this.perDrawSize });
@@ -280,14 +298,8 @@ export class Renderer {
                 { binding: 1, visibility, buffer: { hasDynamicOffset: true, minBindingSize: OBJECT_SIZE } },
             ],
         });
-        this.engineBindGroup = device.createBindGroup({
-            label: 'engine-bind-group',
-            layout: this.engineLayout,
-            entries: [
-                { binding: 0, resource: { buffer: this.perDraw.buffer, size: CAMERA_SIZE } },
-                { binding: 1, resource: { buffer: this.perDraw.buffer, size: OBJECT_SIZE } },
-            ],
-        });
+        this._engineBindGroup = null;
+        this._engineGeneration = -1;
 
         this.emptyLayout = device.createBindGroupLayout({ label: 'empty-layout', entries: [] });
         this.emptyBindGroup = device.createBindGroup({ label: 'empty-bind-group', layout: this.emptyLayout, entries: [] });
@@ -449,10 +461,10 @@ export class Renderer {
 
         this.depthTexture?.destroy();
         this.depthTexture = this._depthView = null;
-        this.perDraw?.buffer?.destroy();
+        this.perDraw?.destroy();
         this.perDraw = null;
         this.pipelines?.clear();
-        this.engineBindGroup = this.emptyBindGroup = null;
+        this._engineBindGroup = this.emptyBindGroup = null;
 
         // reason 'destroyed' — _onDeviceLost deliberately doesn't recover from
         // it, and the _destroyed guard above silences the loss report
@@ -852,8 +864,7 @@ export class Renderer {
             const passInfo = target ? this._targetPassInfo(target) : this._canvasPassInfo();
             const width = target ? target.width : this.gpu.canvas.width;
             const height = target ? target.height : this.gpu.canvas.height;
-            // one camera slice per pass; every draw in it shares the offset (-1 on
-            // overflow: Mesh draws are skipped, the pass still runs)
+            // the frame's next camera slot; every draw in the pass shares it
             const cameraOffset = this.perDraw.writeCamera(camera, this.time, width, height);
 
             const _encoder = encoder || this.gpu.device.createCommandEncoder({ label: 'renderer-encoder' });
@@ -868,7 +879,7 @@ export class Renderer {
             let sx = 0, sy = 0, sw = width, sh = height; // prettier-ignore
             for (const node of this.renderQueue ?? []) {
                 const rect = this.resolveScissor(node, width, height, _scissor);
-                if (!rect) continue; // clipped to nothing: skip the draw (and its per-draw slice)
+                if (!rect) continue; // clipped to nothing: skip the draw
                 if (rect.x !== sx || rect.y !== sy || rect.width !== sw || rect.height !== sh) {
                     pass.setScissorRect(rect.x, rect.y, rect.width, rect.height);
                     sx = rect.x;
@@ -881,13 +892,14 @@ export class Renderer {
 
             pass.end();
 
-            // one upload for every slice this render() allocated — queued before
+            // upload the slots written since the last flush — queued before
             // whichever submit carries the pass (ours below, or the caller's)
             this.perDraw.flush();
 
             if (encoder) return; // caller owns finish/submit
 
             this.gpu.device.queue.submit([_encoder.finish()]);
+            this.perDraw.epoch++; // queue order makes later rewrites safe
 
             if (timing) {
                 this.timingHelper
@@ -950,12 +962,11 @@ export class Renderer {
         this._rafHandle = requestAnimationFrame(this.update);
         if (this.paused) return;
 
-        // One reset per rendered frame — allocations accumulate across every
-        // render() call within the frame (multi-pass chains), that's the point.
-        // Unflushed slices mean a Mesh drew outside render(): its uniforms
-        // never reached the GPU.
+        // One frame boundary per rendered frame: camera slots restart (each
+        // render() in the frame takes the next one). Unflushed slots mean a Mesh
+        // drew outside render(): its uniforms never reached the GPU.
         const pd = this.perDraw;
-        if (pd && Math.min(pd.pointer, pd.size) > pd.flushed && !this._unflushedWarned) {
+        if (pd?.pending && !this._unflushedWarned) {
             this._unflushedWarned = true;
             console.warn('[renderer] mesh.draw() outside render() — call renderer.perDraw.flush() before submitting');
         }

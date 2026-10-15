@@ -14,7 +14,8 @@ export class HighMeshCount {
 
     async init() {
         const canvas = document.getElementById('web-gpu-canvas');
-        // one 256 B object slice per mesh (gui max count) + the pass's camera slice
+        // starting size of the engine buffer (it doubles when full): one 256 B slot per
+        // mesh at the gui max count + the pass's camera slot, so it never has to grow
         this.renderer = new Renderer({ canvas, dpr: 2, perDrawSize: (50000 + 1) * 256 });
         await this.renderer.ready;
 
@@ -48,7 +49,10 @@ export class HighMeshCount {
     setMeshCount(count) {
         count = parseInt(count) || 1000;
 
-        for (const mesh of this.meshes) this.scene.removeChild(mesh);
+        for (const mesh of this.meshes) {
+            this.scene.removeChild(mesh);
+            mesh.destroy(); // frees its engine slot
+        }
         this.meshes = [];
 
         for (let i = 0; i < count; i++) {

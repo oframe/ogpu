@@ -1,5 +1,102 @@
 # Changelog
 
+## 0.13.0
+
+webgpu-utils and wgpu-matrix come back, under the current API. Shader + state meshes, the engine
+group, PerDrawBuffer slots, RecordedGroup, scissor, `drawBufferOffset` and the failed-pipeline fix
+are unchanged; only the internals behind `src/core/reflect`, `Geometry`, the primitives,
+`@utils/mipmap`, `@utils/textureFromSource` and `@math/functions` go back to the libraries. Ported
+from dgpu 0.13.0 and 0.13.1.
+
+### Changed
+
+- **webgpu-utils 2.1.1** (pinned exactly — its bundled parser is part of the contract) backs
+  reflection (`makeShaderDataDefinitions`), struct views (`makeTypedArrayViews`), bind group
+  layout derivation, `Geometry`'s vertex/index buffers, `primitives.create*Vertices`,
+  `generateMipmap` and the texture-from-source helpers. 2.1.1, not 1.11.0: 1.11.0 drops bindings
+  read only inside switch-case bodies (a limit 0.9.0 lifted).
+- What ogpu keeps on top of it: `reflect()` adds `inputs` (@location params, for the pipeline
+  cache's vertex-input check), parses a comment-free copy, renames `block` (the parser rejects
+  it) and drops the type from typed integer const expressions (`const M: u32 = (1u << 19u) - 1u;`
+  — "Invalid cast from f32 to u32" otherwise); `StructView` stays a class with a local
+  `setStructuredView` (the library's measured 1.9× slower per `set()`); `bindGroupLayoutDescriptors`
+  skips the engine group; the texture/mip helpers keep taking `gpu`; `primitives` stays the same
+  eight generators.
+- **`@utils/webgpu-utils` is the only importer of webgpu-utils** (ESLint enforces it). The library
+  reads `Float16Array` while it loads, which Chrome/Edge 113–134 lack: the wrapper defines a
+  `Uint16Array`-subclass stand-in just before the library and deletes the global right after, so
+  app code still sees no `Float16Array`. package.json `sideEffects` (was `false`) lists the shim,
+  the unshim and the wrapper, so bundlers keep them in order.
+- **wgpu-matrix 3.4.2** behind `@math/functions`: the same 90 names, re-exported. Local:
+  `quat.rotationTo` (3.4.2 still returns a zero-axis quat for antiparallel input) and
+  `mat4.inverse`, `lookAt`, `aim` (measured faster in-house). ESLint rejects importing
+  `wgpu-matrix` anywhere but `src/math/functions`.
+- `StructView` f16 vectors and matrices are `Float16Array` views (values); they were raw `Uint16`
+  bits. f16 scalars are still raw bits. No engine or example struct has one.
+- `mat3.copy` / `mat3.identity` leave the padding lanes as they were (WGSL ignores them).
+- A `@location` given by a const _expression_ is left out of `inputs` (the pipeline still
+  validates it); literals and consts with a literal value resolve.
+- The webgpu-utils-lookup skill is back, for 2.1.1.
+
+### Removed
+
+- The direct `wgsl_reflect` dependency and the in-house ports: reflection and struct views, the
+  vertex generators, Geometry's buffer packing, the mip chain (`src/utils/mipmap.wgsl`), texture
+  upload, and the math function bodies the overrides don't need.
+
+### Migration
+
+- **Browser floor unchanged (Chrome/Edge 113+), with two degraded cases before 135:** f16
+  vector/matrix struct fields hold raw bits, not values (`StructView` warns once — use f32
+  fields or an f32 shader variant), and plain-number `*16float` data passed to the texture
+  helpers is truncated and wrapped to uint16 (`textureFromSource` warns once — pass half-float
+  bits in a `Uint16Array`, or use a 32float format). No example uses either.
+- Import webgpu-utils through `@utils/webgpu-utils`, never `'webgpu-utils'` directly (and import
+  `ogpu` before any direct use of the library elsewhere in an app).
+
+### Measured
+
+Parity against 0.12.0. Reflection: 108 WGSL strings (41 captured from all 25 views at runtime, 37
+on-disk files, 30 fixtures) — defs, `inputs`, 367 layouts and 453 struct views (shape + `set()`
+bytes) equal apart from the two intended changes above. Geometry buffers and layouts
+byte-identical over 194 cases, vertex generators over 33. Math: bit-equal per lane over 112
+function runs except `mat4.determinant` (≤1 ulp of the returned double) and, with Float64Array
+in/out only, `mat3.inverse`; class parity 54/54. All 25 views screenshot-match within animation
+phase, natively and with `Float16Array` deleted before load; no new console errors;
+`forceDeviceLoss()` behaves as before.
+
+`highmeshcount`, seeded scene and pinned camera, Apple M1 Pro, headless Chromium, production
+builds: medians of interleaved page loads (4 live, 6 recorded), best of 5 × 300 frames (× 40 at
+10000). CPU = synchronous `render()`; GPU = frames batched into one submit, timed to
+`onSubmittedWorkDone`. A/A noise floor (0.12.0 against itself, same session): CPU ±0–4% live,
+±1–10% recorded; GPU ±1–8%.
+
+| case                     | CPU ms        | GPU ms        |
+| ------------------------ | ------------- | ------------- |
+| 1000 static              | 0.340 → 0.335 | 0.238 → 0.216 |
+| 1000 every mesh moving   | 0.706 → 0.705 | 0.204 → 0.219 |
+| 1000 camera orbiting     | 0.346 → 0.343 |               |
+| 1000 50-mesh churn       | 0.438 → 0.434 |               |
+| 10000 static             | 6.40 → 6.33   | 1.61 → 1.65   |
+| 10000 every mesh moving  | 11.39 → 11.20 | 1.93 → 1.95   |
+| 10000 camera orbiting    | 6.73 → 6.86   |               |
+| 10000 50-mesh churn      | 7.06 → 6.94   |               |
+| 1000 static, recorded    | 0.047 → 0.047 | 0.303 → 0.288 |
+| 1000 moving, recorded    | 0.558 → 0.562 | 0.309 → 0.293 |
+| 10000 static, recorded   | 0.795 → 0.795 | 2.56 → 2.62   |
+| 10000 moving, recorded   | 8.56 → 8.55   | 2.86 → 2.83   |
+| 10000 orbiting, recorded | 0.799 → 0.775 |               |
+
+No regression outside noise (1000 static GPU −9%, just past it, is the one move). On the final
+build: `UniformBuffer.set()` 0.225 → 0.233 µs, `StructView.set()` 0.062 → 0.061 µs; `reflect()`
+of the baked hellowebgpu shader 0.127 → 0.123 ms, `Shader.build()` 0.163 → 0.158 ms. dgpu
+0.13.0's RecordedGroup static-frame regression does not show here (0.046–0.052 ms both, in a
+fresh page and after live phases; measured before the shim commit, which adds no per-frame
+work). One unexplained shift: `scene.updateMatrixWorld()` over 10000 static nodes 0.545 →
+0.575 ms (+4–6%, three sets of interleaved runs). That path calls no math function (it compares
+TRS and returns); it follows the wgpu-matrix swap (the reflection-only build shows none) and is
+too small to resolve in `render()` CPU. Examples bundle +19 KB (+6 KB gzipped).
+
 ## 0.12.0
 
 Engine uniforms live in fixed slots written only when they change, live draws skip redundant

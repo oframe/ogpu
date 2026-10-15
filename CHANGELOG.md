@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.10.1
+
+### Added
+
+- **Scissor testing** (also released on the 0.8 line as 0.8.1). `node.scissor = { x, y, width,
+  height }` on any `Transform` clips it and its subtree; nested scissors intersect, and a draw
+  clipped to nothing is skipped. Units are attachment pixels (device px on the canvas, texels
+  on a RenderTarget), origin top-left; rects are rounded and clamped to the target, and a
+  scissor with a non-finite field is ignored with one warning. `setScissorRect` is only issued
+  when the resolved rect changes, so scenes without scissors make no extra calls.
+  `renderer.resolveScissor(node, width, height, out?)` exposes the resolution. Folded in from a
+  patch written for a client project on ogpu, with the same API.
+
 ## 0.10.0
 
 The math library is in-house: a function layer written from scratch replaces `wgpu-matrix`, and

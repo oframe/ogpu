@@ -22,7 +22,7 @@ export class Transform {
         // Mesh caches normalMatrix/objectMatrix against it
         this.worldVersion = 0;
         // bumped on this node and every ancestor when a child is added or
-        // removed anywhere below — RecordedGroup.stale compares it
+        // removed anywhere below — RenderBundleGroup.stale compares it
         this.structureVersion = 0;
         // last composed position/quaternion/scale — updateMatrix skips the compose
         // (and the world multiply it would trigger) when unchanged. NaN seeds

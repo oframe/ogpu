@@ -110,7 +110,7 @@ The rest of Core:
 - `Geometry.js` — builds its own vertex/index buffers; `layoutKey` feeds the pipeline cache
 - `UniformBuffer.js` — a reflected struct view + the GPU buffer it uploads to
 - `PipelineCache.js` — the renderer-owned, derived pipeline cache (`renderer.pipelines`)
-- `RecordedGroup.js` — a `Transform` whose meshes replay from a render bundle: `group.record()` captures the subtree once, and `render()` then skips the per-mesh encoding (children may still move). For large static opaque sets; it isn't frustum culled or sorted, and the changes listed in `src/core/CLAUDE.md` make `group.stale` true until you `record()` again. `examples/highmeshcount` toggles it (`?src=highmeshcount&mode=recorded`)
+- `RenderBundleGroup.js` — a `Transform` whose meshes replay from a render bundle: `group.record()` captures the subtree once, and `render()` then skips the per-mesh encoding (children may still move). For large static opaque sets; it isn't frustum culled or sorted, and the changes listed in `src/core/CLAUDE.md` make `group.stale` true until you `record()` again. `examples/highmeshcount` toggles it (`?src=highmeshcount&mode=recorded`)
 - `PerDrawBuffer.js` — group(1)'s dynamic-offset buffer: a fixed slot per mesh, rewritten only when it moves
 - `RenderPipeline.js` — a hand-built pipeline for fullscreen passes and other non-`Mesh` draws (fully reflected layout, no engine block)
 - `Texture.js`

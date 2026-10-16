@@ -6,7 +6,7 @@ export { Renderer } from './Renderer.js';
 export { Transform } from './Transform.js';
 export { Camera } from './Camera.js';
 export { Mesh } from './Mesh.js';
-export { RecordedGroup } from './RecordedGroup.js';
+export { RenderBundleGroup } from './RenderBundleGroup.js';
 export { Geometry } from './Geometry.js';
 export { Box, Sphere, Plane, Torus, Cylinder, Disc, Cone, Quad, FullscreenTriangle } from './primitives/index.js';
 export { Shader } from './Shader.js';

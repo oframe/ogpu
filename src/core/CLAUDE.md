@@ -73,7 +73,7 @@ rebuilt (`version` moves), the state or geometry layout changes (a new key), or 
 cache is cleared. One gap remains: an async validation
 failure is known only when its error scope resolves, so draws encoded before then use
 the invalid pipeline (one frame or so); a failed key then bumps `generation`, which also
-re-encodes RecordedGroup bundles. A RecordedGroup leaves pipeline-less meshes out of its
+re-encodes RenderBundleGroup bundles. A RenderBundleGroup leaves pipeline-less meshes out of its
 bundle (warned once per `record()`) and re-encodes as soon as one has a pipeline.
 
 ## Multiple canvases — `setContext`
@@ -381,9 +381,9 @@ group: `mesh.bindGroups[0] = shader.bindGroupLayout(0).createBindGroup({ …fres
 per-frame ping-pong, prebuild the variants and swap the slot:
 `mesh.bindGroups[0] = variants[t % 2]`.
 
-## RecordedGroup — recorded draws, replayed
+## RenderBundleGroup — recorded draws, replayed
 
-`RecordedGroup` (a `Transform`) draws its Mesh descendants from a
+`RenderBundleGroup` (a `Transform`) draws its Mesh descendants from a
 `GPURenderBundle` instead of one by one. `group.record()` is the only moment the
 draw list is captured: it snapshots the visible meshes, sorted by shader, state,
 geometry and first bind group, and the renderer encodes one bundle per pass kind
@@ -425,7 +425,7 @@ re-encodes, against 6.9 ms for a live frame).
 - **Never recorded** → warned once, its children are not drawn. Its subtree
   never enters the live queue either way, and an emptied group still replays
   its last recording — hide it or `record()` it empty.
-- A RecordedGroup inside another is just part of the outer recording: the
+- A RenderBundleGroup inside another is just part of the outer recording: the
   queue walk stops at the outer group, so the inner one's `record()` is unused.
 - The recording holds its meshes strongly: a child removed and dropped is not
   collected (nor its slot freed) until the next `record()`.

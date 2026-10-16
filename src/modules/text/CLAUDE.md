@@ -59,7 +59,7 @@ has the same vertex layout. Pass formats come from the pass, so there's no
 - Instanced, so the culler can't derive extents. `geometry.bounds` is set from the layout
   box, padded by how far the current `from` state can throw a glyph (recomputed in
   `animate`).
-- Don't put a text under a `RecordedGroup`: the replay skips `MSDFText.draw()`, so the reveal
+- Don't put a text under a `RenderBundleGroup`: the replay skips `MSDFText.draw()`, so the reveal
   clock never advances (and the empty-text skip doesn't run).
 - The class is `MSDFText`, not `Text`: `Text` is the DOM text-node global, and a missed
   import would silently construct a DOM node.

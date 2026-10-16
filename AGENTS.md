@@ -13,7 +13,7 @@ Hand-rolled WebGPU engine. Vanilla JS, Vite, no framework, no TypeScript (ambien
 This file is the _why_; api-digest is the _what_. Keep method lists out of here.
 
 Each source directory has its own `CLAUDE.md` with that area's footguns, auto-loaded when you read files there:
-`src/core/` (Renderer, Transform, Camera, Mesh, RecordedGroup, Shader, UniformBuffer, PipelineCache, PerDrawBuffer, RenderPipeline, Geometry, ComputeShader, Texture, RenderTarget, `reflect/`, `primitives/`, `skin/`, ShaderReload) · `src/math/` (the `@math/functions` layer — `vec2`/`vec3`/`vec4`/`quat`/`mat3`/`mat4`, out param last; `wgpu-matrix` plus local overrides, imported from here, never `wgpu-matrix` directly, lint-enforced — under chainable `Float32Array`-subclass classes) · `src/modules/` (Orbit, Raycast, GUI, Animation, GLTFLoader, CubeMap, VideoTexture, `pbr/`, `gsplat/`, `text/` (MSDF text + SplitText-style reveals)) · `src/utils/IBLUtils/`.
+`src/core/` (Renderer, Transform, Camera, Mesh, RenderBundleGroup, Shader, UniformBuffer, PipelineCache, PerDrawBuffer, RenderPipeline, Geometry, ComputeShader, Texture, RenderTarget, `reflect/`, `primitives/`, `skin/`, ShaderReload) · `src/math/` (the `@math/functions` layer — `vec2`/`vec3`/`vec4`/`quat`/`mat3`/`mat4`, out param last; `wgpu-matrix` plus local overrides, imported from here, never `wgpu-matrix` directly, lint-enforced — under chainable `Float32Array`-subclass classes) · `src/modules/` (Orbit, Raycast, GUI, Animation, GLTFLoader, CubeMap, VideoTexture, `pbr/`, `gsplat/`, `text/` (MSDF text + SplitText-style reveals)) · `src/utils/IBLUtils/`.
 `src/utils/` is standalone helpers; `examples/` is runnable demos at the repo root.
 
 `examples/` covers shadows, skinning, PBR/IBL, render targets, compute particles, glTF. Anything overlapping those extends the existing path rather than starting a new one.
@@ -26,7 +26,7 @@ Each source directory has its own `CLAUDE.md` with that area's footguns, auto-lo
 
 `Renderer.render` takes an optional external `encoder` to chain passes into one submit, and `target` selects a `RenderTarget`'s attachments over the bound canvas swapchain.
 
-**Recorded draws:** a `RecordedGroup` (src/core) replays its static subtree from a render bundle — the when-to/when-not rule and the `stale` + `record()` contract are in `src/core/CLAUDE.md`. Use it for large fixed opaque sets; never for CPU-culled, sorted-transparent or frequently swapped content.
+**Recorded draws:** a `RenderBundleGroup` (src/core) replays its static subtree from a render bundle — the when-to/when-not rule and the `stale` + `record()` contract are in `src/core/CLAUDE.md`. Use it for large fixed opaque sets; never for CPU-culled, sorted-transparent or frequently swapped content.
 
 ## Coding conventions
 

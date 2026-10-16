@@ -1,11 +1,11 @@
-import { Camera, Renderer, Shader, Mesh, Transform, Box, RecordedGroup } from 'ogpu';
+import { Camera, Renderer, Shader, Mesh, Transform, Box, RenderBundleGroup } from 'ogpu';
 import { GUI } from '@modules/GUI';
 
 import highMeshCountShader from './highmeshcount.wgsl?raw';
 
 // One shader, one shared box geometry, no per-mesh resources — engine uniforms only.
 // Stress test for high draw-call counts; mesh count is live-tunable. `mode`
-// (`?mode=recorded`) puts the meshes in a RecordedGroup: one render bundle replays
+// (`?mode=recorded`) puts the meshes in a RenderBundleGroup: one render bundle replays
 // them, so render() skips the per-mesh draw encoding — but the group isn't
 // frustum culled, so every mesh is drawn.
 export class HighMeshCount {
@@ -34,7 +34,7 @@ export class HighMeshCount {
         });
 
         this.scene = new Transform();
-        this.group = new RecordedGroup({ label: 'high-mesh-count-group' });
+        this.group = new RenderBundleGroup({ label: 'high-mesh-count-group' });
         this.group.setParent(this.scene);
         // the meshes live under one holder, so switching mode reparents one node
         this.holder = new Transform();

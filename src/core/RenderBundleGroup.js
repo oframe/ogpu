@@ -5,17 +5,18 @@ import { drawGeometry, BoundState, bindPassGroups } from './Mesh.js';
 const _offsets = [0, 0];
 
 // Transform whose Mesh descendants replay from a GPURenderBundle captured by
-// record(), one bundle per pass kind + camera slot. When it fits, what `stale`
-// tracks and what re-encodes on its own: src/core/CLAUDE.md.
+// record(), one bundle per pass kind + camera slot. A group, not a bundle: it
+// owns up to MAX_BUNDLES of them and re-encodes them itself. When it fits, what
+// `stale` tracks and what re-encodes on its own: src/core/CLAUDE.md.
 
 // bundles kept per group; render() outside Renderer.update without
 // perDraw.reset() would otherwise mint one per call (the camera slot climbs)
 const MAX_BUNDLES = 16;
-export class RecordedGroup extends Transform {
-    constructor({ label = 'recorded-group' } = {}) {
+export class RenderBundleGroup extends Transform {
+    constructor({ label = 'render-bundle-group' } = {}) {
         super();
         this.label = label;
-        this.isRecordedGroup = true;
+        this.isRenderBundleGroup = true;
         this._meshes = null; // recorded draw list, null until record()
         this._offsets = null; // their object-slot offsets the bundles baked
         this._snapshot = null; // per descendant: node, visible, then for meshes shader, version, state, geometry, bindGroups, g0, g2, g3, drawBuffer, drawBufferOffset
@@ -56,11 +57,11 @@ export class RecordedGroup extends Transform {
         }
         if (scissored && !this._scissorWarned) {
             this._scissorWarned = true;
-            console.warn(`[recorded-group ${this.label}] a child has its own scissor — it doesn't apply inside a recording; only the group's (and its ancestors') scissor clips the replay`);
+            console.warn(`[render-bundle-group ${this.label}] a child has its own scissor — it doesn't apply inside a recording; only the group's (and its ancestors') scissor clips the replay`);
         }
         if (unordered && !this._orderWarned) {
             this._orderWarned = true;
-            console.warn(`[recorded-group ${this.label}] recorded a transparent, depth-test-off, renderOrder'd or callback mesh — the replay ignores all of that and runs before every live draw`);
+            console.warn(`[render-bundle-group ${this.label}] recorded a transparent, depth-test-off, renderOrder'd or callback mesh — the replay ignores all of that and runs before every live draw`);
         }
         meshes.sort(drawOrder);
         this._meshes = meshes;
@@ -190,7 +191,7 @@ export class RecordedGroup extends Transform {
         }
         if (skipped.length && !this._skippedWarned) {
             this._skippedWarned = true;
-            console.warn(`[recorded-group ${this.label}] ${skipped.length} recorded mesh(es) have no pipeline (reported by the pipeline cache) — left out of the bundle until one is available`);
+            console.warn(`[render-bundle-group ${this.label}] ${skipped.length} recorded mesh(es) have no pipeline (reported by the pipeline cache) — left out of the bundle until one is available`);
         }
         return encoder.finish({ label: `${this.label}-bundle` });
     }

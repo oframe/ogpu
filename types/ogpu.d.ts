@@ -938,7 +938,7 @@ export interface PassInfo {
 export class PipelineCache {
     constructor(gpu: GPU);
     gpu: GPU;
-    /** Bumped by clear() (device restore) and when a key fails validation asynchronously; per-mesh memos and RecordedGroup bundles from before are stale. */
+    /** Bumped by clear() (device restore) and when a key fails validation asynchronously; per-mesh memos and RenderBundleGroup bundles from before are stale. */
     generation: number;
 
     passInfo(colorFormats: GPUTextureFormat[], depthFormat: GPUTextureFormat | null | undefined, sampleCount: number): PassInfo;
@@ -1112,14 +1112,14 @@ export class Mesh extends Transform {
 }
 
 // =============================================================================
-// @core/RecordedGroup — a Transform whose Mesh descendants replay from a
+// @core/RenderBundleGroup — a Transform whose Mesh descendants replay from a
 // GPURenderBundle recorded by record(). See src/core/CLAUDE.md for when it fits.
 // =============================================================================
 
-export class RecordedGroup extends Transform {
+export class RenderBundleGroup extends Transform {
     constructor(options?: { label?: string });
     label: string;
-    readonly isRecordedGroup: true;
+    readonly isRenderBundleGroup: true;
     /** True once record() has run. Never recorded → the renderer skips it (warned once). */
     readonly recorded: boolean;
     /** Snapshot the visible descendant meshes now; bundles re-encode lazily per pass kind. */
@@ -2185,8 +2185,8 @@ declare module '@core/Transform' {
 declare module '@core/Camera' {
     export { Camera, CameraOptions };
 }
-declare module '@core/RecordedGroup' {
-    export { RecordedGroup };
+declare module '@core/RenderBundleGroup' {
+    export { RenderBundleGroup };
 }
 declare module '@core/Mesh' {
     export { Mesh, MeshOptions, MeshState, DrawArgs, BoundState, bindPassGroups, drawGeometry };

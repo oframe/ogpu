@@ -41,7 +41,7 @@ export class Renderer {
         // every context this renderer configured (extra canvases) — released in destroy()
         this._contexts = new Set();
         this.ready = getPromise();
-        this._groups = []; // RecordedGroups met by the last getRenderQueue
+        this._groups = []; // RenderBundleGroups met by the last getRenderQueue
         this._bundles = [];
         this._bundleRects = []; // resolved scissor per entry of _bundles
         this._oneBundle = [null];
@@ -621,7 +621,7 @@ export class Renderer {
         scene.traverse((node) => {
             if (!node.visible) return true;
             // drawn from its bundle; its subtree never enters the live queue
-            if (node.isRecordedGroup) {
+            if (node.isRenderBundleGroup) {
                 groups.push(node);
                 return true;
             }
@@ -812,7 +812,7 @@ export class Renderer {
         return renderPassDescriptor;
     }
 
-    // Bundles of the RecordedGroups the queue walk met: refresh their children's
+    // Bundles of the RenderBundleGroups the queue walk met: refresh their children's
     // slots (only moved ones write), encode per pass kind on first use. A group
     // never recorded is skipped (warned once); a stale one still replays.
     _recordedBundles(passInfo, cameraOffset, width, height) {
@@ -829,7 +829,7 @@ export class Renderer {
             if (!group.recorded) {
                 if (!group._unrecordedWarned) {
                     group._unrecordedWarned = true;
-                    console.warn(`[renderer] RecordedGroup '${group.label}' was never recorded — call record(); its children are not drawn`);
+                    console.warn(`[renderer] RenderBundleGroup '${group.label}' was never recorded — call record(); its children are not drawn`);
                 }
                 continue;
             }
@@ -838,7 +838,7 @@ export class Renderer {
             if (!group._staleWarned && (group._staleTick = (group._staleTick + 1) % 30) === 0) {
                 if (group.stale) {
                     group._staleWarned = true;
-                    console.warn(`[renderer] RecordedGroup '${group.label}' is stale (children changed since record()) — replaying the old recording; call record()`);
+                    console.warn(`[renderer] RenderBundleGroup '${group.label}' is stale (children changed since record()) — replaying the old recording; call record()`);
                 }
             }
             bundles.push(group._bundleFor(this, passInfo, cameraOffset));
@@ -951,7 +951,7 @@ export class Renderer {
             // scissors never calls setScissorRect. Once one is set it is sticky pass
             // state; nodes without one resolve to the full rect, which resets it.
             let sx = 0, sy = 0, sw = width, sh = height; // prettier-ignore
-            // recorded groups replay first, ahead of every live draw, each under
+            // render bundle groups replay first, ahead of every live draw, each under
             // its resolved scissor; when none is scissored they share one executeBundles
             let scissored = false;
             for (let i = 0; i < bundles.length; i++) {

@@ -85,9 +85,9 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - clear()
 - fn `resolveState(state)`
 
-### src/core/RecordedGroup.js
-- **class RecordedGroup** extends Transform
-  - constructor({ label = 'recorded-group' } = {})
+### src/core/RenderBundleGroup.js
+- **class RenderBundleGroup** extends Transform
+  - constructor({ label = 'render-bundle-group' } = {})
   - record()
 
 ### src/core/RenderPipeline.js
@@ -186,7 +186,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { Transform } from './Transform.js'
 - re-export { Camera } from './Camera.js'
 - re-export { Mesh } from './Mesh.js'
-- re-export { RecordedGroup } from './RecordedGroup.js'
+- re-export { RenderBundleGroup } from './RenderBundleGroup.js'
 - re-export { Geometry } from './Geometry.js'
 - re-export { Box, Sphere, Plane, Torus, Cylinder, Disc, Cone, Quad, FullscreenTriangle } from './primitives/index.js'
 - re-export { Shader } from './Shader.js'

@@ -623,12 +623,6 @@
       "outDegree": 1
     },
     {
-      "id": "src/core/RecordedGroup.js",
-      "type": "module",
-      "inDegree": 1,
-      "outDegree": 3
-    },
-    {
       "id": "src/core/reflect/index.js",
       "type": "module",
       "inDegree": 5,
@@ -651,6 +645,12 @@
       "type": "module",
       "inDegree": 2,
       "outDegree": 2
+    },
+    {
+      "id": "src/core/RenderBundleGroup.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 3
     },
     {
       "id": "src/core/Renderer.js",
@@ -1476,11 +1476,11 @@
     },
     {
       "from": "src/core/index.js",
-      "to": "src/core/RecordedGroup.js"
+      "to": "src/core/reflect/index.js"
     },
     {
       "from": "src/core/index.js",
-      "to": "src/core/reflect/index.js"
+      "to": "src/core/RenderBundleGroup.js"
     },
     {
       "from": "src/core/index.js",
@@ -1651,18 +1651,6 @@
       "to": "src/utils/webgpu-utils.js"
     },
     {
-      "from": "src/core/RecordedGroup.js",
-      "to": "src/core/Mesh.js"
-    },
-    {
-      "from": "src/core/RecordedGroup.js",
-      "to": "src/core/Shader.js"
-    },
-    {
-      "from": "src/core/RecordedGroup.js",
-      "to": "src/core/Transform.js"
-    },
-    {
       "from": "src/core/reflect/index.js",
       "to": "src/core/reflect/layout.js"
     },
@@ -1689,6 +1677,18 @@
     {
       "from": "src/core/reflect/StructView.js",
       "to": "src/utils/webgpu-utils.js"
+    },
+    {
+      "from": "src/core/RenderBundleGroup.js",
+      "to": "src/core/Mesh.js"
+    },
+    {
+      "from": "src/core/RenderBundleGroup.js",
+      "to": "src/core/Shader.js"
+    },
+    {
+      "from": "src/core/RenderBundleGroup.js",
+      "to": "src/core/Transform.js"
     },
     {
       "from": "src/core/Renderer.js",

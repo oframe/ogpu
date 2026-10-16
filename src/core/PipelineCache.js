@@ -110,7 +110,7 @@ export class PipelineCache {
         this.map = new Map();
         this._passIds = new Map();
         // bumped by clear() (device restore) and by an async validation failure:
-        // per-mesh memos (and RecordedGroup bundles) from before are stale
+        // per-mesh memos (and RenderBundleGroup bundles) from before are stale
         this.generation = 0;
     }
 

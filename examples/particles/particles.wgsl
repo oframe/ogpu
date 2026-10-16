@@ -73,7 +73,7 @@ fn fs(in: VertexOutPut) -> FragmentOutput {
     let light = dot(lightDir, normal) * 0.5 + 0.5;
 
     let uv = in.vUv;
-    let color = vec3f(0.8) + 0.2 * sin(vec3f(uv.y, uv.x, uv.x) + camera.time + in.vRandom * 6.2832) + vec3f(0.1, 0.0, 0.3);
+    let color = vec3f(0.8) + 0.2 * sin(vec3f(uv.y, uv.x, uv.x) + time.time + in.vRandom * 6.2832) + vec3f(0.1, 0.0, 0.3);
 
     out.color = vec4f(color * light, 1.0);
 

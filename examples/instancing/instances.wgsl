@@ -31,11 +31,11 @@ fn vs(in: Vertex) -> VertexOutput {
 
   pos *= 0.9 + in.random.y * 0.2;
 
-  let xz = rotate2d(pos.xz, in.random.x * 6.28 + 4.0 * camera.time * (in.random.y - 0.5));
+  let xz = rotate2d(pos.xz, in.random.x * 6.28 + 4.0 * time.time * (in.random.y - 0.5));
   pos.x = xz.x;
   pos.z = xz.y;
 
-  let zy = rotate2d(pos.zy, in.random.z * 0.5 * sin(camera.time * in.random.x + in.random.z * 3.14));
+  let zy = rotate2d(pos.zy, in.random.z * 0.5 * sin(time.time * in.random.x + in.random.z * 3.14));
   pos.z = zy.x;
   pos.y = zy.y;
 

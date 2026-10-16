@@ -28,6 +28,6 @@ fn vs(in: Vertex) -> VertexOutput {
 
 @fragment
 fn fs(in: VertexOutput) -> @location(0) vec4f {
-    let rgb = 0.5 + 0.3 * cos(vec3f(in.uv.x, in.uv.y, in.uv.x) + camera.time) + uniforms.uColor;
+    let rgb = 0.5 + 0.3 * cos(vec3f(in.uv.x, in.uv.y, in.uv.x) + time.time) + uniforms.uColor;
     return vec4f(rgb, 1.0);
 }

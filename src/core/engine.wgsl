@@ -5,9 +5,8 @@ struct Camera {
   projectionMatrix: mat4x4f,
   viewMatrix: mat4x4f,
   cameraPosition: vec3f,
-  time: f32,
   cameraQuaternion: vec4f,
-  resolution: vec2f,
+  viewport: vec2f, // target size, else the bound canvas size
 }
 
 // Depends on the mesh alone, not the camera. normalMatrix/objectMatrix are
@@ -20,6 +19,15 @@ struct Object {
 
 @group(1) @binding(0) var<uniform> camera: Camera; // 176 B, one slot per render()
 @group(1) @binding(1) var<uniform> object: Object; // 176 B, one fixed slot per mesh
+
+// Seconds: time = renderer.time, delta = renderer.deltaTime. One value per
+// submit, written by render() only when it changed.
+struct Time {
+  time: f32,
+  delta: f32,
+}
+
+@group(1) @binding(2) var<uniform> time: Time;
 
 // view * model. Per vertex, prefer camera.viewMatrix * (object.modelMatrix * p):
 // two mat-vec products instead of a mat-mat one.

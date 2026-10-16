@@ -5,6 +5,8 @@ import { internBindGroupLayout, wrapBindGroupLayout, declaredBindings } from './
 import { applyOverrideConstants } from '@utils/wgslOverrides';
 
 export const ENGINE_GROUP = 1;
+// engine.wgsl's group(1) bindings
+const ENGINE_NAMES = new Set(['camera', 'object', 'time']);
 // Shader.needs bits: which derived object matrices the user code reads
 export const NEEDS_NORMAL = 1;
 export const NEEDS_OBJECT = 2;
@@ -14,7 +16,7 @@ let ID = 1;
 // Shader module + its reflected interface: the `uniforms` struct, bind group
 // layouts and a pipeline layout. No geometry, targets or blend/depth state —
 // the renderer derives GPURenderPipelines from (shader, mesh.state, geometry
-// layout, pass formats). The engine block (camera/object at group(1)) is
+// layout, pass formats). The engine block (camera/object/time at group(1)) is
 // appended, so user line numbers in compile errors stay correct and `enable`
 // directives stay first. Entry points are `vs` and (optionally) `fs`.
 export class Shader {
@@ -45,7 +47,7 @@ export class Shader {
 
         if (!defs.entryPoints.vs) throw new Error(`no 'vs' vertex entry point`);
         for (const name of ['vs', 'fs']) {
-            const own = defs.entryPoints[name]?.resources.find((r) => r.group === ENGINE_GROUP && r.name !== 'camera' && r.name !== 'object');
+            const own = defs.entryPoints[name]?.resources.find((r) => r.group === ENGINE_GROUP && !ENGINE_NAMES.has(r.name));
             if (own) {
                 throw new Error(`'${own.name}' is bound at group(1), which is the engine's — use group(0), 2 or 3`);
             }

@@ -10,6 +10,9 @@ import { FullscreenTriangle } from './primitives/FullscreenTriangle.js';
 import { Quad } from './primitives/Quad.js';
 
 const _scissor = { x: 0, y: 0, width: 0, height: 0 }; // reused per draw, consumed immediately
+// engine.wgsl `Time` (time, delta: f32 each) and its buffer, rounded up to 16 B
+const TIME_SIZE = 8;
+const TIME_BUFFER_SIZE = 16;
 
 const tempVec3 = /* @__PURE__ */ new Vec3(0, 0, 0);
 
@@ -254,10 +257,10 @@ export class Renderer {
         this._depthView = null;
         this.depth && this.createDepthTexture();
 
-        // Same story: the old PerDrawBuffer's GPUBuffer died with the device.
-        // Drop the reference (no destroy — same rationale as depth texture
-        // above) and remake it, the engine group and the pipeline cache against
-        // the fresh gpu. App code rebuilds its Shaders in deviceRestoredHandlers.
+        // Same story: the old PerDrawBuffer's and time buffer's GPUBuffers died
+        // with the device. Drop the references (no destroy — same rationale as
+        // depth texture above) and remake them, the engine group and the
+        // pipeline cache against the fresh gpu. App code rebuilds its Shaders in deviceRestoredHandlers.
         this._createEngineResources();
 
         this.isReady = true;
@@ -281,19 +284,24 @@ export class Renderer {
                 entries: [
                     { binding: 0, resource: { buffer: pd.buffer, size: CAMERA_SIZE } },
                     { binding: 1, resource: { buffer: pd.buffer, size: OBJECT_SIZE } },
+                    { binding: 2, resource: { buffer: this._timeBuffer } },
                 ],
             });
         }
         return this._engineBindGroup;
     }
 
-    // Engine-owned GPU state for Mesh draws: the PerDrawBuffer, the fixed group(1)
-    // layout over it (camera slot at binding 0, object slot at binding 1, both
-    // dynamic; the bind group is the engineBindGroup getter), the shared empty
-    // group, and the pipeline cache. Runs on boot and on every device restore.
+    // Engine-owned GPU state for Mesh draws: the PerDrawBuffer, the time buffer,
+    // the fixed group(1) layout over them (camera slot at binding 0, object slot
+    // at binding 1, both dynamic; time at binding 2, plain; the bind group is the
+    // engineBindGroup getter), the shared empty group, and the pipeline cache.
+    // Runs on boot and on every device restore.
     _createEngineResources() {
         const { device } = this.gpu;
         this.perDraw = new PerDrawBuffer(this.gpu, { size: this.perDrawSize });
+        this._timeBuffer = device.createBuffer({ label: 'engine-time', size: TIME_BUFFER_SIZE, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+        this._timeData = new Float32Array(TIME_BUFFER_SIZE / 4);
+        this._timeData[0] = NaN; // the fresh buffer is zero: force the first write
 
         const visibility = GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
         this.engineLayout = device.createBindGroupLayout({
@@ -301,6 +309,7 @@ export class Renderer {
             entries: [
                 { binding: 0, visibility, buffer: { hasDynamicOffset: true, minBindingSize: CAMERA_SIZE } },
                 { binding: 1, visibility, buffer: { hasDynamicOffset: true, minBindingSize: OBJECT_SIZE } },
+                { binding: 2, visibility, buffer: { minBindingSize: TIME_SIZE } },
             ],
         });
         this._engineBindGroup = null;
@@ -468,6 +477,8 @@ export class Renderer {
         this.depthTexture = this._depthView = null;
         this.perDraw?.destroy();
         this.perDraw = null;
+        this._timeBuffer?.destroy();
+        this._timeBuffer = null;
         this.pipelines?.clear();
         this._engineBindGroup = this.emptyBindGroup = null;
         this._groups.length = this._bundles.length = 0;
@@ -913,7 +924,8 @@ export class Renderer {
             const width = target ? target.width : this.gpu.canvas.width;
             const height = target ? target.height : this.gpu.canvas.height;
             // the frame's next camera slot; every draw in the pass shares it
-            const cameraOffset = this.perDraw.writeCamera(camera, this.time, width, height);
+            const cameraOffset = this.perDraw.writeCamera(camera, width, height);
+            this._writeTime();
 
             // before the pass opens: slot acquisition may grow the engine buffer
             this.getRenderQueue({ scene, camera, frustumCull });
@@ -989,6 +1001,18 @@ export class Renderer {
         } finally {
             this.setContext(null);
         }
+    }
+
+    // Engine Time block (binding 2): uploaded only when the clock moved, so
+    // further render()s in a frame cost nothing. One value per submit.
+    _writeTime() {
+        const d = this._timeData;
+        const time = Math.fround(this.time);
+        const delta = Math.fround(this.deltaTime);
+        if (d[0] === time && d[1] === delta) return;
+        d[0] = time;
+        d[1] = delta;
+        this.gpu.device.queue.writeBuffer(this._timeBuffer, 0, d);
     }
 
     // Intersection of `node.scissor` and every ancestor's, clamped to the target

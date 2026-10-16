@@ -37,8 +37,8 @@ fn vs(in: Vertex) -> VertexOutput {
 
   pos *= 0.9 + random.y * 0.2;
 
-  let a1 = random.x * 6.28 + 4.0 * camera.time * (random.y - 0.5);
-  let a2 = random.z * 0.5 * sin(camera.time * random.x + random.z * 3.14);
+  let a1 = random.x * 6.28 + 4.0 * time.time * (random.y - 0.5);
+  let a2 = random.z * 0.5 * sin(time.time * random.x + random.z * 3.14);
 
   // rotate position around y (xz) then x (zy)
   let pxz = rotate2d(pos.xz, a1); pos.x = pxz.x; pos.z = pxz.y;

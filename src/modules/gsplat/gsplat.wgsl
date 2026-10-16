@@ -4,7 +4,7 @@
 // quad (instanced); the VS projects the 2D Gaussian ellipse and the FS evaluates
 // the Gaussian fall-off, outputting premultiplied alpha.
 //
-// Camera/object matrices and resolution come from the engine block (group 1).
+// Camera/object matrices and viewport come from the engine block (group 1).
 
 struct Uniforms {
     uCount : u32,
@@ -90,8 +90,8 @@ fn vs(
     // ── EWA Jacobian ─────────────────────────────────────────────────────────
     // focal lengths from projection matrix diagonal.
     let proj    = camera.projectionMatrix;
-    let focal_x = proj[0][0] * camera.resolution.x * 0.5;
-    let focal_y = proj[1][1] * camera.resolution.y * 0.5;
+    let focal_x = proj[0][0] * camera.viewport.x * 0.5;
+    let focal_y = proj[1][1] * camera.viewport.y * 0.5;
 
     // Clamp tan(fov/2) extents to avoid numerical blowup at extreme angles.
     let limx = 1.3 / proj[0][0]; // 1.3 * tan(fovX/2)
@@ -155,7 +155,7 @@ fn vs(
     // Clip-space centre.
     let clip    = proj * t;
     // Add pixel-space offset via homogeneous NDC trick.
-    let ndcOff  = offset * 2.0 / camera.resolution;
+    let ndcOff  = offset * 2.0 / camera.viewport;
     out.position = vec4f(clip.xy + ndcOff * clip.w, clip.z, clip.w);
 
     // Gaussian-space coordinate passed to the fragment shader.

@@ -845,13 +845,13 @@ export class BindGroupLayout {
 
 export interface ShaderOptions {
     label?: string;
-    /** Raw WGSL. Entry points `vs` and (optionally) `fs`; the engine block (camera/object at group(1)) is appended. */
+    /** Raw WGSL. Entry points `vs` and (optionally) `fs`; the engine block (camera/object/time at group(1)) is appended. */
     code: string;
     /** Override constants, baked into source (Safari-safe). */
     constants?: Record<string, number>;
 }
 
-/** Index of the bind group the engine owns (camera + object slots). Not in the barrel — import via `@core/Shader`. */
+/** Index of the bind group the engine owns (camera + object slots, time buffer). Not in the barrel — import via `@core/Shader`. */
 export const ENGINE_GROUP: 1;
 /** `Shader.needs` bit: the user code reads `normalMatrix`. Import via `@core/Shader`. */
 export const NEEDS_NORMAL: 1;
@@ -985,7 +985,7 @@ export class PerDrawBuffer {
     readonly pending: number;
 
     /** Camera block in the frame's next camera slot; returns its dynamic offset. A null camera writes identity matrices. */
-    writeCamera(camera: Camera | null | undefined, time: number, width: number, height: number): number;
+    writeCamera(camera: Camera | null | undefined, width: number, height: number): number;
     /** `mesh`'s object slot (acquired on first use, rewritten only when it moved or its shader needs more); returns its dynamic offset. */
     writeObject(mesh: Mesh): number;
     /** Give `mesh`'s slot back (Mesh.destroy calls this). */
@@ -1417,7 +1417,7 @@ export class Renderer {
     presentationFormat: GPUTextureFormat;
     /** Shared per-draw uniform buffer (null after destroy()). */
     perDraw: PerDrawBuffer | null;
-    /** Layout of the engine's group(1): dynamic camera + object slots of `perDraw`. */
+    /** Layout of the engine's group(1): dynamic camera + object slots of `perDraw`, plain time block at binding 2. */
     engineLayout: GPUBindGroupLayout;
     /** Getter: rebuilt when `perDraw` grows (its `generation` moves); null after destroy(). */
     readonly engineBindGroup: GPUBindGroup | null;

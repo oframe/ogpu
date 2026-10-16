@@ -4,7 +4,7 @@ import { NEEDS_NORMAL, NEEDS_OBJECT } from './Shader.js';
 // Engine block sizes (src/core/engine.wgsl). Float offsets inside each block:
 export const CAMERA_SIZE = 176;
 export const OBJECT_SIZE = 176;
-const PROJECTION = 0, VIEW = 16, CAMERA_POSITION = 32, TIME = 35, CAMERA_QUATERNION = 36, RESOLUTION = 40; // prettier-ignore
+const PROJECTION = 0, VIEW = 16, CAMERA_POSITION = 32, CAMERA_QUATERNION = 36, VIEWPORT = 40; // prettier-ignore
 const MODEL = 0, NORMAL = 16, OBJECT = 28; // prettier-ignore
 
 const IDENTITY = /* @__PURE__ */ new Mat4();
@@ -106,7 +106,7 @@ export class PerDrawBuffer {
 
     // Camera block in the frame's next camera slot; returns its dynamic offset.
     // A null camera (e.g. a render() with no camera) writes identity matrices.
-    writeCamera(camera, time, width, height) {
+    writeCamera(camera, width, height) {
         let slot = this._cameraSlots[this._cameraIndex];
         if (slot === undefined) {
             slot = this._cameraSlots[this._cameraIndex] = this._acquire();
@@ -129,9 +129,8 @@ export class PerDrawBuffer {
             f.set(IDENTITY, o + VIEW);
             f[o + CAMERA_QUATERNION + 3] = 1;
         }
-        f[o + TIME] = time;
-        f[o + RESOLUTION] = width;
-        f[o + RESOLUTION + 1] = height;
+        f[o + VIEWPORT] = width;
+        f[o + VIEWPORT + 1] = height;
         this._mark(slot);
         return offset;
     }

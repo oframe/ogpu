@@ -12,16 +12,15 @@ export class BoxMesh extends Transform {
 
         const shader = new Shader(this.gpu, { label: 'simple-rendering', code: cubeShader });
 
-        // scale + alpha live in their own uniform structs/buffers, bound by WGSL name
-        this.scaleStruct = new UniformBuffer(this.gpu, shader.defs.uniforms.scaleUniform, { scale: 1 }, { label: 'box-scale' });
-        this.alphaStruct = new UniformBuffer(this.gpu, shader.defs.uniforms.alphaUniform, { alpha: 1 }, { label: 'box-alpha' });
+        // scale + alpha share one uniform struct and buffer
+        this.uniforms = new UniformBuffer(this.gpu, shader.uniforms, { uScale: 1, uAlpha: 1 }, { label: 'box-uniforms' });
 
         this.mesh = new Mesh({
             label: 'box-mesh',
             geometry,
             shader,
             state: { cullMode: 'back' },
-            bindGroups: [shader.bindGroupLayout(0).createBindGroup({ scaleUniform: this.scaleStruct, alphaUniform: this.alphaStruct })],
+            bindGroups: [shader.bindGroupLayout(0).createBindGroup({ uniforms: this.uniforms })],
         });
 
         this.mesh.setParent(this);

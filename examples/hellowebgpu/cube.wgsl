@@ -1,16 +1,12 @@
 // validate-prepend: ../../src/core/engine.wgsl
 // `camera` and `object` (group 1) come from the engine block Shader appends
 
-struct Scale {
-  scale: f32,
+struct Uniforms {
+  uScale: f32,
+  uAlpha: f32,
 }
 
-struct Alpha {
-  alpha: f32,
-}
-
-@group(0) @binding(0) var<uniform> scaleUniform : Scale;
-@group(0) @binding(1) var<uniform> alphaUniform : Alpha;
+@group(0) @binding(0) var<uniform> uniforms : Uniforms;
 
 struct Vertex {
   @location(0) position: vec3f,
@@ -28,7 +24,7 @@ struct VertexOutput {
 fn vs(in: Vertex) -> VertexOutput {
   var vsOut: VertexOutput;
 
-  let localPos = in.position * scaleUniform.scale;
+  let localPos = in.position * uniforms.uScale;
 
   vsOut.position = camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * vec4f(localPos, 1.0)));
   vsOut.vNormal = object.normalMatrix * in.normal;
@@ -38,5 +34,5 @@ fn vs(in: Vertex) -> VertexOutput {
 
 @fragment
 fn fs(in: VertexOutput) -> @location(0) vec4f {
-  return vec4f(normalize(in.vNormal), alphaUniform.alpha);
+  return vec4f(normalize(in.vNormal), uniforms.uAlpha);
 }

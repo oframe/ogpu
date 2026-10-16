@@ -29,8 +29,7 @@ export class HelloWebGPU {
 
         this.box = new BoxMesh(this.gpu);
         this.box.setParent(this.scene);
-        this.box.scaleStruct.set({ scale: 0.1 });
-        this.box.alphaStruct.set({ alpha: 1 });
+        this.box.uniforms.set({ uScale: 0.1, uAlpha: 1 });
 
         this.box.position.x = 1.0;
         this.box.position.y = -1.0;
@@ -39,21 +38,17 @@ export class HelloWebGPU {
         const shader = new Shader(this.gpu, { label: 'third-box-shader', code: cubeShader });
         const glass = { transparent: true, depthWrite: false };
 
-        const scaleDef = shader.defs.uniforms.scaleUniform;
-        const alphaDef = shader.defs.uniforms.alphaUniform;
+        // each mesh owns one UniformBuffer holding its scale + alpha, bound by WGSL name
+        const bindGroups = (uniforms) => [shader.bindGroupLayout(0).createBindGroup({ uniforms })];
 
-        // each mesh owns its own scale + alpha UniformBuffers, bound by WGSL name
-        const scaleAlpha = (scale, alpha) => [shader.bindGroupLayout(0).createBindGroup({ scaleUniform: scale, alphaUniform: alpha })];
-
-        this.secondScale = new UniformBuffer(this.gpu, scaleDef, { scale: 1 }, { label: 'second-scale' });
-        this.secondAlpha = new UniformBuffer(this.gpu, alphaDef, { alpha: 1 }, { label: 'second-alpha' });
+        this.secondUniforms = new UniformBuffer(this.gpu, shader.uniforms, { uScale: 1, uAlpha: 1 }, { label: 'second-uniforms' });
 
         this.secondBox = new Mesh({
             label: 'second-webgpu-box',
             geometry,
             shader,
             state: glass,
-            bindGroups: scaleAlpha(this.secondScale, this.secondAlpha),
+            bindGroups: bindGroups(this.secondUniforms),
         });
 
         this.secondBox.setParent(this.scene);
@@ -61,15 +56,14 @@ export class HelloWebGPU {
         this.secondBox.position.y = -1.0;
         this.secondBox.position.z = 0;
 
-        this.thirdScale = new UniformBuffer(this.gpu, scaleDef, { scale: 0.5 }, { label: 'third-scale' });
-        this.thirdAlpha = new UniformBuffer(this.gpu, alphaDef, { alpha: 0.5 }, { label: 'third-alpha' });
+        this.thirdUniforms = new UniformBuffer(this.gpu, shader.uniforms, { uScale: 0.5, uAlpha: 0.5 }, { label: 'third-uniforms' });
 
         this.thirdBox = new Mesh({
             label: 'third-webgpu-box',
             geometry,
             shader,
             state: glass,
-            bindGroups: scaleAlpha(this.thirdScale, this.thirdAlpha),
+            bindGroups: bindGroups(this.thirdUniforms),
         });
 
         this.thirdBox.setParent(this.scene);
@@ -85,8 +79,8 @@ export class HelloWebGPU {
         this.gui.add(this.params, 'glass').on('change', ({ value }) => {
             this.thirdBox.state = value ? glass : {};
         });
-        this.gui.uniform(this.thirdScale, 'scale', { min: 0, max: 2, step: 0.01 });
-        this.gui.uniform(this.thirdAlpha, 'alpha', { min: 0, max: 1, step: 0.01 });
+        this.gui.uniform(this.thirdUniforms, 'uScale', { min: 0, max: 2, step: 0.01 });
+        this.gui.uniform(this.thirdUniforms, 'uAlpha', { min: 0, max: 1, step: 0.01 });
 
         addEventListener('resize', this.handleResize);
 

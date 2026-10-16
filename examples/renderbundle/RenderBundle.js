@@ -34,9 +34,9 @@ export class RenderBundle {
         this.orbit = new Orbit(this.camera, { element: gpu.canvas });
 
         this.scene = new Transform();
-        this.recorded = new RenderBundleGroup({ label: 'render-bundle-field' });
+        this.bundleGroup = new RenderBundleGroup({ label: 'render-bundle-field' });
         this.plain = new Transform();
-        this.recorded.setParent(this.scene);
+        this.bundleGroup.setParent(this.scene);
         this.plain.setParent(this.scene);
 
         const shader = new Shader(gpu, { label: 'render-bundle-shader', code: renderBundleShader });
@@ -111,7 +111,7 @@ export class RenderBundle {
             })
             .on('change', ({ value }) => this.setMode(value));
         this.gui.add(this.params, 'animate', { label: 'animate' });
-        this.gui.button('re-record', () => this.recorded.record());
+        this.gui.button('re-record', () => this.bundleGroup.record());
         // a state swap on a recorded child: stale until re-recorded
         this.gui.button('swap-mover-state', () => {
             const m = this.movers[0];
@@ -136,12 +136,12 @@ export class RenderBundle {
     // recorded once (the explicit moment). Live: the same meshes under a plain
     // Transform, drawn one by one.
     setMode(mode) {
-        const parent = mode === 'recorded' ? this.recorded : this.plain;
+        const parent = mode === 'recorded' ? this.bundleGroup : this.plain;
         for (const m of this.field) m.setParent(parent);
         for (const m of this.movers) m.setParent(parent);
         // an emptied group still holds its last recording: hide it, or it replays
-        this.recorded.visible = mode === 'recorded';
-        if (mode === 'recorded') this.recorded.record();
+        this.bundleGroup.visible = mode === 'recorded';
+        if (mode === 'recorded') this.bundleGroup.record();
         this._times.length = 0;
     }
 
@@ -169,7 +169,7 @@ export class RenderBundle {
         this.params.renderBestMs = Math.min(...times);
         // stale walks the whole recording: sample it, don't pay for it every frame
         if (++this._tick % 30 === 0) {
-            this.params.stale = this.params.mode === 'recorded' && this.recorded.stale;
+            this.params.stale = this.params.mode === 'recorded' && this.bundleGroup.stale;
         }
         this.orbit.update();
     };

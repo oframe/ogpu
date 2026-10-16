@@ -2023,6 +2023,8 @@ export interface MSDFTextOptions extends TextLayoutOptions {
     outline?: number;
     outlineColor?: ArrayLike<number>;
     depthTest?: boolean;
+    /** Draw the glyph quads' edges (and their shared diagonal) in place of the glyphs. */
+    wireframe?: boolean;
     /** Variant of the shared text shader (same bindings); pass formats come from the pass. */
     shader?: Shader;
     label?: string;
@@ -2049,6 +2051,8 @@ export class MSDFText extends Mesh {
     progress: number;
     readonly playing: boolean;
     set color(c: ArrayLike<number>);
+    /** Quad edges in place of the glyphs, in the text's color. */
+    wireframe: boolean;
     setText(text: string, options?: TextLayoutOptions): this;
     animate(preset: string | TextRevealOptions, overrides?: TextRevealOptions): this;
     seek(time: number): this;

@@ -7,18 +7,18 @@ Signatures live in repo-root `api-digest.md`. Worked example: `examples/msdftext
 
 msdfgen does the distance fields; its front-end **msdf-atlas-gen** packs the atlas and
 writes the json `MSDFFont` reads. `npm run build:font` (`scripts/build-msdf-font.mjs`)
-rebakes the bundled Instrument Serif. There's no prebuilt macOS binary, so the script header
+rebakes the bundled Fira Sans Bold (the font OGL's msdf-text example uses). There's no prebuilt macOS binary, so the script header
 has the cmake line (vcpkg/Skia off, Homebrew freetype + libpng). Fonts committed under
 `public/assets/fonts/<name>/` must be redistributable and ship their licence (`OFL.txt`).
 
 - **`-type mtsdf`, not msdf.** RGB = multi-channel distance (median → sharp corners), A =
   true sdf. Outline and blur read A: the median wobbles away from the edge.
 - **`pxrange` caps every effect.** The field only exists pxRange/2 atlas px out from the
-  edge, so outline/blur saturate at `font.padEm` em (0.142 for the bundled font). A wider
+  edge, so outline/blur saturate at `font.padEm` em (0.164 for the bundled font). A wider
   effect hits a hard rim where the field runs out. Need more → rebake with a bigger range,
   and accept fewer px/em (`-minsize` fills the same POT atlas).
 - **Kerning comes from the legacy `kern` table only** (FreeType). GPOS-only fonts, which is
-  most modern ones including Instrument Serif, bake `kerning: []`. That's not a loader bug.
+  most modern ones including Fira Sans, bake `kerning: []`. That's not a loader bug.
 
 ## Loading
 

@@ -551,10 +551,9 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - **class MSDFTextExample**
   - constructor()
   - init()
-  - intro()
   - initGUI()
   - presetParams(name)
-  - replay(texts)
+  - replay()
 
 ### examples/multicanvas/MultiCanvas.js
 - **class MultiCanvas**

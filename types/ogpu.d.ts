@@ -970,7 +970,7 @@ export const TIME_BINDING_SIZE: number;
 export class PerDrawBuffer {
     constructor(gpu: GPU, options?: { label?: string; size?: number });
     gpu: GPU;
-    /** Replaced when the buffer grows (see `generation`). */
+    /** Replaced when the buffer grows (see `bufferVersion`). */
     buffer: GPUBuffer;
     /** minUniformBufferOffsetAlignment of the device. */
     align: number;
@@ -980,9 +980,9 @@ export class PerDrawBuffer {
     capacity: number;
     size: number;
     /** Bumped when `buffer` is replaced; bind groups over the old one are stale. */
-    generation: number;
+    bufferVersion: number;
     /** Bumped at each frame start and renderer-owned submit. */
-    epoch: number;
+    submitIndex: number;
     /** CPU copy of `buffer`; writes land here, `flush` uploads the dirty slots. */
     mirror: Uint8Array;
     /** Float32 view over `mirror`. */
@@ -1435,7 +1435,7 @@ export class Renderer {
     perDraw: PerDrawBuffer | null;
     /** Layout of the engine's group(1): dynamic camera + object slots of `perDraw`. */
     engineLayout: GPUBindGroupLayout;
-    /** Getter: rebuilt when `perDraw` grows (its `generation` moves); null after destroy(). */
+    /** Getter: rebuilt when `perDraw` grows (its `bufferVersion` moves); null after destroy(). */
     readonly engineBindGroup: GPUBindGroup | null;
     /** Layout of the engine's group(3): the `time` block (time, delta), plain uniform. */
     timeLayout: GPUBindGroupLayout;

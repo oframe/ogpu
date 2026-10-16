@@ -65,11 +65,11 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/core/PerDrawBuffer.js
 - **class PerDrawBuffer**
   - constructor(gpu, { label = 'per-draw-uniforms', size = 1 << 20 } = {})
+  - writeObject(mesh)
   - writeCamera(camera, width, height)
   - writeTime(time, delta)
-  - writeObject(mesh)
-  - release(mesh)
   - flush()
+  - release(mesh)
   - reset()
   - destroy()
 - const `CAMERA_SIZE`, `OBJECT_SIZE`, `TIME_SIZE`, `TIME_BINDING_SIZE`

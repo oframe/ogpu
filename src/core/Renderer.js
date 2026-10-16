@@ -273,8 +273,8 @@ export class Renderer {
     get engineBindGroup() {
         const pd = this.perDraw;
         if (!pd) return null;
-        if (this._engineGeneration !== pd.generation) {
-            this._engineGeneration = pd.generation;
+        if (this._engineBufferVersion !== pd.bufferVersion) {
+            this._engineBufferVersion = pd.bufferVersion;
             this._engineBindGroup = this.gpu.device.createBindGroup({
                 label: 'engine-bind-group',
                 layout: this.engineLayout,
@@ -291,8 +291,8 @@ export class Renderer {
     get timeBindGroup() {
         const pd = this.perDraw;
         if (!pd) return null;
-        if (this._timeGeneration !== pd.generation) {
-            this._timeGeneration = pd.generation;
+        if (this._timeBufferVersion !== pd.bufferVersion) {
+            this._timeBufferVersion = pd.bufferVersion;
             this._timeBindGroup = this.gpu.device.createBindGroup({
                 label: 'time-bind-group',
                 layout: this.timeLayout,
@@ -325,7 +325,7 @@ export class Renderer {
             entries: [{ binding: 0, visibility, buffer: { minBindingSize: TIME_SIZE } }],
         });
         this._engineBindGroup = this._timeBindGroup = null;
-        this._engineGeneration = this._timeGeneration = -1;
+        this._engineBufferVersion = this._timeBufferVersion = -1;
 
         this.emptyLayout = device.createBindGroupLayout({ label: 'empty-layout', entries: [] });
         this.emptyBindGroup = device.createBindGroup({ label: 'empty-bind-group', layout: this.emptyLayout, entries: [] });
@@ -1003,7 +1003,7 @@ export class Renderer {
             if (encoder) return; // caller owns finish/submit
 
             this.gpu.device.queue.submit([_encoder.finish()]);
-            this.perDraw.epoch++; // queue order makes later rewrites safe
+            this.perDraw.submitIndex++; // queue order makes later rewrites safe
 
             if (timing) {
                 this.timingHelper

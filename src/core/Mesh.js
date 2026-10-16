@@ -72,7 +72,7 @@ export class Mesh extends Transform {
     // that draws again takes a new slot. Dropping a mesh without destroy() frees
     // the slot when it's garbage collected.
     destroy() {
-        this._slotOwner?.release(this);
+        this._perDrawSlot?.owner?.release(this);
     }
 
     onBeforeRender(f) {

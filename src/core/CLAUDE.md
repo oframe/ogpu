@@ -320,7 +320,7 @@ an `fs` entry point, so a vertex-only shader is a depth-only pipeline.
 **PerDrawBuffer** (`renderer.perDraw`) — fixed slots, written only when they
 change:
 
-- Every mesh gets a permanent object slot on its first draw (`mesh._slot`) and
+- Every mesh gets a permanent object slot on its first draw (`mesh._perDrawSlot`) and
   rewrites it only when its `worldVersion` moved or its shader's `needs` grew. A
   static mesh costs no upload at all; each `render()` uploads its camera slot.
 - Each `render()` takes the frame's next camera slot (sequential, restarted by
@@ -344,7 +344,7 @@ change:
   buffer). Drawing an unmoved mesh into several passes of one submit (shadow +
   main) is fine — the object block holds no camera data — and self-submitting
   `render()`s are fine whatever moves: queue order separates them — but one
-  in the middle of an open external-encoder chain bumps the epoch, so a move
+  in the middle of an open external-encoder chain bumps `submitIndex`, so a move
   across it inside that chain isn't warned.
 - Slots come back through `mesh.destroy()`, or a `FinalizationRegistry` when a
   mesh is dropped without it. Not "unseen for N frames": a hidden mesh must
@@ -353,12 +353,12 @@ change:
   after the next `reset()` — an encoded, unsubmitted draw may still read it.
 - The buffer doubles when it runs out (`perDrawSize`, default 1 MiB, is the
   starting size; size it for meshes + camera slots + the time slot). Growth
-  bumps `generation`: `renderer.engineBindGroup` and `timeBindGroup` (getters)
+  bumps `bufferVersion`: `renderer.engineBindGroup` and `timeBindGroup` (getters)
   are rebuilt on next read, draws already encoded keep the old buffer
   (its pending slots are uploaded first; it's destroyed at the next frame
   start). There is no cap below `maxBufferSize`.
 - After a device restore a mesh that never draws again still points at the old
-  buffer (`_slotOwner`), keeping its CPU mirror alive; drawing it moves it over.
+  buffer (`mesh._perDrawSlot.owner`), keeping its CPU mirror alive; drawing it moves it over.
 
 **Redundant state is skipped.** `Renderer.render` hands every draw one
 `BoundState` per pass (a fresh one per `render()`, so a callback that renders

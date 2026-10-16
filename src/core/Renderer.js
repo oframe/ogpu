@@ -10,7 +10,7 @@ import { FullscreenTriangle } from './primitives/FullscreenTriangle.js';
 import { Quad } from './primitives/Quad.js';
 
 const _scissor = { x: 0, y: 0, width: 0, height: 0 }; // reused per draw, consumed immediately
-// engine.wgsl `Time` (time, delta: f32 each) and its buffer, rounded up to 16 B
+// engine.wgsl `Time` (time, delta: f32 each, group(3)) and its buffer, rounded up to 16 B
 const TIME_SIZE = 8;
 const TIME_BUFFER_SIZE = 16;
 
@@ -259,8 +259,8 @@ export class Renderer {
 
         // Same story: the old PerDrawBuffer's and time buffer's GPUBuffers died
         // with the device. Drop the references (no destroy — same rationale as
-        // depth texture above) and remake them, the engine group and the
-        // pipeline cache against the fresh gpu. App code rebuilds its Shaders in deviceRestoredHandlers.
+        // depth texture above) and remake them, the engine groups (1 and 3)
+        // and the pipeline cache against the fresh gpu. App code rebuilds its Shaders in deviceRestoredHandlers.
         this._createEngineResources();
 
         this.isReady = true;
@@ -284,18 +284,18 @@ export class Renderer {
                 entries: [
                     { binding: 0, resource: { buffer: pd.buffer, size: CAMERA_SIZE } },
                     { binding: 1, resource: { buffer: pd.buffer, size: OBJECT_SIZE } },
-                    { binding: 2, resource: { buffer: this._timeBuffer } },
                 ],
             });
         }
         return this._engineBindGroup;
     }
 
-    // Engine-owned GPU state for Mesh draws: the PerDrawBuffer, the time buffer,
-    // the fixed group(1) layout over them (camera slot at binding 0, object slot
-    // at binding 1, both dynamic; time at binding 2, plain; the bind group is the
-    // engineBindGroup getter), the shared empty group, and the pipeline cache.
-    // Runs on boot and on every device restore.
+    // Engine-owned GPU state for Mesh draws: the PerDrawBuffer and the fixed
+    // group(1) layout over it (camera slot at binding 0, object slot at binding 1,
+    // both dynamic; the bind group is the engineBindGroup getter), the time buffer
+    // with its group(3) layout + bind group (static, set once per pass), the
+    // shared empty group, and the pipeline cache. Runs on boot and on every
+    // device restore.
     _createEngineResources() {
         const { device } = this.gpu;
         this.perDraw = new PerDrawBuffer(this.gpu, { size: this.perDrawSize });
@@ -309,9 +309,13 @@ export class Renderer {
             entries: [
                 { binding: 0, visibility, buffer: { hasDynamicOffset: true, minBindingSize: CAMERA_SIZE } },
                 { binding: 1, visibility, buffer: { hasDynamicOffset: true, minBindingSize: OBJECT_SIZE } },
-                { binding: 2, visibility, buffer: { minBindingSize: TIME_SIZE } },
             ],
         });
+        this.timeLayout = device.createBindGroupLayout({
+            label: 'time-layout',
+            entries: [{ binding: 0, visibility, buffer: { minBindingSize: TIME_SIZE } }],
+        });
+        this.timeBindGroup = device.createBindGroup({ label: 'time-bind-group', layout: this.timeLayout, entries: [{ binding: 0, resource: { buffer: this._timeBuffer } }] });
         this._engineBindGroup = null;
         this._engineGeneration = -1;
 
@@ -478,7 +482,7 @@ export class Renderer {
         this.perDraw?.destroy();
         this.perDraw = null;
         this._timeBuffer?.destroy();
-        this._timeBuffer = null;
+        this._timeBuffer = this.timeBindGroup = null;
         this.pipelines?.clear();
         this._engineBindGroup = this.emptyBindGroup = null;
         this._groups.length = this._bundles.length = 0;
@@ -942,7 +946,6 @@ export class Renderer {
             let sx = 0, sy = 0, sw = width, sh = height; // prettier-ignore
             // recorded groups replay first, ahead of every live draw, each under
             // its resolved scissor; when none is scissored they share one executeBundles
-            // (which leaves the pass with nothing bound — `bound` starts empty anyway)
             let scissored = false;
             for (let i = 0; i < bundles.length; i++) {
                 const r = this._bundleRects[i];
@@ -965,6 +968,10 @@ export class Renderer {
                 }
                 one[0] = null;
             }
+            // executeBundles leaves the pass with nothing bound: live draws re-set
+            // every group (2 and 3 included) from an empty BoundState (a no-op
+            // today — `bound` is fresh — kept so a draw moved ahead stays correct)
+            if (bundles.length) args.bound.reset();
             for (const node of this.renderQueue ?? []) {
                 const rect = this.resolveScissor(node, width, height, _scissor);
                 if (!rect) continue; // clipped to nothing: skip the draw
@@ -1003,7 +1010,7 @@ export class Renderer {
         }
     }
 
-    // Engine Time block (binding 2): uploaded only when the clock moved, so
+    // Engine Time block (group(3)): uploaded only when the clock moved, so
     // further render()s in a frame cost nothing. One value per submit.
     _writeTime() {
         const d = this._timeData;

@@ -1,5 +1,6 @@
-// Engine block: Shader appends this to every Mesh shader. group(1) is the
-// engine's — the layout is fixed (Renderer.engineLayout), never reflected.
+// Engine block: Shader appends this to every Mesh shader. group(1) and group(3)
+// are the engine's — fixed layouts (Renderer.engineLayout, Renderer.timeLayout),
+// never reflected.
 
 struct Camera {
   projectionMatrix: mat4x4f,
@@ -21,13 +22,13 @@ struct Object {
 @group(1) @binding(1) var<uniform> object: Object; // 176 B, one fixed slot per mesh
 
 // Seconds: time = renderer.time, delta = renderer.deltaTime. One value per
-// submit, written by render() only when it changed.
+// submit, written by render() only when it changed; bound once per pass.
 struct Time {
   time: f32,
   delta: f32,
 }
 
-@group(1) @binding(2) var<uniform> time: Time;
+@group(3) @binding(0) var<uniform> time: Time;
 
 // view * model. Per vertex, prefer camera.viewMatrix * (object.modelMatrix * p):
 // two mat-vec products instead of a mat-mat one.

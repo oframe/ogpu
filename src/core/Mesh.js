@@ -1,14 +1,15 @@
 import { Transform } from './Transform';
 import { Mat3, Mat4 } from '@math';
-import { ENGINE_GROUP, NEEDS_NORMAL, NEEDS_OBJECT } from './Shader.js';
+import { ENGINE_GROUP, TIME_GROUP, NEEDS_NORMAL, NEEDS_OBJECT } from './Shader.js';
 
 const NO_STATE = Object.freeze({});
 const _offsets = [0, 0]; // group(1) dynamic offsets: camera slot, object slot
 
 // Renderable node: geometry + Shader + plain `state` + bind groups. Holds no GPU
 // objects of its own — the renderer derives the GPURenderPipeline from
-// (shader, state, geometry layout, pass formats) and binds its engine group at
-// group(1) (camera + object slots of the shared PerDrawBuffer, the time buffer). `geometry`,
+// (shader, state, geometry layout, pass formats) and binds its engine groups:
+// group(1) (camera + object slots of the shared PerDrawBuffer) and group(3)
+// (time, once per pass). `geometry`,
 // `shader`, `state` and `bindGroups` are all swappable; bind groups belong to
 // the shader, so a new shader needs new bind groups.
 export class Mesh extends Transform {
@@ -61,8 +62,8 @@ export class Mesh extends Transform {
     }
 
     set bindGroups(groups) {
-        if (groups[ENGINE_GROUP]) {
-            throw new Error(`[mesh ${this.label}] bindGroups[1] must be empty — group(1) is the engine's`);
+        if (groups[ENGINE_GROUP] || groups[TIME_GROUP]) {
+            throw new Error(`[mesh ${this.label}] bindGroups[1] and bindGroups[3] must be empty — groups 1 and 3 are the engine's`);
         }
         this._bindGroups = groups;
     }
@@ -117,9 +118,9 @@ export class Mesh extends Transform {
         _offsets[1] = objectOffset;
         // after writeObject: it may grow the buffer (new bind group)
         pass.setBindGroup(ENGINE_GROUP, renderer.engineBindGroup, _offsets);
-        for (let i = 2; i < groups.length; i++) {
-            setBindGroup(pass, bound, i, groups[i] ?? renderer.emptyBindGroup);
-        }
+        // groups 2 and 3 rarely change between draws: `bound` skips them
+        setBindGroup(pass, bound, 2, groups[2] ?? renderer.emptyBindGroup);
+        setBindGroup(pass, bound, TIME_GROUP, renderer.timeBindGroup);
 
         drawGeometry(pass, this.geometry, bound);
 

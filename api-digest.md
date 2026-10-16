@@ -144,7 +144,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - bindGroupLayout(group = 0)
   - reload(code)
   - destroy()
-- const `ENGINE_GROUP`, `NEEDS_NORMAL`, `NEEDS_OBJECT`
+- const `ENGINE_GROUP`, `TIME_GROUP`, `NEEDS_NORMAL`, `NEEDS_OBJECT`
 
 ### src/core/ShaderReload.js
 - fn `registerShader(instance)`

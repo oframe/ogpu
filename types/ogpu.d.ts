@@ -845,14 +845,16 @@ export class BindGroupLayout {
 
 export interface ShaderOptions {
     label?: string;
-    /** Raw WGSL. Entry points `vs` and (optionally) `fs`; the engine block (camera/object/time at group(1)) is appended. */
+    /** Raw WGSL. Entry points `vs` and (optionally) `fs`; the engine block (camera/object at group(1), time at group(3)) is appended. */
     code: string;
     /** Override constants, baked into source (Safari-safe). */
     constants?: Record<string, number>;
 }
 
-/** Index of the bind group the engine owns (camera + object slots, time buffer). Not in the barrel — import via `@core/Shader`. */
+/** Index of the bind group the engine owns (camera + object slots). Not in the barrel — import via `@core/Shader`. */
 export const ENGINE_GROUP: 1;
+/** Index of the engine's per-pass `time` group. Not in the barrel — import via `@core/Shader`. */
+export const TIME_GROUP: 3;
 /** `Shader.needs` bit: the user code reads `normalMatrix`. Import via `@core/Shader`. */
 export const NEEDS_NORMAL: 1;
 /** `Shader.needs` bit: the user code reads `objectMatrix`. Import via `@core/Shader`. */
@@ -888,8 +890,8 @@ export class Shader {
     build(code: string): void;
     /**
      * The BindGroupLayout of a user group (default 0): `shader.bindGroupLayout(0).createBindGroup({ uniforms, tMap })`.
-     * Group 1 (the engine's) throws, as does a group above the highest one vs/fs read. A
-     * declared group vs/fs never read, below that, is an empty layout that drops every name.
+     * Groups 1 and 3 (the engine's) throw, as does a group the module doesn't declare. A
+     * declared group vs/fs never read is an empty layout that drops every name.
      */
     bindGroupLayout(group?: number): BindGroupLayout;
     reload(code: string): void;
@@ -1033,7 +1035,7 @@ export interface MeshOptions {
     geometry: Geometry;
     shader: Shader;
     state?: MeshState;
-    /** Indexed by group; index 1 must be empty (the engine's). Missing slots bind the renderer's empty group. */
+    /** Indexed by group; indices 1 and 3 must be empty (the engine's). Missing slots bind the renderer's empty group. */
     bindGroups?: GPUBindGroup[];
     manualRender?: boolean;
     renderOrder?: number;
@@ -1417,10 +1419,14 @@ export class Renderer {
     presentationFormat: GPUTextureFormat;
     /** Shared per-draw uniform buffer (null after destroy()). */
     perDraw: PerDrawBuffer | null;
-    /** Layout of the engine's group(1): dynamic camera + object slots of `perDraw`, plain time block at binding 2. */
+    /** Layout of the engine's group(1): dynamic camera + object slots of `perDraw`. */
     engineLayout: GPUBindGroupLayout;
     /** Getter: rebuilt when `perDraw` grows (its `generation` moves); null after destroy(). */
     readonly engineBindGroup: GPUBindGroup | null;
+    /** Layout of the engine's group(3): the `time` block (time, delta), plain uniform. */
+    timeLayout: GPUBindGroupLayout;
+    /** group(3) bind group over the time buffer, set once per pass; remade on device restore, null after destroy(). */
+    timeBindGroup: GPUBindGroup | null;
     /** Shared layout/bind group for empty slots in a Shader's pipeline layout. */
     emptyLayout: GPUBindGroupLayout;
     emptyBindGroup: GPUBindGroup;

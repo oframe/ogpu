@@ -5,8 +5,10 @@ import { internBindGroupLayout, wrapBindGroupLayout, declaredBindings } from './
 import { applyOverrideConstants } from '@utils/wgslOverrides';
 
 export const ENGINE_GROUP = 1;
+// engine.wgsl's per-pass `time` group
+export const TIME_GROUP = 3;
 // engine.wgsl's group(1) bindings
-const ENGINE_NAMES = new Set(['camera', 'object', 'time']);
+const ENGINE_NAMES = new Set(['camera', 'object']);
 // Shader.needs bits: which derived object matrices the user code reads
 export const NEEDS_NORMAL = 1;
 export const NEEDS_OBJECT = 2;
@@ -16,7 +18,7 @@ let ID = 1;
 // Shader module + its reflected interface: the `uniforms` struct, bind group
 // layouts and a pipeline layout. No geometry, targets or blend/depth state —
 // the renderer derives GPURenderPipelines from (shader, mesh.state, geometry
-// layout, pass formats). The engine block (camera/object/time at group(1)) is
+// layout, pass formats). The engine block (camera/object at group(1), time at group(3)) is
 // appended, so user line numbers in compile errors stay correct and `enable`
 // directives stay first. Entry points are `vs` and (optionally) `fs`.
 export class Shader {
@@ -49,24 +51,26 @@ export class Shader {
         for (const name of ['vs', 'fs']) {
             const own = defs.entryPoints[name]?.resources.find((r) => r.group === ENGINE_GROUP && !ENGINE_NAMES.has(r.name));
             if (own) {
-                throw new Error(`'${own.name}' is bound at group(1), which is the engine's — use group(0), 2 or 3`);
+                throw new Error(`'${own.name}' is bound at group(1), which is the engine's — use group(0) or 2`);
             }
         }
+        const timeOwn = declaredBindings(defs, TIME_GROUP).find(([name]) => name !== 'time');
+        if (timeOwn) throw new Error(`'${timeOwn[0]}' is bound at group(3), which is the engine's — use group(0) or 2`);
 
         const module = device.createShaderModule({ label: this.label, code: baked });
         const hasFragment = defs.entryPoints.fs?.stage === GPUShaderStage.FRAGMENT;
         const stages = hasFragment ? ['vs', 'fs'] : ['vs'];
         const descriptors = bindGroupLayoutDescriptors(defs, stages, {
-            skip: [ENGINE_GROUP],
+            skip: [ENGINE_GROUP, TIME_GROUP],
         });
 
-        // every slot below the highest group gets a layout; empty slots share the
-        // renderer's empty layout so `renderer.emptyBindGroup` binds there
+        // all four slots get a layout (group(3) is the engine's time group); empty
+        // ones share the renderer's empty layout so `renderer.emptyBindGroup` binds there
         const layouts = [];
         const groups = [];
-        const count = Math.max(ENGINE_GROUP + 1, descriptors.length);
-        for (let i = 0; i < count; i++) {
+        for (let i = 0; i <= TIME_GROUP; i++) {
             if (i === ENGINE_GROUP) layouts.push(renderer.engineLayout);
+            else if (i === TIME_GROUP) layouts.push(renderer.timeLayout);
             else if (descriptors[i]?.entries.length) {
                 groups[i] = internBindGroupLayout(device, defs, i, descriptors[i].entries, this.label, stages);
                 layouts.push(groups[i].layout);
@@ -102,10 +106,10 @@ export class Shader {
         }
     }
 
-    // The BindGroupLayout of a user group (0, 2, 3); build bind groups from it:
+    // The BindGroupLayout of a user group (0 or 2); build bind groups from it:
     // shader.bindGroupLayout(0).createBindGroup({ uniforms, tMap: view }).
     bindGroupLayout(group = 0) {
-        if (group === ENGINE_GROUP) throw new Error(`[shader ${this.label}] group(1) is the engine's`);
+        if (group === ENGINE_GROUP || group === TIME_GROUP) throw new Error(`[shader ${this.label}] group(${group}) is the engine's`);
         const layout = this._groups[group];
         if (!layout) throw new Error(`[shader ${this.label}] has no group(${group})`);
         return layout;

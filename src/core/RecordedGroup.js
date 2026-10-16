@@ -1,5 +1,5 @@
 import { Transform } from './Transform.js';
-import { ENGINE_GROUP } from './Shader.js';
+import { ENGINE_GROUP, TIME_GROUP } from './Shader.js';
 import { drawGeometry, BoundState } from './Mesh.js';
 
 const _offsets = [0, 0];
@@ -179,9 +179,8 @@ export class RecordedGroup extends Transform {
             setGroup(encoder, bound, 0, groups[0] ?? renderer.emptyBindGroup);
             _offsets[1] = offsets[i];
             encoder.setBindGroup(ENGINE_GROUP, engine, _offsets);
-            for (let g = 2; g < groups.length; g++) {
-                setGroup(encoder, bound, g, groups[g] ?? renderer.emptyBindGroup);
-            }
+            setGroup(encoder, bound, 2, groups[2] ?? renderer.emptyBindGroup);
+            setGroup(encoder, bound, TIME_GROUP, renderer.timeBindGroup);
             drawGeometry(encoder, mesh.geometry, bound);
         }
         if (skipped.length && !this._skippedWarned) {

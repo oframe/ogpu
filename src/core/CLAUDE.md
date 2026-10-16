@@ -364,11 +364,16 @@ change:
 `BoundState` per pass (a fresh one per `render()`, so a callback that renders
 into another pass mid-loop doesn't corrupt it), so a draw re-sets only the pipeline, bind groups and
 vertex/index buffers that differ from the previous draw's (group(1) is always
-set: its offsets differ; group(3) and an unchanged group 2 cost one set per
-pass). Scissor changes don't touch it. Anything that encodes into the pass
-between draws must `reset()` it — the renderer does after `executeBundles`,
-which leaves the pass with nothing bound (bundles set every group they use
-themselves); callbacks get no pass.
+set: its offsets differ). Groups 2 and 3 are bound once per encoder by
+`bindPassGroups` (`./Mesh.js`: the empty group 2 + the time group, `bound.g2`
+seeded): at each bundle's start, and on the pass before the first live draw
+(after any `executeBundles`, which leaves the pass with nothing bound; the
+renderer resets `bound` there, and skips the call when the live queue is empty).
+A draw never touches group 3 and swaps group 2 only when its own (or the empty
+one after a mesh that had one) differs — one compare; a draw on an unseeded
+`bound` binds group 3 itself, and one without `bound` sets both. Scissor
+changes don't touch `bound`. Anything that encodes into the pass between draws
+must `reset()` it. Callbacks get no pass.
 
 **Texture resize:** destroying/recreating a `Texture` invalidates its
 `GPUTextureView`s, so any bind group holding them is stale. Rebuild the affected

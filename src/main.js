@@ -21,6 +21,7 @@ import { FrustumCulling } from '@examples/frustumculling/FrustumCulling';
 import { ComputeFrustumCulling } from '@examples/computefrustumculling/ComputeFrustumCulling';
 import { SceneGraph } from '@examples/scenegraph/SceneGraph';
 import { HighMeshCount } from '@examples/highmeshcount/HighMeshCount';
+import { RenderBundle } from '@examples/renderbundle/RenderBundle';
 import { SortTransparency } from '@examples/sorttransparency/SortTransparency';
 import { FeedbackTrails } from '@examples/feedback/Feedback';
 import { MSAA } from '@examples/msaa/MSAA';
@@ -52,6 +53,7 @@ const views = {
     computefrustumculling: () => new ComputeFrustumCulling(),
     scenegraph: () => new SceneGraph(),
     highmeshcount: () => new HighMeshCount(),
+    renderbundle: () => new RenderBundle(),
     sorttransparency: () => new SortTransparency(),
     feedback: () => new FeedbackTrails(),
     msaa: () => new MSAA(),
@@ -99,6 +101,7 @@ function renderLanding() {
         { view: 'raycasting', label: 'Projection and Raycasting', folder: 'raycasting' },
         { section: 'Performance' },
         { view: 'highmeshcount', label: 'High Mesh Count', folder: 'highmeshcount' },
+        { view: 'renderbundle', label: 'Render Bundle', folder: 'renderbundle' },
         { section: 'Compute' },
         { view: 'particles', label: 'Particles', folder: 'particles' },
         { view: 'computefrustumculling', label: 'Frustum Culling (GPU Compute)', folder: 'computefrustumculling' },

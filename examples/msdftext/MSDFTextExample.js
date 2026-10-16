@@ -13,12 +13,13 @@ const option = (keys) => Object.fromEntries(keys.map((k) => [k, k]));
 
 export class MSDFTextExample {
     constructor() {
+        // built here, not in init(): main.js wires the boot loader to app.renderer synchronously
+        const canvas = document.getElementById('web-gpu-canvas');
+        this.renderer = new Renderer({ canvas, dpr: 2 });
         this.init().catch((e) => console.error('[msdftext] init failed', e));
     }
 
     async init() {
-        const canvas = document.getElementById('web-gpu-canvas');
-        this.renderer = new Renderer({ canvas, dpr: 2 });
         await this.renderer.ready;
         this.gpu = this.renderer.gpu;
         this.renderer.setClearColor({ r: 0.055, g: 0.05, b: 0.045 });

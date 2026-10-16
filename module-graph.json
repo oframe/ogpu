@@ -1,10 +1,10 @@
 {
   "description": "Static module dependency graph of src/ for agent navigation. nodes: source files (module), ?raw shaders (shader), packages (external). edges: imports. inDegree = import hubs. Regenerate via scripts/build-module-graph.mjs.",
   "stats": {
-    "nodes": 175,
-    "edges": 334,
-    "modules": 120,
-    "shaders": 48,
+    "nodes": 177,
+    "edges": 337,
+    "modules": 121,
+    "shaders": 49,
     "external": 7
   },
   "hubs": [
@@ -329,6 +329,18 @@
       "outDegree": 2
     },
     {
+      "id": "examples/renderbundle/RenderBundle.js",
+      "type": "module",
+      "inDegree": 1,
+      "outDegree": 2
+    },
+    {
+      "id": "examples/renderbundle/renderbundle.wgsl",
+      "type": "shader",
+      "inDegree": 1,
+      "outDegree": 0
+    },
+    {
       "id": "examples/rendertotexture/cube.wgsl",
       "type": "shader",
       "inDegree": 1,
@@ -469,7 +481,7 @@
     {
       "id": "pkg:ogpu",
       "type": "external",
-      "inDegree": 28,
+      "inDegree": 29,
       "outDegree": 0
     },
     {
@@ -728,7 +740,7 @@
       "id": "src/main.js",
       "type": "module",
       "inDegree": 0,
-      "outDegree": 29
+      "outDegree": 30
     },
     {
       "id": "src/math/Color.js",
@@ -1312,6 +1324,14 @@
     },
     {
       "from": "examples/raycasting/Raycasting.js",
+      "to": "pkg:ogpu"
+    },
+    {
+      "from": "examples/renderbundle/RenderBundle.js",
+      "to": "examples/renderbundle/renderbundle.wgsl"
+    },
+    {
+      "from": "examples/renderbundle/RenderBundle.js",
       "to": "pkg:ogpu"
     },
     {
@@ -1973,6 +1993,10 @@
     {
       "from": "src/main.js",
       "to": "examples/raycasting/Raycasting.js"
+    },
+    {
+      "from": "src/main.js",
+      "to": "examples/renderbundle/RenderBundle.js"
     },
     {
       "from": "src/main.js",

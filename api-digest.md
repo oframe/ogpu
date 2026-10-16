@@ -597,6 +597,12 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - constructor()
   - init()
 
+### examples/renderbundle/RenderBundle.js
+- **class RenderBundle**
+  - constructor()
+  - init()
+  - setMode(mode)
+
 ### examples/rendertotexture/RenderToTexture.js
 - **class RenderToTexture**
   - constructor({ el = null } = {})

@@ -8,7 +8,7 @@ const _offsets = [0, 0]; // group(1) dynamic offsets: camera slot, object slot
 // Renderable node: geometry + Shader + plain `state` + bind groups. Holds no GPU
 // objects of its own — the renderer derives the GPURenderPipeline from
 // (shader, state, geometry layout, pass formats) and binds its engine group at
-// group(1) (camera + object slots of the shared PerDrawBuffer). `geometry`,
+// group(1) (camera + object slots of the shared PerDrawBuffer, the time buffer). `geometry`,
 // `shader`, `state` and `bindGroups` are all swappable; bind groups belong to
 // the shader, so a new shader needs new bind groups.
 export class Mesh extends Transform {

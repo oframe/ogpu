@@ -19,13 +19,14 @@ silently shades garbage or fails construction:
 
 - Line 1 is `// validate-prepend: <relative path to src/core/engine.wgsl>` so
   `validate-shaders` can compile the file (the script computes the path).
-- Do NOT declare matrices/time/resolution in a `Uniforms` struct. `Shader`
+- Do NOT declare matrices/time/viewport in a `Uniforms` struct. `Shader`
   appends the engine block (`src/core/engine.wgsl`): `@group(1) camera`
-  (`projectionMatrix`, `viewMatrix`, `cameraPosition`, `time`,
-  `cameraQuaternion`, `resolution`; one slot per render()) and `@group(1) object`
+  (`projectionMatrix`, `viewMatrix`, `cameraPosition`, `cameraQuaternion`,
+  `viewport`; one slot per render()), `@group(1) object`
   (`modelMatrix`, `normalMatrix` (mat3x3f), `objectMatrix` (inverse model); one
-  fixed slot per mesh). Read `camera.*` / `object.*`. There is no stored modelView;
-  per vertex write
+  fixed slot per mesh) and `@group(1) time` (`time`, `delta`, seconds). Read
+  `camera.*` / `object.*` / `time.*`; don't declare your own module-scope `time`.
+  There is no stored modelView; per vertex write
   `camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * p))`
   (WGSL `*` is left-associative, so `P * V * M * p` does mat-mat products per
   vertex). `modelViewMatrix()` returns the matrix where code needs it. Don't

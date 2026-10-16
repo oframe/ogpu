@@ -46,7 +46,7 @@ has the same vertex layout. Pass formats come from the pass, so there's no
 - `transparent`, **`depthWrite: false`**: kerned glyphs and their sdf margins overlap at one
   z and would clip each other. `cullMode: 'none'` because per-unit flips show back faces.
 - Each text owns a `UniformBuffer` (`text.uniforms`) and one bind group of
-  `{ uniforms, atlasSampler, tMap }`. The engine block (camera/object) is group(1).
+  `{ uniforms, atlasSampler, tMap }`. The engine block (camera/object/time) is group(1).
 - `setText` rebuilds the `Geometry` (instance count changes) with the same layout, so the
   bind group and the cached pipeline survive. Empty text keeps a one-glyph dummy buffer and
   `draw()` skips it.

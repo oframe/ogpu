@@ -157,18 +157,26 @@ forward). `Transform.lookAt` without invert aims `+Z` away from target.
 
 `Shader` appends `engine.wgsl` (after the user code, so error line numbers and
 leading `enable` directives stay put): `camera` at binding 0 (176 B: projection,
-view, cameraPosition, time, cameraQuaternion, resolution) and `object` at
-binding 1 (176 B: model, normalMatrix `mat3x3f`, objectMatrix). The
-layout is `renderer.engineLayout`, never reflected; both bindings are dynamic
-offsets into the PerDrawBuffer through the one `renderer.engineBindGroup`. A
+view, cameraPosition, cameraQuaternion, viewport), `object` at binding 1 (176 B:
+model, normalMatrix `mat3x3f`, objectMatrix) and `time` at binding 2 (`time`,
+`delta`). The layout is `renderer.engineLayout`, never reflected; camera and
+object are dynamic offsets into the PerDrawBuffer, time is a plain
+renderer-owned buffer, all through the one `renderer.engineBindGroup`. A
 shader binding its own resource at group(1) throws at construction, and
 `mesh.bindGroups[1]` must stay empty (the setter throws). A typo'd field is a
 WGSL compile error — there is no by-name matching left to fail silently.
 
 Values: `cameraPosition` = `camera.worldPosition`, `cameraQuaternion` =
-`camera.worldQuaternion`, `time` = `renderer.time`, `resolution` = target size
-or else the bound canvas size. With no camera (`render({ scene })`)
-view/projection are identity.
+`camera.worldQuaternion`, `viewport` = target size or else the bound canvas
+size; `time.time` = `renderer.time`, `time.delta` = `renderer.deltaTime` (both
+seconds). With no camera (`render({ scene })`) view/projection are identity.
+The time block is written by `render()` only when the clock changed since the
+last write (later render()s in a frame write nothing) and, like any uniform,
+holds one value per submit: two render()s in one external-encoder submit with
+different times both see the last. The engine declares module-scope `time`, so a
+Mesh shader can't declare its own (WGSL module names share one namespace);
+fullscreen RenderPipelines and ComputeShaders have no engine block and pass time
+in their own uniforms.
 
 There is no stored modelView: the object block depends on the mesh alone, not
 the camera. Per vertex write

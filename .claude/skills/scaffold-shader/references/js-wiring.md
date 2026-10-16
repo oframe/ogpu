@@ -9,7 +9,7 @@ import myShader from './my.wgsl?raw';
 ```
 
 The ownership split to keep straight: `Shader` holds the compiled module and
-reflected layouts (and appends the engine block, so `camera.*`/`object.*` just
+reflected layouts (and appends the engine block, so `camera.*`/`object.*`/`time.*` just
 work at group(1)). `state` is a plain frozen object (`cullMode`, `transparent`,
 `depthWrite`, `blending`, …) — replace it, don't mutate it. The renderer derives
 the `GPURenderPipeline` from shader + state + geometry layout + the pass's

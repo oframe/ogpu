@@ -137,7 +137,7 @@ Two correctness constraints worth knowing the reason for:
 - the user's own uniform block (if any) is named `uniforms`; entry points `vs` / `fs`
   (hardcoded)
 - per-pass/per-draw fields come from the engine block (`camera.*`, `object.*`,
-  group 1), never from the shader's own structs; user resources stay in group 0
+  `time.*`, group 1), never from the shader's own structs; user resources stay in group 0
   (groups 2–3 for extras)
 - WGSL lives next to the JS, imported with `?raw`
 - WGSL short aliases (`vec3f`, `mat3x3f`, …); `let` for values that don't change,

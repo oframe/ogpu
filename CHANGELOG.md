@@ -1,5 +1,82 @@
 # Changelog
 
+## 0.18.0
+
+Breaking. The public launch release, and the first on `main` since 0.8.0: every change from
+0.9.0 to 0.17.0 below lands with it. Two core classes are renamed and the two core files under
+every Mesh draw now read top-down (ported from dgpu 0.18.0 and 0.19.0; behaviour unchanged).
+Also new: a render-bundle example, a quad wireframe view for MSDF text, and OGL's MSDF font,
+which replaces Instrument Serif. Compressed KTX textures now load.
+
+### Changed
+
+- **`PipelineCache` → `PipelineRegistry`** (`src/core/PipelineRegistry.js`). It builds each
+  pipeline on first request and hands every later asker the same object, so it's where Mesh
+  pipelines come from rather than an optional speed-up (and Vulkan's `VkPipelineCache` means a
+  driver-level binary cache). Errors are prefixed `[pipeline-registry]`; `renderer.pipelines`
+  keeps its name. No alias.
+- **`RecordedGroup` → `RenderBundleGroup`** (`src/core/RenderBundleGroup.js`): the name people
+  search for plus what it is in the scene graph. Not `RenderBundle`: it owns up to 16
+  GPURenderBundles (one per pass kind + camera slot) and re-encodes them itself.
+  `isRecordedGroup` → `isRenderBundleGroup`; default label `render-bundle-group`, warnings
+  prefixed `[render-bundle-group <label>]`. No alias.
+- **PipelineRegistry and PerDrawBuffer read top-down**: the idea first (`get` / `key` /
+  `descriptor` / `passInfo`; `writeObject` / `writeCamera` / `writeTime` / `flush`), then one
+  section per hardening concern, each opening with the problem it solves. In PerDrawBuffer,
+  rare paths moved into named helpers (`_claim`, `_flushRuns`, `_newCameraSlot`,
+  `_warnRewrite`), so the per-draw path gains no calls.
+- **Counters say what they count**: `pipelines.generation` → `pipelines.version`;
+  `perDraw.generation` → `perDraw.bufferVersion`; `perDraw.epoch` → `perDraw.submitIndex`. A
+  mesh's per-draw slot state is one record,
+  `mesh._perDrawSlot = { owner, index, worldVersion, needs, submit }`, declared in the Mesh
+  constructor, in place of five `_slot*` fields.
+- **Bundled font: Fira Sans Bold**, the font OGL's msdf-text example uses (TTF from
+  oframe/ogl, rebaked as MTSDF with `npm run build:font`: pxrange 16, 512×512, 118 glyphs; OFL
+  included). Instrument Serif is removed; `build:font` defaults to Fira.
+- `vite preview` serves the production build under `/ogpu/`, like GitHub Pages (Vite's
+  `isPreview`); only `vite dev` stays at `/`.
+- Dev dependencies: brace-expansion 1.1.21, js-yaml 4.3.2, source-map-js 1.2.2.
+
+### Added
+
+- **`MSDFText` `wireframe`** option and accessor (uniform `uWireframe`): each glyph quad's
+  edges plus the diagonal its two triangles share, ~1 px, in the text colour. The reveal still
+  applies; the overflow mask is skipped so whole quads show.
+- **`examples/renderbundle`** (`?src=renderbundle`): 6400 static meshes plus movers in a
+  `RenderBundleGroup` vs the same meshes drawn live, with re-record, a state swap that makes
+  the group stale, and render() timings (`?mode=live` starts live).
+- **`examples/msdftext`** matches OGL's msdf-text example: "don't panic", size 1, width 4,
+  centred, black on white, with a wireframe toggle and every reveal preset.
+
+### Fixed
+
+- **KTX mips that aren't a whole number of compression blocks** (any level whose size isn't a
+  multiple of 4, e.g. 125×125, 2×2 or 1×1, of a BC/ETC2/ASTC texture) failed `writeTexture`
+  validation, so the ktx example errored. The copy extent is now rounded up to whole blocks, as
+  WebGPU validates it against the physical mip size.
+- msdftext and highmeshcount build their Renderer in the constructor, so the boot loader
+  attaches (it was created inside async `init()`, after `main.js` looked for it).
+- `api-digest.md` listed no class method named `get` or `set` (`PipelineRegistry.get`,
+  `UniformBuffer.set`, the math classes' `set`, …): the generator skipped them as accessors,
+  which its pattern never matches anyway.
+
+### Migration
+
+- Import `PipelineRegistry` instead of `PipelineCache`, and `RenderBundleGroup` instead of
+  `RecordedGroup` (barrel, `@core/PipelineRegistry`, `@core/RenderBundleGroup`);
+  `node.isRecordedGroup` → `node.isRenderBundleGroup`.
+- `renderer.pipelines.generation` → `.version`; `renderer.perDraw.generation` →
+  `.bufferVersion`; `renderer.perDraw.epoch` → `.submitIndex`.
+- Fonts: `public/assets/fonts/instrument-serif/` is gone; load
+  `assets/fonts/fira-sans/firasans-bold.{json,png}`, or bake your own with `build:font`.
+
+### Measured
+
+highmeshcount, production builds, base / base again / tip interleaved, 6 runs each. With the
+slot record added to each mesh on its first draw, recorded 10k render() CPU was +17% static,
++26% orbit, +8% churn against 0.17.0; with `_perDrawSlot` declared in the constructor, every
+recorded row is within the A/A floor and the live rows are within it or slightly faster.
+
 ## 0.17.0
 
 Breaking. Time leaves the camera: a new engine `time` block at group(3) holds `time.time` and

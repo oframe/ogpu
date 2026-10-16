@@ -82,12 +82,11 @@ function parseFile(file) {
         }
 
         // method: exactly 4-space indent (no more, else body lines match) + name(.
-        // Skip _private, accessors, control-flow keywords.
+        // Skip _private and control-flow keywords; accessors (`get x()`) never match.
         if (current) {
             const mm = line.match(/^ {4}(?:async\s+)?(?:\*\s*)?(\w+)\s*\(/);
             if (mm) {
                 const name = mm[1];
-                if (name === 'get' || name === 'set') continue;
                 if (name.startsWith('_')) continue;
                 if (KEYWORDS.has(name)) continue;
                 const open = lineOffsets[i] + line.indexOf('(');

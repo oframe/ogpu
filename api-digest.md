@@ -77,6 +77,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/core/PipelineCache.js
 - **class PipelineCache**
   - constructor(gpu)
+  - get(mesh, passInfo)
   - key(mesh, passInfo)
   - descriptor(mesh, passInfo)
   - passInfo(colorFormats, depthFormat, sampleCount)
@@ -178,6 +179,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/core/UniformBuffer.js
 - **class UniformBuffer**
   - constructor(gpu, struct, values, { label = 'uniforms', usage = 0 } = {})
+  - set(values)
   - upload()
   - destroy()
 
@@ -256,6 +258,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/core/reflect/StructView.js
 - **class StructView**
   - constructor(def, arrayBuffer, byteOffset = 0)
+  - set(data)
 - fn `setStructuredView(data, views)`
 - fn `makeStructuredView(def, arrayBuffer, byteOffset = 0)`
 
@@ -452,6 +455,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - **class NonNegativeRollingAverage**
   - constructor(numSamples = 30)
   - addSample(v)
+  - get()
 
 ### src/utils/textureFromSource.js
 - fn `createTextureFromSources(gpu, sources, options = {})`
@@ -672,6 +676,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/math/Color.js
 - **class Color** extends Float32Array
   - constructor(r, g, b)
+  - set(r, g, b)
   - setHex(hex)
   - copy(c)
   - clone()
@@ -681,6 +686,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/math/Euler.js
 - **class Euler** extends Float32Array
   - constructor(x = 0, y = 0, z = 0, order = 'YXZ')
+  - set(x, y, z, order = this.order)
   - copy(e)
   - clone()
   - setFromRotationMatrix(m, order = this.order)
@@ -692,6 +698,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/math/Mat3.js
 - **class Mat3** extends Float32Array
   - constructor()
+  - set(...values)
   - copy(m)
   - clone()
   - identity()
@@ -707,6 +714,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/math/Mat4.js
 - **class Mat4** extends Float32Array
   - constructor()
+  - set(...values)
   - copy(m)
   - clone()
   - identity()
@@ -740,6 +748,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/math/Quat.js
 - **class Quat** extends Float32Array
   - constructor(x = 0, y = 0, z = 0, w = 1)
+  - set(x, y, z, w)
   - copy(q)
   - clone()
   - identity()
@@ -768,6 +777,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/math/Vec2.js
 - **class Vec2** extends Float32Array
   - constructor(x = 0, y = 0)
+  - set(x, y)
   - copy(v)
   - clone()
   - add(v)
@@ -790,6 +800,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/math/Vec3.js
 - **class Vec3** extends Float32Array
   - constructor(x = 0, y = 0, z = 0)
+  - set(x, y, z)
   - copy(v)
   - clone()
   - add(v)
@@ -830,6 +841,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/math/Vec4.js
 - **class Vec4** extends Float32Array
   - constructor(x = 0, y = 0, z = 0, w = 0)
+  - set(x, y, z, w)
   - copy(v)
   - clone()
   - add(v)

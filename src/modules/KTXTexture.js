@@ -71,14 +71,16 @@ export class KTXTexture extends Texture {
             const data = ktx.getImage(level, 0, 0);
             const w = Math.max(1, header.width >> level);
             const h = Math.max(1, header.height >> level);
+            // whole blocks: a compressed copy extent must be a multiple of the block size
+            // and is checked against the rounded-up (physical) mip size, so a 2x2 mip of a
+            // 4x4-block format copies one 4x4 block
+            const blocksW = Math.ceil(w / block.blockW);
+            const blocksH = Math.ceil(h / block.blockH);
             this.gpu.device.queue.writeTexture(
                 { texture: this.texture, mipLevel: level },
                 data,
-                {
-                    bytesPerRow: Math.ceil(w / block.blockW) * block.blockBytes,
-                    rowsPerImage: Math.ceil(h / block.blockH),
-                },
-                { width: w, height: h, depthOrArrayLayers: 1 }
+                { bytesPerRow: blocksW * block.blockBytes, rowsPerImage: blocksH },
+                { width: blocksW * block.blockW, height: blocksH * block.blockH, depthOrArrayLayers: 1 }
             );
         }
 

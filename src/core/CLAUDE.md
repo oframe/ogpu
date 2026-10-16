@@ -161,8 +161,9 @@ view, cameraPosition, cameraQuaternion, viewport), `object` at binding 1 (176 B:
 model, normalMatrix `mat3x3f`, objectMatrix), dynamic offsets into the
 PerDrawBuffer through the one `renderer.engineBindGroup` (layout
 `renderer.engineLayout`, never reflected); and `time` at group(3) binding 0
-(`time`, `delta`), a plain renderer-owned buffer behind the static
-`renderer.timeBindGroup` / `renderer.timeLayout`. group(1) is re-set every draw
+(`time`, `delta`), the PerDrawBuffer's fixed time slot bound through
+`renderer.timeBindGroup` (layout `renderer.timeLayout`; rebuilt on growth like
+`engineBindGroup`). group(1) is re-set every draw
 (its object offset moves), so it holds nothing else: each extra entry costs per
 draw (a third binding, used or not, measured +10–18% Chrome GPU-process time on
 highmeshcount, Dawn/Metal). group(3) is set once per pass. Users get groups 0 and 2. A shader binding its own resource at
@@ -174,9 +175,10 @@ Values: `cameraPosition` = `camera.worldPosition`, `cameraQuaternion` =
 `camera.worldQuaternion`, `viewport` = target size or else the bound canvas
 size; `time.time` = `renderer.time`, `time.delta` = `renderer.deltaTime` (both
 seconds). With no camera (`render({ scene })`) view/projection are identity.
-The time block is written by `render()` only when the clock changed since the
-last write (later render()s in a frame write nothing) and, like any uniform,
-holds one value per submit: two render()s in one external-encoder submit with
+`render()` writes the time slot only when the clock changed since the last
+write (later render()s in a frame write nothing); it uploads in the same
+`flush()` as the camera slot, with no `writeBuffer` of its own. Like any uniform
+it holds one value per submit: two render()s in one external-encoder submit with
 different times both see the last. The engine declares module-scope `time`, so a
 Mesh shader can't declare its own (WGSL module names share one namespace);
 fullscreen RenderPipelines and ComputeShaders have no engine block and pass time
@@ -327,6 +329,9 @@ change:
   sequence is — a conditional render() shifts the camera slots of every later
   one. Driving render() outside `Renderer.update` means calling
   `perDraw.reset()` per frame yourself, or camera slots pile up (warned at 1024).
+- Slot 0 is the time slot (`perDraw.timeOffset`, group(3)), acquired in the
+  constructor and never released, so the first camera slot follows it and one
+  span uploads both. `writeTime()` marks it only when a value changed.
 - `flush()` (end of `render()`, right after `pass.end()` and before the
   external-encoder early return) uploads the dirty slots: one `writeBuffer` over
   the dirty span while it is at most 4× the dirty count, else one per contiguous
@@ -347,8 +352,9 @@ change:
   only signal that nothing can draw it again. A released slot is reusable only
   after the next `reset()` — an encoded, unsubmitted draw may still read it.
 - The buffer doubles when it runs out (`perDrawSize`, default 1 MiB, is the
-  starting size). Growth bumps `generation`: `renderer.engineBindGroup` (a
-  getter) is rebuilt on next read, draws already encoded keep the old buffer
+  starting size; size it for meshes + camera slots + the time slot). Growth
+  bumps `generation`: `renderer.engineBindGroup` and `timeBindGroup` (getters)
+  are rebuilt on next read, draws already encoded keep the old buffer
   (its pending slots are uploaded first; it's destroyed at the next frame
   start). There is no cap below `maxBufferSize`.
 - After a device restore a mesh that never draws again still points at the old

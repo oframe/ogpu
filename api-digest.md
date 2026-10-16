@@ -65,12 +65,13 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - **class PerDrawBuffer**
   - constructor(gpu, { label = 'per-draw-uniforms', size = 1 << 20 } = {})
   - writeCamera(camera, width, height)
+  - writeTime(time, delta)
   - writeObject(mesh)
   - release(mesh)
   - flush()
   - reset()
   - destroy()
-- const `CAMERA_SIZE`, `OBJECT_SIZE`
+- const `CAMERA_SIZE`, `OBJECT_SIZE`, `TIME_SIZE`, `TIME_BINDING_SIZE`
 
 ### src/core/PipelineCache.js
 - **class PipelineCache**

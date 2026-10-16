@@ -962,6 +962,10 @@ export class PipelineCache {
 export const CAMERA_SIZE: number;
 /** Byte size of the engine object block (group(1) binding 1). Not in the barrel — import via `@core/PerDrawBuffer`. */
 export const OBJECT_SIZE: number;
+/** Byte size of the engine time block (group(3) binding 0: time, delta). Not in the barrel — import via `@core/PerDrawBuffer`. */
+export const TIME_SIZE: number;
+/** Bytes group(3) binds at `perDraw.timeOffset` (TIME_SIZE rounded up to 16). Not in the barrel — import via `@core/PerDrawBuffer`. */
+export const TIME_BINDING_SIZE: number;
 
 export class PerDrawBuffer {
     constructor(gpu: GPU, options?: { label?: string; size?: number });
@@ -985,9 +989,13 @@ export class PerDrawBuffer {
     f32: Float32Array;
     /** Dirty slots not yet uploaded. */
     readonly pending: number;
+    /** Byte offset of the time slot (slot 0, never released) that group(3) binds. */
+    readonly timeOffset: number;
 
     /** Camera block in the frame's next camera slot; returns its dynamic offset. A null camera writes identity matrices. */
     writeCamera(camera: Camera | null | undefined, width: number, height: number): number;
+    /** Time block (time, delta in seconds) in the time slot; marks it dirty only when a value changed. Renderer.render calls it. */
+    writeTime(time: number, delta: number): void;
     /** `mesh`'s object slot (acquired on first use, rewritten only when it moved or its shader needs more); returns its dynamic offset. */
     writeObject(mesh: Mesh): number;
     /** Give `mesh`'s slot back (Mesh.destroy calls this). */
@@ -1425,8 +1433,8 @@ export class Renderer {
     readonly engineBindGroup: GPUBindGroup | null;
     /** Layout of the engine's group(3): the `time` block (time, delta), plain uniform. */
     timeLayout: GPUBindGroupLayout;
-    /** group(3) bind group over the time buffer, set once per pass; remade on device restore, null after destroy(). */
-    timeBindGroup: GPUBindGroup | null;
+    /** Getter: group(3) bind group over `perDraw`'s time slot, set once per pass; rebuilt when `perDraw` grows, null after destroy(). */
+    readonly timeBindGroup: GPUBindGroup | null;
     /** Shared layout/bind group for empty slots in a Shader's pipeline layout. */
     emptyLayout: GPUBindGroupLayout;
     emptyBindGroup: GPUBindGroup;

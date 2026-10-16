@@ -4,16 +4,19 @@ import { NEEDS_NORMAL, NEEDS_OBJECT } from './Shader.js';
 // Engine block sizes (src/core/engine.wgsl). Float offsets inside each block:
 export const CAMERA_SIZE = 176;
 export const OBJECT_SIZE = 176;
+export const TIME_SIZE = 8; // time, delta (group(3), bound with size TIME_BINDING_SIZE)
+export const TIME_BINDING_SIZE = 16;
 const PROJECTION = 0, VIEW = 16, CAMERA_POSITION = 32, CAMERA_QUATERNION = 36, VIEWPORT = 40; // prettier-ignore
 const MODEL = 0, NORMAL = 16, OBJECT = 28; // prettier-ignore
 
 const IDENTITY = /* @__PURE__ */ new Mat4();
 
 // Engine uniform buffer behind group(1), in fixed slots bound through dynamic
-// offsets. Every mesh owns a permanent object slot from its first draw, rewritten
-// only when its worldVersion (or its shader's needs) changes; camera slices take
-// the frame's next camera slot per render(), so a stable setup sees stable
-// offsets. Writes land in a CPU mirror; flush() uploads the dirty slots.
+// offsets, plus the time block group(3) binds at `timeOffset`. Every mesh owns a
+// permanent object slot from its first draw, rewritten only when its worldVersion
+// (or its shader's needs) changes; camera slices take the frame's next camera
+// slot per render(), so a stable setup sees stable offsets. Writes land in a CPU
+// mirror; flush() uploads the dirty slots.
 //
 // A slot holds one value per submit: the same mesh drawn twice in one
 // external-encoder chain with a different transform in between shows the last
@@ -50,6 +53,9 @@ export class PerDrawBuffer {
         this._retired = [];
         // meshes dropped without destroy() give their slot back when collected
         this._registry = new FinalizationRegistry((slot) => this._release(slot));
+        // slot 0, never released: the frame's first camera slot (1) follows it, so
+        // flush() uploads both in one span
+        this.timeOffset = this._acquire() * this.stride;
     }
 
     _createBuffer(size) {
@@ -133,6 +139,17 @@ export class PerDrawBuffer {
         f[o + VIEWPORT + 1] = height;
         this._mark(slot);
         return offset;
+    }
+
+    // Time block (time, delta) for group(3); marks the slot only when a value
+    // changed, so further render()s in a frame upload nothing for it.
+    writeTime(time, delta) {
+        const o = this.timeOffset >> 2;
+        const f = this.f32;
+        if (f[o] === Math.fround(time) && f[o + 1] === Math.fround(delta)) return;
+        f[o] = time;
+        f[o + 1] = delta;
+        this._mark(this.timeOffset / this.stride);
     }
 
     // `mesh`'s object slot (acquired on first use), rewritten only when its world

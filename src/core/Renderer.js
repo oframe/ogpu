@@ -2,7 +2,7 @@ import { Vec3 } from '@math';
 import { TimingHelper } from '@utils/TimingHelper';
 import { NonNegativeRollingAverage } from '@utils/miscutils';
 import { getPromise } from '@utils/utils';
-import { PerDrawBuffer, CAMERA_SIZE, OBJECT_SIZE } from './PerDrawBuffer.js';
+import { PerDrawBuffer, CAMERA_SIZE, OBJECT_SIZE, TIME_SIZE, TIME_BINDING_SIZE } from './PerDrawBuffer.js';
 import { PipelineCache } from './PipelineCache.js';
 import { BoundState } from './Mesh.js';
 import { TextureFormat, AlphaMode } from './GPUEnums.js';
@@ -10,9 +10,6 @@ import { FullscreenTriangle } from './primitives/FullscreenTriangle.js';
 import { Quad } from './primitives/Quad.js';
 
 const _scissor = { x: 0, y: 0, width: 0, height: 0 }; // reused per draw, consumed immediately
-// engine.wgsl `Time` (time, delta: f32 each, group(3)) and its buffer, rounded up to 16 B
-const TIME_SIZE = 8;
-const TIME_BUFFER_SIZE = 16;
 
 const tempVec3 = /* @__PURE__ */ new Vec3(0, 0, 0);
 
@@ -257,10 +254,10 @@ export class Renderer {
         this._depthView = null;
         this.depth && this.createDepthTexture();
 
-        // Same story: the old PerDrawBuffer's and time buffer's GPUBuffers died
-        // with the device. Drop the references (no destroy — same rationale as
-        // depth texture above) and remake them, the engine groups (1 and 3)
-        // and the pipeline cache against the fresh gpu. App code rebuilds its Shaders in deviceRestoredHandlers.
+        // Same story: the old PerDrawBuffer's GPUBuffer died with the device.
+        // Drop the reference (no destroy — same rationale as depth texture
+        // above) and remake it, the engine groups (1 and 3) and the pipeline
+        // cache against the fresh gpu. App code rebuilds its Shaders in deviceRestoredHandlers.
         this._createEngineResources();
 
         this.isReady = true;
@@ -290,18 +287,30 @@ export class Renderer {
         return this._engineBindGroup;
     }
 
-    // Engine-owned GPU state for Mesh draws: the PerDrawBuffer and the fixed
-    // group(1) layout over it (camera slot at binding 0, object slot at binding 1,
-    // both dynamic; the bind group is the engineBindGroup getter), the time buffer
-    // with its group(3) layout + bind group (static, set once per pass), the
-    // shared empty group, and the pipeline cache. Runs on boot and on every
+    // group(3) bind group over the PerDrawBuffer's time slot; remade when the buffer grows
+    get timeBindGroup() {
+        const pd = this.perDraw;
+        if (!pd) return null;
+        if (this._timeGeneration !== pd.generation) {
+            this._timeGeneration = pd.generation;
+            this._timeBindGroup = this.gpu.device.createBindGroup({
+                label: 'time-bind-group',
+                layout: this.timeLayout,
+                entries: [{ binding: 0, resource: { buffer: pd.buffer, offset: pd.timeOffset, size: TIME_BINDING_SIZE } }],
+            });
+        }
+        return this._timeBindGroup;
+    }
+
+    // Engine-owned GPU state for Mesh draws: the PerDrawBuffer, the fixed group(1)
+    // layout over it (camera slot at binding 0, object slot at binding 1, both
+    // dynamic; the bind group is the engineBindGroup getter), the group(3) layout
+    // over its time slot (bind group: the timeBindGroup getter, set once per
+    // pass), the shared empty group, and the pipeline cache. Runs on boot and on every
     // device restore.
     _createEngineResources() {
         const { device } = this.gpu;
         this.perDraw = new PerDrawBuffer(this.gpu, { size: this.perDrawSize });
-        this._timeBuffer = device.createBuffer({ label: 'engine-time', size: TIME_BUFFER_SIZE, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
-        this._timeData = new Float32Array(TIME_BUFFER_SIZE / 4);
-        this._timeData[0] = NaN; // the fresh buffer is zero: force the first write
 
         const visibility = GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
         this.engineLayout = device.createBindGroupLayout({
@@ -315,9 +324,8 @@ export class Renderer {
             label: 'time-layout',
             entries: [{ binding: 0, visibility, buffer: { minBindingSize: TIME_SIZE } }],
         });
-        this.timeBindGroup = device.createBindGroup({ label: 'time-bind-group', layout: this.timeLayout, entries: [{ binding: 0, resource: { buffer: this._timeBuffer } }] });
-        this._engineBindGroup = null;
-        this._engineGeneration = -1;
+        this._engineBindGroup = this._timeBindGroup = null;
+        this._engineGeneration = this._timeGeneration = -1;
 
         this.emptyLayout = device.createBindGroupLayout({ label: 'empty-layout', entries: [] });
         this.emptyBindGroup = device.createBindGroup({ label: 'empty-bind-group', layout: this.emptyLayout, entries: [] });
@@ -481,8 +489,7 @@ export class Renderer {
         this.depthTexture = this._depthView = null;
         this.perDraw?.destroy();
         this.perDraw = null;
-        this._timeBuffer?.destroy();
-        this._timeBuffer = this.timeBindGroup = null;
+        this._timeBindGroup = null;
         this.pipelines?.clear();
         this._engineBindGroup = this.emptyBindGroup = null;
         this._groups.length = this._bundles.length = 0;
@@ -929,7 +936,7 @@ export class Renderer {
             const height = target ? target.height : this.gpu.canvas.height;
             // the frame's next camera slot; every draw in the pass shares it
             const cameraOffset = this.perDraw.writeCamera(camera, width, height);
-            this._writeTime();
+            this.perDraw.writeTime(this.time, this.deltaTime);
 
             // before the pass opens: slot acquisition may grow the engine buffer
             this.getRenderQueue({ scene, camera, frustumCull });
@@ -1008,18 +1015,6 @@ export class Renderer {
         } finally {
             this.setContext(null);
         }
-    }
-
-    // Engine Time block (group(3)): uploaded only when the clock moved, so
-    // further render()s in a frame cost nothing. One value per submit.
-    _writeTime() {
-        const d = this._timeData;
-        const time = Math.fround(this.time);
-        const delta = Math.fround(this.deltaTime);
-        if (d[0] === time && d[1] === delta) return;
-        d[0] = time;
-        d[1] = delta;
-        this.gpu.device.queue.writeBuffer(this._timeBuffer, 0, d);
     }
 
     // Intersection of `node.scissor` and every ancestor's, clamped to the target

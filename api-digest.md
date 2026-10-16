@@ -59,6 +59,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - **class BoundState**
   - constructor()
   - reset()
+- fn `bindPassGroups(pass, renderer, bound)`
 - fn `drawGeometry(pass, geometry, bound)`
 
 ### src/core/PerDrawBuffer.js

@@ -4,7 +4,7 @@ import { NonNegativeRollingAverage } from '@utils/miscutils';
 import { getPromise } from '@utils/utils';
 import { PerDrawBuffer, CAMERA_SIZE, OBJECT_SIZE, TIME_SIZE, TIME_BINDING_SIZE } from './PerDrawBuffer.js';
 import { PipelineCache } from './PipelineCache.js';
-import { BoundState } from './Mesh.js';
+import { BoundState, bindPassGroups } from './Mesh.js';
 import { TextureFormat, AlphaMode } from './GPUEnums.js';
 import { FullscreenTriangle } from './primitives/FullscreenTriangle.js';
 import { Quad } from './primitives/Quad.js';
@@ -975,10 +975,12 @@ export class Renderer {
                 }
                 one[0] = null;
             }
-            // executeBundles leaves the pass with nothing bound: live draws re-set
-            // every group (2 and 3 included) from an empty BoundState (a no-op
-            // today — `bound` is fresh — kept so a draw moved ahead stays correct)
+            // the live draws' pass start, after any executeBundles (which leaves the
+            // pass with nothing bound): group(3) and the empty group 2 once, `bound`
+            // seeded to match. The reset is a no-op while `bound` is fresh here; it
+            // keeps this right if anything ever draws ahead of the bundles.
             if (bundles.length) args.bound.reset();
+            if (this.renderQueue?.length) bindPassGroups(pass, this, args.bound);
             for (const node of this.renderQueue ?? []) {
                 const rect = this.resolveScissor(node, width, height, _scissor);
                 if (!rect) continue; // clipped to nothing: skip the draw

@@ -118,9 +118,18 @@ export class Mesh extends Transform {
         _offsets[1] = objectOffset;
         // after writeObject: it may grow the buffer (new bind group)
         pass.setBindGroup(ENGINE_GROUP, renderer.engineBindGroup, _offsets);
-        // groups 2 and 3 rarely change between draws: `bound` skips them
-        setBindGroup(pass, bound, 2, groups[2] ?? renderer.emptyBindGroup);
-        setBindGroup(pass, bound, TIME_GROUP, renderer.timeBindGroup);
+        // group(3) and the empty group 2 are bound once per pass (bindPassGroups);
+        // a draw only swaps group 2 when it differs
+        const g2 = groups[2] ?? renderer.emptyBindGroup;
+        if (!bound) {
+            pass.setBindGroup(2, g2);
+            pass.setBindGroup(TIME_GROUP, renderer.timeBindGroup);
+        } else if (bound.g2 !== g2) {
+            // a `bound` nobody seeded (fresh or reset): group(3) isn't bound yet either
+            if (bound.g2 === null) pass.setBindGroup(TIME_GROUP, renderer.timeBindGroup);
+            pass.setBindGroup(2, g2);
+            bound.g2 = g2;
+        }
 
         drawGeometry(pass, this.geometry, bound);
 
@@ -145,12 +154,22 @@ export class BoundState {
 
     reset() {
         this.pipeline = null;
+        this.g2 = null; // group 2, tracked apart: bindPassGroups seeds it
         this.groups.length = 0;
         this.vertex.length = 0;
         this.index = null;
         this.indexFormat = null;
         return this;
     }
+}
+
+// Pass start (and after executeBundles, which clears a pass's state): bind the
+// engine's group(3) and the empty group 2, and seed `bound` to match. Draws
+// then never touch group 3 and compare group 2 once.
+export function bindPassGroups(pass, renderer, bound) {
+    pass.setBindGroup(TIME_GROUP, renderer.timeBindGroup);
+    pass.setBindGroup(2, renderer.emptyBindGroup);
+    bound.g2 = renderer.emptyBindGroup;
 }
 
 function setBindGroup(pass, bound, index, group) {

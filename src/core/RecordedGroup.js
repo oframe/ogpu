@@ -1,6 +1,6 @@
 import { Transform } from './Transform.js';
-import { ENGINE_GROUP, TIME_GROUP } from './Shader.js';
-import { drawGeometry, BoundState } from './Mesh.js';
+import { ENGINE_GROUP } from './Shader.js';
+import { drawGeometry, BoundState, bindPassGroups } from './Mesh.js';
 
 const _offsets = [0, 0];
 
@@ -163,6 +163,8 @@ export class RecordedGroup extends Transform {
             sampleCount: passInfo.sampleCount,
         });
         const bound = new BoundState();
+        bindPassGroups(encoder, renderer, bound);
+        const empty = renderer.emptyBindGroup;
         _offsets[0] = cameraOffset;
         for (let i = 0; i < meshes.length; i++) {
             const mesh = meshes[i];
@@ -176,11 +178,14 @@ export class RecordedGroup extends Transform {
                 bound.pipeline = pipeline;
             }
             const groups = mesh.bindGroups;
-            setGroup(encoder, bound, 0, groups[0] ?? renderer.emptyBindGroup);
+            setGroup(encoder, bound, 0, groups[0] ?? empty);
             _offsets[1] = offsets[i];
             encoder.setBindGroup(ENGINE_GROUP, engine, _offsets);
-            setGroup(encoder, bound, 2, groups[2] ?? renderer.emptyBindGroup);
-            setGroup(encoder, bound, TIME_GROUP, renderer.timeBindGroup);
+            const g2 = groups[2] ?? empty;
+            if (bound.g2 !== g2) {
+                encoder.setBindGroup(2, g2);
+                bound.g2 = g2;
+            }
             drawGeometry(encoder, mesh.geometry, bound);
         }
         if (skipped.length && !this._skippedWarned) {

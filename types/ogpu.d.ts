@@ -1064,13 +1064,19 @@ export interface DrawArgs {
 /** Pipeline, bind groups and vertex/index buffers already set on a pass or bundle encoder. Import via `@core/Mesh`. */
 export class BoundState {
     pipeline: GPURenderPipeline | null;
+    /** Group 0 (and any other tracked index). */
     groups: GPUBindGroup[];
+    /** Group 2; null until `bindPassGroups` seeds it (a draw on an unseeded state binds group(3) too). */
+    g2: GPUBindGroup | null;
     vertex: GPUBuffer[];
     index: GPUBuffer | null;
     indexFormat: GPUIndexFormat | null;
     /** Forget everything — after anything else encoded into the pass (executeBundles clears its state). */
     reset(): this;
 }
+
+/** Pass start (and after executeBundles): bind the engine's group(3) and the empty group 2 once and seed `bound`; draws then never touch group 3. Import via `@core/Mesh`. */
+export function bindPassGroups(pass: GPURenderPassEncoder | GPURenderBundleEncoder, renderer: Renderer, bound: BoundState): void;
 
 /** Set vertex/index buffers and issue the draw (indexed, indirect or plain); `bound` skips buffers already set. Import via `@core/Mesh`. */
 export function drawGeometry(pass: GPURenderPassEncoder | GPURenderBundleEncoder, geometry: Geometry, bound?: BoundState | null): void;
@@ -2183,7 +2189,7 @@ declare module '@core/RecordedGroup' {
     export { RecordedGroup };
 }
 declare module '@core/Mesh' {
-    export { Mesh, MeshOptions, MeshState, DrawArgs, BoundState, drawGeometry };
+    export { Mesh, MeshOptions, MeshState, DrawArgs, BoundState, bindPassGroups, drawGeometry };
 }
 declare module '@core/Shader' {
     export { Shader, ShaderOptions, ShaderResource, ENGINE_GROUP, NEEDS_NORMAL, NEEDS_OBJECT };

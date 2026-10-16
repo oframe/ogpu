@@ -57,7 +57,7 @@ export class MSDFTextExample {
     }
 
     initGUI() {
-        const gui = new GUI({ title: 'msdf-text' });
+        const gui = new GUI({ title: 'msdf-text', expanded: true });
         const params = (this.params = {
             wireframe: false,
             preset: 'lines-slide',

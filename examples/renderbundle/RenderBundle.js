@@ -3,7 +3,7 @@ import { Camera, Renderer, Orbit, GUI, Shader, UniformBuffer, Mesh, Transform, R
 import renderBundleShader from './renderbundle.wgsl?raw';
 
 const GRID = 80; // GRID² static meshes
-const MOVERS = 8; // moving meshes inside the recorded group
+const MOVERS = 8; // moving meshes inside the render bundle group
 const LIVE = 8; // moving meshes outside it, drawn live
 const WINDOW = 60; // frames in the render() timing window
 

@@ -2192,7 +2192,7 @@ declare module '@core/Mesh' {
     export { Mesh, MeshOptions, MeshState, DrawArgs, BoundState, bindPassGroups, drawGeometry };
 }
 declare module '@core/Shader' {
-    export { Shader, ShaderOptions, ShaderResource, ENGINE_GROUP, NEEDS_NORMAL, NEEDS_OBJECT };
+    export { Shader, ShaderOptions, ShaderResource, ENGINE_GROUP, TIME_GROUP, NEEDS_NORMAL, NEEDS_OBJECT };
 }
 declare module '@core/UniformBuffer' {
     export { UniformBuffer };
@@ -2210,7 +2210,7 @@ declare module '@core/RenderPipeline' {
     export { RenderPipeline, RenderPipelineOptions, BlendingOptions };
 }
 declare module '@core/PerDrawBuffer' {
-    export { PerDrawBuffer, CAMERA_SIZE, OBJECT_SIZE };
+    export { PerDrawBuffer, CAMERA_SIZE, OBJECT_SIZE, TIME_SIZE, TIME_BINDING_SIZE };
 }
 declare module '@core/Geometry' {
     export { Geometry, GeometryOptions, GeometryData };

@@ -14,14 +14,15 @@ export class HighMeshCount {
     animate = true;
 
     constructor() {
-        this.init();
-    }
-
-    async init() {
+        // built here, not in init(): main.js wires the boot loader to app.renderer synchronously
         const canvas = document.getElementById('web-gpu-canvas');
         // starting size of the engine buffer (it doubles when full): one 256 B slot per
         // mesh at the gui max count + the time slot + the pass's camera slot, so it never has to grow
         this.renderer = new Renderer({ canvas, dpr: 2, perDrawSize: (50000 + 2) * 256 });
+        this.init().catch((e) => console.error('[highmeshcount] init failed', e));
+    }
+
+    async init() {
         await this.renderer.ready;
 
         this.gpu = this.renderer.gpu;

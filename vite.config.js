@@ -29,12 +29,12 @@ if (import.meta.hot) {
     };
 }
 
-export default defineConfig(({ command }) => ({
+export default defineConfig(({ command, isPreview }) => ({
     // Project Pages sites are served from https://<user>.github.io/<repo>/, so the
     // production build needs to be base-pathed to /ogpu/. `command` is 'build'
-    // for `vite build` and 'serve' for `vite dev`/`preview`, so local dev stays
-    // at '/' and only the deployed build gets the subpath.
-    base: command === 'build' ? '/ogpu/' : '/',
+    // for `vite build` and 'serve' for `vite dev`/`preview`; `isPreview` gives
+    // preview the deployed subpath too, so only `vite dev` stays at '/'.
+    base: command === 'build' || isPreview ? '/ogpu/' : '/',
     plugins: [wgslHotReload()],
     resolve: {
         alias: {

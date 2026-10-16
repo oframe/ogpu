@@ -338,7 +338,7 @@ export class GLTFLoader {
     }
 
     // One shared state object per (cullMode, transparent) combo so the pipeline
-    // cache sees the same identity for every primitive with that material state.
+    // registry sees the same identity for every primitive with that material state.
     _getState(cullMode, transparent) {
         const key = `${cullMode}|${transparent}`;
         let state = this._stateCache.get(key);

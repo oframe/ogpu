@@ -74,8 +74,8 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - destroy()
 - const `CAMERA_SIZE`, `OBJECT_SIZE`, `TIME_SIZE`, `TIME_BINDING_SIZE`
 
-### src/core/PipelineCache.js
-- **class PipelineCache**
+### src/core/PipelineRegistry.js
+- **class PipelineRegistry**
   - constructor(gpu)
   - get(mesh, passInfo)
   - key(mesh, passInfo)
@@ -194,7 +194,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - re-export { Shader } from './Shader.js'
 - re-export { BindGroupLayout } from './BindGroupLayout.js'
 - re-export { UniformBuffer } from './UniformBuffer.js'
-- re-export { PipelineCache } from './PipelineCache.js'
+- re-export { PipelineRegistry } from './PipelineRegistry.js'
 - re-export { RenderPipeline } from './RenderPipeline.js'
 - re-export { PerDrawBuffer } from './PerDrawBuffer.js'
 - re-export { ComputeShader } from './ComputeShader.js'

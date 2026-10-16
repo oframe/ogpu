@@ -57,7 +57,7 @@ Otherwise the loader builds ONE `Shader` for the whole file (`loader.shader`; th
 `UniformBuffer` per material, and every primitive becomes a `Mesh({ geometry,
 shader, state, bindGroups })`. The only per-material pipeline state is cull +
 blend, kept as shared frozen `state` objects (one per `cullMode|transparent`
-combo) so the pipeline cache sees one identity per combo. There are no `targets`/
+combo) so the pipeline registry sees one identity per combo. There are no `targets`/
 `sampleCount` options — the renderer derives them from the pass. `iblEntries` are
 raw group-0 entries keyed by binding number (bindings 1–4 of `pbr.wgsl`); the loader
 names them from the shader's declarations and builds each material group with

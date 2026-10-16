@@ -7,7 +7,7 @@ import { applyOverrideConstants } from '@utils/wgslOverrides';
 import { TextureFormat, BlendFactor } from './GPUEnums.js';
 
 // An explicit GPURenderPipeline for fullscreen passes and other non-Mesh draws
-// (fixed geometry + fixed target, so the renderer's pipeline cache buys nothing).
+// (fixed geometry + fixed target, so the renderer's pipeline registry buys nothing).
 // No engine block, a fully reflected layout, nothing dynamic: callers own their
 // uniform buffers and bind groups (bindGroupLayout(i).createBindGroup). Meshes use
 // Shader + state instead and never see one of these.

@@ -551,7 +551,7 @@
       "outDegree": 2
     },
     {
-      "id": "src/core/PipelineCache.js",
+      "id": "src/core/PipelineRegistry.js",
       "type": "module",
       "inDegree": 2,
       "outDegree": 1
@@ -1468,7 +1468,7 @@
     },
     {
       "from": "src/core/index.js",
-      "to": "src/core/PipelineCache.js"
+      "to": "src/core/PipelineRegistry.js"
     },
     {
       "from": "src/core/index.js",
@@ -1535,7 +1535,7 @@
       "to": "src/core/Shader.js"
     },
     {
-      "from": "src/core/PipelineCache.js",
+      "from": "src/core/PipelineRegistry.js",
       "to": "src/core/GPUEnums.js"
     },
     {
@@ -1708,7 +1708,7 @@
     },
     {
       "from": "src/core/Renderer.js",
-      "to": "src/core/PipelineCache.js"
+      "to": "src/core/PipelineRegistry.js"
     },
     {
       "from": "src/core/Renderer.js",

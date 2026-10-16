@@ -119,9 +119,10 @@ export class RenderBundleGroup extends Transform {
     }
 
     // Renderer: the bundle for this pass kind + camera slot, encoded on first use.
-    // Re-encoded (same recorded list) when the engine buffer or the pipeline
-    // cache was replaced — a bundle over a destroyed buffer can't replay — or when
-    // a mesh left out for lack of a pipeline has one now.
+    // Re-encoded (same recorded list) when the engine buffer was replaced — a
+    // bundle over a destroyed buffer can't replay — when the pipeline registry was
+    // cleared or a key turned out invalid, or when a mesh left out for lack of a
+    // pipeline has one now.
     _bundleFor(renderer, passInfo, cameraOffset) {
         const key = `${passInfo.key}|${cameraOffset}`;
         const perDraw = renderer.perDraw;
@@ -171,7 +172,7 @@ export class RenderBundleGroup extends Transform {
             const mesh = meshes[i];
             const pipeline = renderer.pipelines.get(mesh, passInfo);
             if (!pipeline) {
-                skipped.push(mesh); // reported by the cache
+                skipped.push(mesh); // reported by the registry
                 continue;
             }
             if (bound.pipeline !== pipeline) {
@@ -191,7 +192,9 @@ export class RenderBundleGroup extends Transform {
         }
         if (skipped.length && !this._skippedWarned) {
             this._skippedWarned = true;
-            console.warn(`[render-bundle-group ${this.label}] ${skipped.length} recorded mesh(es) have no pipeline (reported by the pipeline cache) — left out of the bundle until one is available`);
+            console.warn(
+                `[render-bundle-group ${this.label}] ${skipped.length} recorded mesh(es) have no pipeline (reported by the pipeline registry) — left out of the bundle until one is available`
+            );
         }
         return encoder.finish({ label: `${this.label}-bundle` });
     }

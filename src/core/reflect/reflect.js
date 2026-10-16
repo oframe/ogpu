@@ -6,7 +6,7 @@ import { makeShaderDataDefinitions } from '@utils/webgpu-utils.js';
 //     samplers, immediates,
 //     entryPoints: { name: { stage, resources: [{ name, group, entry }], inputs } } }
 // inputs = the @location parameters ([{ name, location }]; vertex attributes for
-// a vertex entry point), scanned on first read: only the pipeline cache reads
+// a vertex entry point), scanned on first read: only the pipeline registry reads
 // them, once per pipeline.
 //
 // The parser gets a copy without comments (line breaks kept, so error line

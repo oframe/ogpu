@@ -669,7 +669,7 @@ export class Geometry {
     /** True when the geometry has per-instance attributes or a drawBuffer. */
     readonly instanced: boolean;
     bufferLayouts: GPUVertexBufferLayout[];
-    /** JSON of `bufferLayouts` — pipeline-cache key part; equal layouts share pipelines. */
+    /** JSON of `bufferLayouts` — pipeline-registry key part; equal layouts share pipelines. */
     layoutKey: string;
     numBuffers: number;
     bounds?: Bounds;
@@ -880,7 +880,7 @@ export class Shader {
     /** Reflected struct of `var<uniform> uniforms`, or undefined — feed it to UniformBuffer. */
     uniforms: ReflectedVariable | undefined;
     hasFragment: boolean;
-    /** The device this shader was built on; the pipeline cache refuses a shader from another (lost) device. */
+    /** The device this shader was built on; the pipeline registry refuses a shader from another (lost) device. */
     device: GPUDevice;
     /** NEEDS_NORMAL | NEEDS_OBJECT: a text check of the user code for `normalMatrix` / `objectMatrix` (comments count). Meshes compute and write only these. */
     needs: number;
@@ -923,10 +923,10 @@ export class UniformBuffer {
 }
 
 // =============================================================================
-// @core/PipelineCache — renderer-owned GPURenderPipeline cache.
+// @core/PipelineRegistry — renderer-owned GPURenderPipelines, built on demand and shared.
 // =============================================================================
 
-/** Stable pass descriptor from PipelineCache.passInfo. */
+/** Stable pass descriptor from PipelineRegistry.passInfo. */
 export interface PassInfo {
     colorFormats: GPUTextureFormat[];
     depthFormat: GPUTextureFormat | null | undefined;
@@ -935,7 +935,7 @@ export interface PassInfo {
     id: number;
 }
 
-export class PipelineCache {
+export class PipelineRegistry {
     constructor(gpu: GPU);
     gpu: GPU;
     /** Bumped by clear() (device restore) and when a key fails validation asynchronously; per-mesh memos and RenderBundleGroup bundles from before are stale. */
@@ -944,7 +944,7 @@ export class PipelineCache {
     passInfo(colorFormats: GPUTextureFormat[], depthFormat: GPUTextureFormat | null | undefined, sampleCount: number): PassInfo;
     /** The pipeline for (mesh shader + state + geometry layout, pass); null when it can't be built (already reported). */
     get(mesh: Mesh, passInfo: PassInfo): GPURenderPipeline | null;
-    /** Warm-up: compile asynchronously so later draws hit the cache. */
+    /** Warm-up: compile asynchronously so later draws find it built. */
     compileAsync(mesh: Mesh, passInfo: PassInfo): Promise<GPURenderPipeline | null>;
     key(mesh: Mesh, passInfo: PassInfo): string;
     descriptor(mesh: Mesh, passInfo: PassInfo): GPURenderPipelineDescriptor;
@@ -1445,7 +1445,7 @@ export class Renderer {
     emptyLayout: GPUBindGroupLayout;
     emptyBindGroup: GPUBindGroup;
     /** Derives and caches the GPURenderPipeline for each (shader, state, geometry, pass). */
-    pipelines: PipelineCache;
+    pipelines: PipelineRegistry;
     depthTexture?: GPUTexture | null;
     renderQueue?: Mesh[];
     timingHelper?: TimingHelper;
@@ -2200,8 +2200,8 @@ declare module '@core/UniformBuffer' {
 declare module '@core/BindGroupLayout' {
     export { BindGroupLayout };
 }
-declare module '@core/PipelineCache' {
-    export { PipelineCache, PassInfo };
+declare module '@core/PipelineRegistry' {
+    export { PipelineRegistry, PassInfo };
 }
 declare module '@core/reflect' {
     export { StructView, makeStructuredView, reflect, ShaderDefs };

@@ -12,7 +12,7 @@ export { Box, Sphere, Plane, Torus, Cylinder, Disc, Cone, Quad, FullscreenTriang
 export { Shader } from './Shader.js';
 export { BindGroupLayout } from './BindGroupLayout.js';
 export { UniformBuffer } from './UniformBuffer.js';
-export { PipelineCache } from './PipelineCache.js';
+export { PipelineRegistry } from './PipelineRegistry.js';
 export { RenderPipeline } from './RenderPipeline.js';
 export { PerDrawBuffer } from './PerDrawBuffer.js';
 export { ComputeShader } from './ComputeShader.js';

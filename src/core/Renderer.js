@@ -3,7 +3,7 @@ import { TimingHelper } from '@utils/TimingHelper';
 import { NonNegativeRollingAverage } from '@utils/miscutils';
 import { getPromise } from '@utils/utils';
 import { PerDrawBuffer, CAMERA_SIZE, OBJECT_SIZE, TIME_SIZE, TIME_BINDING_SIZE } from './PerDrawBuffer.js';
-import { PipelineCache } from './PipelineCache.js';
+import { PipelineRegistry } from './PipelineRegistry.js';
 import { BoundState, bindPassGroups } from './Mesh.js';
 import { TextureFormat, AlphaMode } from './GPUEnums.js';
 import { FullscreenTriangle } from './primitives/FullscreenTriangle.js';
@@ -257,7 +257,7 @@ export class Renderer {
         // Same story: the old PerDrawBuffer's GPUBuffer died with the device.
         // Drop the reference (no destroy — same rationale as depth texture
         // above) and remake it, the engine groups (1 and 3) and the pipeline
-        // cache against the fresh gpu. App code rebuilds its Shaders in deviceRestoredHandlers.
+        // registry against the fresh gpu. App code rebuilds its Shaders in deviceRestoredHandlers.
         this._createEngineResources();
 
         this.isReady = true;
@@ -306,7 +306,7 @@ export class Renderer {
     // layout over it (camera slot at binding 0, object slot at binding 1, both
     // dynamic; the bind group is the engineBindGroup getter), the group(3) layout
     // over its time slot (bind group: the timeBindGroup getter, set once per
-    // pass), the shared empty group, and the pipeline cache. Runs on boot and on every
+    // pass), the shared empty group, and the pipeline registry. Runs on boot and on every
     // device restore.
     _createEngineResources() {
         const { device } = this.gpu;
@@ -330,12 +330,12 @@ export class Renderer {
         this.emptyLayout = device.createBindGroupLayout({ label: 'empty-layout', entries: [] });
         this.emptyBindGroup = device.createBindGroup({ label: 'empty-bind-group', layout: this.emptyLayout, entries: [] });
 
-        // one cache for the renderer's life; clear() invalidates every mesh memo
+        // one registry for the renderer's life; clear() invalidates every mesh memo
         if (this.pipelines) {
             this.pipelines.gpu = this.gpu;
             this.pipelines.clear();
         } else {
-            this.pipelines = new PipelineCache(this.gpu);
+            this.pipelines = new PipelineRegistry(this.gpu);
         }
     }
 
@@ -846,7 +846,7 @@ export class Renderer {
         return bundles;
     }
 
-    // Formats + sample count of the pass a render() opens — the pipeline cache
+    // Formats + sample count of the pass a render() opens — the pipeline registry
     // keys on these, so a mesh drawn into a target, an MSAA target or the canvas
     // gets a matching pipeline. Mirrors _targetPassDescriptor / _canvasPassDescriptor.
     _targetPassInfo(target) {

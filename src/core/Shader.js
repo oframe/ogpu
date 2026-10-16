@@ -84,7 +84,7 @@ export class Shader {
         const prevSize = this.uniforms?.size;
 
         this.code = code;
-        // the pipeline cache refuses a shader from another (lost) device
+        // the pipeline registry refuses a shader from another (lost) device
         this.device = device;
         this.module = module;
         this.defs = defs;

@@ -38,7 +38,7 @@ char/word/line boxes hug.
 ## MSDFText
 
 One instanced quad per glyph, all six per-glyph vec4s interleaved into one buffer. One
-`Shader` per device (the cache key holds `shader.id`), so every MSDFText shares a pipeline
+`Shader` per device (the pipeline key holds `shader.id`), so every MSDFText shares a pipeline
 per pass kind and `depthTest` setting: the atlas is a bind group resource, and every text
 has the same vertex layout. Pass formats come from the pass, so there's no
 `targets`/`sampleCount`/`pipeline` option; `shader` swaps in a variant (same bindings).

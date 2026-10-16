@@ -49,7 +49,7 @@ export class Mesh extends Transform {
         return this._state;
     }
 
-    // frozen: the pipeline cache compares states by identity, so a mutation would
+    // frozen: the pipeline registry compares states by identity, so a mutation would
     // be silently ignored — replace the object instead
     set state(state) {
         if (!state) state = NO_STATE;
@@ -103,7 +103,7 @@ export class Mesh extends Transform {
         this.beforeRenderCallbacks.forEach((cb) => cb && cb({ mesh: this, camera }));
 
         const pipeline = renderer.pipelines.get(this, passInfo);
-        if (!pipeline) return; // reported by the cache
+        if (!pipeline) return; // reported by the registry
         // this mesh's fixed slot, rewritten only if it moved; Renderer.render
         // uploads the dirty slots after the pass
         const objectOffset = renderer.perDraw.writeObject(this);

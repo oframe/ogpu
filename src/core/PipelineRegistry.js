@@ -1,11 +1,13 @@
 import { BlendFactor } from './GPUEnums.js';
 
-// PipelineCache: the renderer's GPURenderPipelines, derived, never built by hand.
+// PipelineRegistry: the renderer's GPURenderPipelines, derived, never built by hand.
+// It builds each pipeline on first request and hands every later asker the same
+// object.
 //
 // A WebGPU pipeline bakes four things together: the shader, the mesh's `state`
 // (blend, depth, cull, topology), the geometry's vertex layout, and the pass's
 // colour/depth formats + sample count. The last is only known when the mesh is
-// drawn, so a Mesh can't own its pipeline; every draw asks the cache.
+// drawn, so a Mesh can't own its pipeline; every draw asks the registry.
 //
 // Two levels:
 //   map   key string → pipeline, shared by every mesh with that key. Equal
@@ -18,12 +20,12 @@ import { BlendFactor } from './GPUEnums.js';
 // Reading order: the idea (get, key, descriptor, passInfo), then the hardening,
 // each section opening with the problem it solves.
 
-export class PipelineCache {
+export class PipelineRegistry {
     constructor(gpu) {
         this.gpu = gpu;
         this.map = new Map(); // key → pipeline, or null for a key that can't build
         this._passIds = new Map();
-        // bumped when anything derived from the cache may be stale (clear(), or a
+        // bumped when anything derived from the registry may be stale (clear(), or a
         // key that turned out invalid): mesh memos and RenderBundleGroup bundles
         // compare against it
         this.version = 0;
@@ -40,7 +42,7 @@ export class PipelineCache {
         // each frame stays on it.
         const memos = (mesh._pipelineMemos ??= []);
         let m = memos[passInfo.id];
-        if (m && m.shader === shader && m.shaderVersion === shader.version && m.state === state && m.geometry === geometry && m.cacheVersion === this.version) {
+        if (m && m.shader === shader && m.shaderVersion === shader.version && m.state === state && m.geometry === geometry && m.registryVersion === this.version) {
             return m.pipeline;
         }
 
@@ -57,7 +59,7 @@ export class PipelineCache {
         m.shaderVersion = shader.version;
         m.state = state;
         m.geometry = geometry;
-        m.cacheVersion = this.version;
+        m.registryVersion = this.version;
         m.pipeline = pipeline;
         return pipeline;
     }
@@ -229,7 +231,7 @@ export class PipelineCache {
 
     _report(mesh, descriptor, error) {
         const what = descriptor ? ` (${descriptor.label})` : '';
-        console.error(new Error(`[pipeline-cache] no pipeline for mesh '${mesh.label}' with shader '${mesh.shader.label}'${what}: ${error.message}`, { cause: error }));
+        console.error(new Error(`[pipeline-registry] no pipeline for mesh '${mesh.label}' with shader '${mesh.shader.label}'${what}: ${error.message}`, { cause: error }));
     }
 }
 
@@ -326,7 +328,7 @@ function checkVertexInputs(mesh) {
     const missing = mesh.shader.defs.entryPoints.vs.inputs.filter((i) => !provided.has(i.location));
     if (missing.length) {
         throw new Error(
-            `[pipeline-cache] mesh '${mesh.label}': shader '${mesh.shader.label}' reads ${missing.map((i) => `@location(${i.location}) ${i.name}`).join(', ')} — not in the geometry's vertex layout`
+            `[pipeline-registry] mesh '${mesh.label}': shader '${mesh.shader.label}' reads ${missing.map((i) => `@location(${i.location}) ${i.name}`).join(', ')} — not in the geometry's vertex layout`
         );
     }
 }

@@ -58,7 +58,7 @@ histogram/scan/scatter — and each kernel's layout drops the names it doesn't b
 
 Blending: `one / one-minus-src-alpha` (premultiplied); `depthWrite: false`;
 `cullMode: 'none'` — all set in the mesh's frozen `state`, which the pipeline
-cache keys on (swap `mesh.state` for a new object, never mutate it). If you add a depth-sorted transparent scene, splats must
+registry keys on (swap `mesh.state` for a new object, never mutate it). If you add a depth-sorted transparent scene, splats must
 render in a separate pass — they cannot share a depth-write-enabled render
 target because `depthWrite: false` means other objects always composite over
 them regardless of depth.

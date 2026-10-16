@@ -40,7 +40,7 @@ const QUAD = {
 };
 
 // one Shader per device: the atlas is a bind group resource, and every MSDFText shares
-// the vertex layout, so the pipeline cache hands them all one pipeline per pass kind
+// the vertex layout, so the pipeline registry hands them all one pipeline per pass kind
 const shaders = new WeakMap();
 function textShaderFor(gpu) {
     let shader = shaders.get(gpu.device);

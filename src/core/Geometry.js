@@ -40,7 +40,7 @@ export class Geometry {
 
         this.bufferLayouts = [...this.nonInstancedVerts.bufferLayouts, ...(this.instancedVerts?.bufferLayouts || [])];
 
-        // pipeline-cache key part: geometries with equal layouts share pipelines
+        // pipeline-registry key part: geometries with equal layouts share pipelines
         this.layoutKey = JSON.stringify(this.bufferLayouts);
 
         this.numBuffers = this.nonInstancedVerts.buffers.length;

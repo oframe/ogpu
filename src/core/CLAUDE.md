@@ -32,14 +32,14 @@ means a recovery that races the dying loop can't spawn a second one.
 
 The engine only restores **engine-owned** state on recovery (context
 reconfigure, depth texture, and `_createEngineResources`: the PerDrawBuffer,
-the engine/empty layouts + bind groups, and a cleared pipeline cache).
+the engine/empty layouts + bind groups, and a cleared pipeline registry).
 Everything app code built — Shaders, UniformBuffers, buffers, textures, bind
 groups, `Geometry`/`ComputeShader`/`RenderPipeline` instances — was tied to the
 dead device and is gone. Owners must rebuild them in a
 `renderer.addDeviceRestoredHandler(gpu => {...})` callback (returns an
 unsubscribe fn); the callback receives the fresh `gpu`. Without it the loop
 recovers and the canvas paints, but the scene is empty (each dead shader's
-pipeline is reported once by the cache, synchronously — `shader.device` isn't
+pipeline is reported once by the registry, synchronously — `shader.device` isn't
 the renderer's — so no mesh draws with a dead shader's pipeline). A shader
 rebuilt in place while its geometry or bind groups are still the dead
 device's will draw and fail validation — rebuild all of them. There's no automatic scene rebuild —
@@ -67,12 +67,12 @@ device-loss recovery.
 preconditions (missing gpu/code/shader/geometry) THROW, and shader build failures rethrow
 with the shader label attached. A Mesh pipeline that can't be built (bad state enum, a
 vertex input the geometry lacks, async validation failure) is reported once by the
-PipelineCache, naming the mesh and the shader, and the draws of every mesh with that
+PipelineRegistry, naming the mesh and the shader, and the draws of every mesh with that
 pipeline key are skipped — nothing throws mid-pass. The key retries when the shader is
 rebuilt (`shader.version` moves), the state or geometry layout changes (a new key), or the
-cache is cleared. One gap remains: an async validation
+registry is cleared. One gap remains: an async validation
 failure is known only when its error scope resolves, so draws encoded before then use
-the invalid pipeline (one frame or so); a failed key then bumps the cache's `version`, which also
+the invalid pipeline (one frame or so); a failed key then bumps the registry's `version`, which also
 re-encodes RenderBundleGroup bundles. A RenderBundleGroup leaves pipeline-less meshes out of its
 bundle (warned once per `record()`) and re-encodes as soon as one has a pipeline.
 
@@ -108,7 +108,7 @@ its own depth texture (`context.depthTexture`), and `setContext` swaps
   canvas + a transparent overlay. Omitted options stick to whatever the
   canvas was last configured with (device-loss reconfigure preserves them);
   first configure falls back to the renderer defaults. Mesh pipelines follow
-  a custom `format` automatically (the cache keys on the pass's formats); a
+  a custom `format` automatically (the registry keys on the pass's formats); a
   fullscreen `RenderPipeline` blitting into that canvas must be built with
   `targets: [{format}]` — its default targets `presentationFormat` and fails
   attachment validation against a differently-formatted canvas.
@@ -214,9 +214,9 @@ So `queue.writeBuffer` on a vertex/instance buffer **fails validation silently**
 vertex or instance attributes needs this. The primitive classes (`Sphere`,
 `Box`, …) don't forward `usage` — use a plain `Geometry` with
 `primitives.create*Vertices` (`./primitives/vertices.js`) when you need it.
-`geometry.layoutKey` (its buffer layouts as JSON) is part of the pipeline-cache
+`geometry.layoutKey` (its buffer layouts as JSON) is part of the pipeline-registry
 key, so geometries with equal layouts share pipelines; every `@location` the
-shader's `vs` reads must be in that layout or the cache reports the mesh and
+shader's `vs` reads must be in that layout or the registry reports the mesh and
 skips it.
 
 Indirect draws: `geometry.drawBuffer` holds the args and `drawBufferOffset`
@@ -279,7 +279,7 @@ turns legal per-kernel aliasing (src/dst of one texture) into a validation error
 undefined; other uniform vars come from `shader.defs.uniforms.<name>`.
 
 `Mesh` holds geometry, shader, `state` and `bindGroups` — no GPU objects, no
-`gpu` (the old `new Mesh(gpu, { pipeline })` form throws). `state` is frozen on assignment (with its `blending`): the cache compares
+`gpu` (the old `new Mesh(gpu, { pipeline })` form throws). `state` is frozen on assignment (with its `blending`): the registry compares
 states by identity, so swap the object (`mesh.state = glass`) instead of
 mutating it. Keys: `transparent`, `depthWrite`, `depthTest`, `depthCompare`,
 `depthBias`, `depthBiasSlopeScale`, `depthBiasClamp`, `cullMode`, `frontFace`,
@@ -303,7 +303,7 @@ before each `render()`. After writing `ub.views` directly, call `upload()`.
 struct size warns; rebuild the UniformBuffers and bind groups from the new
 `shader.uniforms`.
 
-**PipelineCache** (`renderer.pipelines`): key = shader id + version, state,
+**PipelineRegistry** (`renderer.pipelines`): key = shader id + version, state,
 `geometry.layoutKey` (+ index format for strip topologies), and the pass's
 colour formats + depth format + sample count (`_targetPassInfo` /
 `_canvasPassInfo` mirror the pass descriptors: destroyed target textures
@@ -416,9 +416,9 @@ re-encodes, against 6.9 ms for a live frame).
   the whole recording (O(descendants)), so sample it. A stale group keeps
   replaying what it recorded and warns once; you decide when to `record()`.
 - **Engine-side changes re-encode the same recording** without a `record()`:
-  a replaced engine buffer (growth or device restore), a cleared pipeline cache, or a
+  a replaced engine buffer (growth or device restore), a cleared pipeline registry, or a
   recorded mesh that came back with another slot (destroyed, or drawn by another
-  renderer), a pipeline key failing asynchronously (the cache's `version` moves), or a mesh
+  renderer), a pipeline key failing asynchronously (the registry's `version` moves), or a mesh
   the bundle left out for lack of a pipeline getting one. A bundle over a destroyed
   buffer can't replay at all. (A recovery by swapping shader/geometry still leaves
   the group `stale` and warning, though it re-encodes and draws.)
@@ -489,7 +489,7 @@ object lands its keys at the top level where WebGPU silently ignores them).
 Shader, RenderPipeline and ComputeShader all reflect through `./reflect`.
 `reflect(code)` is webgpu-utils' `makeShaderDataDefinitions` (pinned 2.1.1, its
 bundled wgsl_reflect) plus `inputs` on every entry point — the @location
-parameters, scanned from the source on first read (only PipelineCache's
+parameters, scanned from the source on first read (only PipelineRegistry's
 vertex-input check reads them). `StructView`/`makeStructuredView` lay a
 reflected type out over an ArrayBuffer (`makeTypedArrayViews`, with a local
 `setStructuredView`: the library's measured 1.9× slower per `set()`), and
@@ -567,7 +567,7 @@ right usage flags; `update()` recreates the texture if usage changes.
 `depthTexture` is a raw `GPUTexture` (not a `Texture` wrapper) created by
 `createDepthTexture`, which destroys the old one on recreate — resize is
 leak-free. A Mesh drawn into a target picks up its formats, sample count and
-depth presence automatically (PipelineCache).
+depth presence automatically (PipelineRegistry).
 Passing `target` to `Renderer.render` without a `depthTexture` on it means no
 depth testing at all. (Fullscreen `blit` passes don't go through
 `Renderer.render` — they record a color-only pass with `depthStencil: false`

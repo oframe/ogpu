@@ -939,7 +939,7 @@ export class PipelineCache {
     constructor(gpu: GPU);
     gpu: GPU;
     /** Bumped by clear() (device restore) and when a key fails validation asynchronously; per-mesh memos and RenderBundleGroup bundles from before are stale. */
-    generation: number;
+    version: number;
 
     passInfo(colorFormats: GPUTextureFormat[], depthFormat: GPUTextureFormat | null | undefined, sampleCount: number): PassInfo;
     /** The pipeline for (mesh shader + state + geometry layout, pass); null when it can't be built (already reported). */

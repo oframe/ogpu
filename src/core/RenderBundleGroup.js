@@ -126,7 +126,7 @@ export class RenderBundleGroup extends Transform {
         const key = `${passInfo.key}|${cameraOffset}`;
         const perDraw = renderer.perDraw;
         let entry = this._bundles.get(key);
-        if (entry && entry.buffer === perDraw.buffer && entry.pipelines === renderer.pipelines.generation && !pipelineArrived(renderer, passInfo, entry.skipped)) {
+        if (entry && entry.buffer === perDraw.buffer && entry.pipelines === renderer.pipelines.version && !pipelineArrived(renderer, passInfo, entry.skipped)) {
             if (this._bundles.size > 1) {
                 // least recently used goes first when the cap is hit
                 this._bundles.delete(key);
@@ -138,7 +138,7 @@ export class RenderBundleGroup extends Transform {
         entry = {
             bundle: this._encode(renderer, passInfo, cameraOffset, skipped),
             buffer: perDraw.buffer,
-            pipelines: renderer.pipelines.generation,
+            pipelines: renderer.pipelines.version,
             skipped: skipped.length ? skipped : null,
         };
         const bundles = this._bundles;

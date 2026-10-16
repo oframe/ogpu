@@ -69,10 +69,10 @@ with the shader label attached. A Mesh pipeline that can't be built (bad state e
 vertex input the geometry lacks, async validation failure) is reported once by the
 PipelineCache, naming the mesh and the shader, and the draws of every mesh with that
 pipeline key are skipped — nothing throws mid-pass. The key retries when the shader is
-rebuilt (`version` moves), the state or geometry layout changes (a new key), or the
+rebuilt (`shader.version` moves), the state or geometry layout changes (a new key), or the
 cache is cleared. One gap remains: an async validation
 failure is known only when its error scope resolves, so draws encoded before then use
-the invalid pipeline (one frame or so); a failed key then bumps `generation`, which also
+the invalid pipeline (one frame or so); a failed key then bumps the cache's `version`, which also
 re-encodes RenderBundleGroup bundles. A RenderBundleGroup leaves pipeline-less meshes out of its
 bundle (warned once per `record()`) and re-encodes as soon as one has a pipeline.
 
@@ -312,7 +312,7 @@ memoizes per pass kind, so a steady-state draw is identity compares only.
 Labels are kebab-case (`<mesh>-<shader>-<state>-<formats>`, named after the
 first mesh that built the pipeline). `renderer.compile({ scene, target })`
 pre-builds with `createRenderPipelineAsync`; otherwise pipelines build
-synchronously on first draw. `clear()` (device restore) bumps a generation that
+synchronously on first draw. `clear()` (device restore) bumps `version`, which
 invalidates every memo. Hot reload bumps `shader.version`, so pipelines rebuild
 lazily on the next draw. The fragment stage is emitted only if the module has
 an `fs` entry point, so a vertex-only shader is a depth-only pipeline.
@@ -418,7 +418,7 @@ re-encodes, against 6.9 ms for a live frame).
 - **Engine-side changes re-encode the same recording** without a `record()`:
   a replaced engine buffer (growth or device restore), a cleared pipeline cache, or a
   recorded mesh that came back with another slot (destroyed, or drawn by another
-  renderer), a pipeline key failing asynchronously (`generation` bump), or a mesh
+  renderer), a pipeline key failing asynchronously (the cache's `version` moves), or a mesh
   the bundle left out for lack of a pipeline getting one. A bundle over a destroyed
   buffer can't replay at all. (A recovery by swapping shader/geometry still leaves
   the group `stale` and warning, though it re-encodes and draws.)

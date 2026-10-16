@@ -77,12 +77,12 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 ### src/core/PipelineCache.js
 - **class PipelineCache**
   - constructor(gpu)
-  - passInfo(colorFormats, depthFormat, sampleCount)
-  - compileAsync(mesh, passInfo)
   - key(mesh, passInfo)
   - descriptor(mesh, passInfo)
-  - describe(mesh, passInfo, s = resolveState(mesh.state))
+  - passInfo(colorFormats, depthFormat, sampleCount)
+  - compileAsync(mesh, passInfo)
   - clear()
+  - describe(mesh, passInfo, s = resolveState(mesh.state))
 - fn `resolveState(state)`
 
 ### src/core/RenderBundleGroup.js

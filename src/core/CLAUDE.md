@@ -153,17 +153,21 @@ this adjustment passes near-clipped geometry through.
 camera version passes `invert=true` so `+Z` aims AT the target (camera faces
 forward). `Transform.lookAt` without invert aims `+Z` away from target.
 
-## Engine block — group(1)
+## Engine block — groups 1 and 3
 
 `Shader` appends `engine.wgsl` (after the user code, so error line numbers and
 leading `enable` directives stay put): `camera` at binding 0 (176 B: projection,
 view, cameraPosition, cameraQuaternion, viewport), `object` at binding 1 (176 B:
-model, normalMatrix `mat3x3f`, objectMatrix) and `time` at binding 2 (`time`,
-`delta`). The layout is `renderer.engineLayout`, never reflected; camera and
-object are dynamic offsets into the PerDrawBuffer, time is a plain
-renderer-owned buffer, all through the one `renderer.engineBindGroup`. A
-shader binding its own resource at group(1) throws at construction, and
-`mesh.bindGroups[1]` must stay empty (the setter throws). A typo'd field is a
+model, normalMatrix `mat3x3f`, objectMatrix), dynamic offsets into the
+PerDrawBuffer through the one `renderer.engineBindGroup` (layout
+`renderer.engineLayout`, never reflected); and `time` at group(3) binding 0
+(`time`, `delta`), a plain renderer-owned buffer behind the static
+`renderer.timeBindGroup` / `renderer.timeLayout`. group(1) is re-set every draw
+(its object offset moves), so it holds nothing else: each extra entry costs per
+draw (a third binding, used or not, measured +10–18% Chrome GPU-process time on
+highmeshcount, Dawn/Metal). group(3) is set once per pass. Users get groups 0 and 2. A shader binding its own resource at
+group(1) or group(3) throws at construction, and `mesh.bindGroups[1]` and
+`[3]` must stay empty (the setter throws). A typo'd field is a
 WGSL compile error — there is no by-name matching left to fail silently.
 
 Values: `cameraPosition` = `camera.worldPosition`, `cameraQuaternion` =
@@ -244,10 +248,10 @@ rect changes, so a scene without scissors costs no extra calls. It applies to
 ## Mesh / Shader / state — who owns what
 
 `Shader` = module + reflected interface (`defs`, `uniforms` struct,
-`bindGroupLayout(i)`, `pipelineLayout` with the engine layout at slot 1). Empty
-group slots below the highest used group get `renderer.emptyLayout`, and a
-mesh without `bindGroups[0]` (or a hole at 2–3) gets `renderer.emptyBindGroup`
-there. Bind groups come from layouts, never from the shader:
+`bindGroupLayout(i)`, `pipelineLayout` with the engine layout at slot 1 and the
+time layout at slot 3). Slots 0 and 2 without a user group get
+`renderer.emptyLayout`, and a mesh without `bindGroups[0]` or `[2]` gets
+`renderer.emptyBindGroup` there. Bind groups come from layouts, never from the shader:
 `shader.bindGroupLayout(group).createBindGroup({ name: resource })`. The
 `BindGroupLayout` (`./BindGroupLayout.js`, also what RenderPipeline and
 ComputeShader hand out) maps WGSL names to bindings: it throws on a name the
@@ -255,7 +259,7 @@ WGSL doesn't declare in that group, silently drops a declared one no entry
 point uses (it's absent from the derived layout, so commenting out a read while
 debugging doesn't invalidate the bind group), and throws when a binding of the
 layout is missing, `undefined` or `null`, listing what it needs. `bindGroupLayout(1)`
-throws (the engine's group). Resources: UniformBuffer or GPUBuffer (whole
+and `bindGroupLayout(3)` throw (the engine's groups). Resources: UniformBuffer or GPUBuffer (whole
 buffer), `{ buffer, offset, size }`, views, samplers, external textures. Each
 call allocates a GPUBindGroup: build once, rebuild only when a resource changes.
 
@@ -354,9 +358,11 @@ change:
 `BoundState` per pass (a fresh one per `render()`, so a callback that renders
 into another pass mid-loop doesn't corrupt it), so a draw re-sets only the pipeline, bind groups and
 vertex/index buffers that differ from the previous draw's (group(1) is always
-set: its offsets differ). Scissor changes don't touch it. Anything that encodes
-into the pass between draws must `reset()` it — nothing in the engine does;
-callbacks get no pass.
+set: its offsets differ; group(3) and an unchanged group 2 cost one set per
+pass). Scissor changes don't touch it. Anything that encodes into the pass
+between draws must `reset()` it — the renderer does after `executeBundles`,
+which leaves the pass with nothing bound (bundles set every group they use
+themselves); callbacks get no pass.
 
 **Texture resize:** destroying/recreating a `Texture` invalidates its
 `GPUTextureView`s, so any bind group holding them is stale. Rebuild the affected

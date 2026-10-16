@@ -1,8 +1,8 @@
 // validate-prepend: ../../../../src/core/engine.wgsl
 // Annotated reference of what scaffold.py emits (it writes the prepend path
 // relative to the generated file, e.g. ../../src/core/engine.wgsl in examples/<name>/).
-// `camera` (per pass), `object` (per mesh) and `time` at group(1) come from the engine
-// block Shader appends: read camera.projectionMatrix / viewMatrix / cameraPosition /
+// `camera` (per pass), `object` (per mesh) at group(1) and `time` at group(3) come from
+// the engine block Shader appends: read camera.projectionMatrix / viewMatrix / cameraPosition /
 // cameraQuaternion / viewport, object.modelMatrix / normalMatrix / objectMatrix and
 // time.time / time.delta instead of declaring them. View space is
 // camera.viewMatrix * (object.modelMatrix * p), associated right to left (mat-vec only). Vertex entry `vs`, fragment `fs`.

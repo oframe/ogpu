@@ -24,15 +24,15 @@ silently shades garbage or fails construction:
   (`projectionMatrix`, `viewMatrix`, `cameraPosition`, `cameraQuaternion`,
   `viewport`; one slot per render()), `@group(1) object`
   (`modelMatrix`, `normalMatrix` (mat3x3f), `objectMatrix` (inverse model); one
-  fixed slot per mesh) and `@group(1) time` (`time`, `delta`, seconds). Read
+  fixed slot per mesh) and `@group(3) time` (`time`, `delta`, seconds). Read
   `camera.*` / `object.*` / `time.*`; don't declare your own module-scope `time`.
   There is no stored modelView; per vertex write
   `camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * p))`
   (WGSL `*` is left-associative, so `P * V * M * p` does mat-mat products per
   vertex). `modelViewMatrix()` returns the matrix where code needs it. Don't
   use `camera`/`object`/`Camera`/`Object`/`modelViewMatrix` as other
-  module-scope names. group(1) is the engine's — user resources go in group 0
-  (groups 2–3 for extras).
+  module-scope names. Groups 1 and 3 are the engine's — user resources go in
+  group 0 (group 2 for extras).
 - Custom uniforms: `@group(0) @binding(0) var<uniform> uniforms : Uniforms`
   (lowercase `uniforms`, struct typed; `shader.uniforms` is that struct). Own
   them with a `UniformBuffer` and `set({...})`.

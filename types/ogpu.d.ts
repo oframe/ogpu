@@ -1001,7 +1001,7 @@ export class PerDrawBuffer {
 
 // =============================================================================
 // @core/Mesh — geometry + Shader + plain state + bind groups. Holds no GPU
-// objects; the renderer derives the pipeline and binds the engine group(1).
+// objects; the renderer derives the pipeline and binds the engine groups 1 and 3.
 // =============================================================================
 
 /**
@@ -1078,7 +1078,7 @@ export class Mesh extends Transform {
     shader: Shader;
     /** Frozen on assignment. */
     state: MeshState;
-    /** Setting a group at index 1 throws. */
+    /** Setting a group at index 1 or 3 throws. */
     bindGroups: GPUBindGroup[];
     /** Cached against `worldVersion`, computed only when the shader reads it — call updateDerived() before reading in JS. */
     normalMatrix: Mat3;

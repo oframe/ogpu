@@ -39,7 +39,7 @@ mkdir -p "$EX_DIR"
 
 cat > "$EX_DIR/cube.wgsl" <<'WGSL'
 // validate-prepend: ../../src/core/engine.wgsl
-// `camera`, `object` and `time` (group 1) come from the engine block Shader appends
+// `camera`/`object` (group 1) and `time` (group 3) come from the engine block Shader appends
 
 struct Uniforms {
   uScale : f32,
@@ -114,7 +114,7 @@ export class $CLASS {
             geometry,
             shader,
             state: { cullMode: 'back' },
-            // bind by WGSL name; group(1) is the engine's (camera, object, time)
+            // bind by WGSL name; groups 1 and 3 are the engine's (camera + object, time)
             bindGroups: [shader.bindGroupLayout(0).createBindGroup({ uniforms: this.uniforms })],
         });
         this.cube.setParent(this.scene);

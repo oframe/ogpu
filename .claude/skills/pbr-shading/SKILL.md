@@ -61,7 +61,7 @@ same — `references/js-wiring.md` has the full copy-paste blocks.
    view), 2 `shConstants` (SH buffer), 3 `tBrdf` (LUT view), 4 `iblSampler`
    (linear, mipmap linear, clamp), 5 `tMap`, 6 `tMetallicRoughness`, 7 `tNormal`,
    8 `tOcclusion`, 9 `tEmissive`, 10 `materialSampler` (linear, repeat), 11
-   `tOpacity`, 12 `material`. Binding 0 is unused; group 1 is the engine's.
+   `tOpacity`, 12 `material`. Binding 0 is unused; groups 1 and 3 are the engine's.
 6. Verify with `npm run build` (pipeline construction / reflection errors are
    runtime, but build catches JS/import mistakes) and
    `npm run validate:shaders` for folded WGSL. If a dev server check is

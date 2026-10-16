@@ -4,7 +4,7 @@
 Writes a vs/fs shader following the engine's conventions (`vs`/`fs` entry
 points, attribute order position/normal/uv). Camera/object matrices are NOT
 declared: the engine block `Shader` appends supplies `camera.*` (group 1,
-per pass), `object.*` (group 1, per mesh) and `time.*` (time, delta), so
+per pass), `object.*` (group 1, per mesh) and `time.*` (group 3), so
 the file starts with a `// validate-prepend:` line pointing at
 src/core/engine.wgsl for the validator.
 The fragment stage outputs the normal mapped to 0..1. Custom uniforms are
@@ -41,7 +41,7 @@ def build(fields, engine_rel):
     a = lines.append
 
     a(f"// validate-prepend: {engine_rel}")
-    a("// `camera`, `object` and `time` (group 1) come from the engine block Shader appends")
+    a("// `camera`/`object` (group 1) and `time` (group 3) come from the engine block Shader appends")
     a("")
 
     # Custom uniforms only; the engine fields live in camera/object/time.

@@ -1,5 +1,5 @@
 // validate-prepend: ../../src/core/engine.wgsl
-// `camera`, `object` and `time` (group 1) come from the engine block Shader appends
+// `camera`/`object` (group 1) and `time` (group 3) come from the engine block Shader appends
 
 @group(0) @binding(0) var <storage, read> positionData : array<vec4f>;
 

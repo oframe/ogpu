@@ -9,13 +9,13 @@ import myShader from './my.wgsl?raw';
 ```
 
 The ownership split to keep straight: `Shader` holds the compiled module and
-reflected layouts (and appends the engine block, so `camera.*`/`object.*`/`time.*` just
-work at group(1)). `state` is a plain frozen object (`cullMode`, `transparent`,
+reflected layouts (and appends the engine block, so `camera.*`/`object.*` just
+work at group(1) and `time.*` at group(3)). `state` is a plain frozen object (`cullMode`, `transparent`,
 `depthWrite`, `blending`, …) — replace it, don't mutate it. The renderer derives
 the `GPURenderPipeline` from shader + state + geometry layout + the pass's
 formats, so a `Mesh` takes no `gpu`, no pipeline, and no targets. Bind groups
 are built by WGSL name with `shader.bindGroupLayout(group).createBindGroup({ name: resource })`;
-group(1) is the engine's, so `bindGroups[1]` stays empty.
+groups 1 and 3 are the engine's, so `bindGroups[1]` and `[3]` stay empty.
 
 ## No texture (short path)
 

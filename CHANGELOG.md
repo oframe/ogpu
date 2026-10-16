@@ -1,5 +1,103 @@
 # Changelog
 
+## 0.17.0
+
+Breaking. Time leaves the camera: a new engine `time` block at group(3) holds `time.time` and
+`time.delta`, and `camera.resolution` is renamed `camera.viewport`. Users get groups 0 and 2.
+
+### Added
+
+- **Engine `Time` group** (`src/core/engine.wgsl`): `struct Time { time: f32, delta: f32 }` at
+  `@group(3) @binding(0) var<uniform> time: Time;`, read in every Mesh shader as `time.time`
+  (`renderer.time`) and `time.delta` (`renderer.deltaTime`), both in seconds. Its data is slot 0
+  of the PerDrawBuffer (`perDraw.timeOffset`, never released), next to the frame's first camera
+  slot, so it uploads in the same `flush()` span with no `writeBuffer` of its own; `render()`
+  marks it only when the clock changed (`perDraw.writeTime`). Bound through `renderer.timeLayout`
+  / `renderer.timeBindGroup` (a getter rebuilt on growth, like `engineBindGroup`). Group 3 and the
+  empty group 2 are bound once per encoder by `bindPassGroups` (`@core/Mesh`): at each
+  RecordedGroup bundle's start and on the pass before the first live draw (after
+  `executeBundles`); in those passes a draw never touches group 3 and compares group 2 once
+  (`BoundState.g2`), restoring the empty group after a mesh that had its own. New exports:
+  `TIME_GROUP` (`@core/Shader`), `TIME_SIZE` (8 B) bound as `TIME_BINDING_SIZE` (16 B)
+  (`@core/PerDrawBuffer`), `bindPassGroups` (`@core/Mesh`). Like any uniform it holds one value
+  per submit: two render()s with different times in one external-encoder submit both see the last.
+  Recorded groups read the live value.
+
+### Changed
+
+- The camera block drops `time` and renames `resolution` to `viewport` (same value: the target
+  size, else the bound canvas size); it stays 176 B. group(1) is camera + object, as in 0.16.0:
+  it is re-set on every draw, so it holds nothing else (a third binding there measured +10 to
+  +18 % Chrome GPU-process time on highmeshcount).
+- Every Mesh shader's pipeline layout has all four slots: engine groups 1 and 3, the user's
+  group 0 and 2 or `renderer.emptyLayout`. A declared group 2 that vs/fs never read is now an
+  empty layout (it threw `has no group(2)` when nothing above it was read).
+- Shaders: `instancing`, `instancingpicking`, `triangle` and `particles` read `time.time`;
+  `gsplat.wgsl` reads `camera.viewport`.
+- `types/ogpu.d.ts`, AGENTS.md, README, the core and text CLAUDE.md files and the scaffold-shader
+  (template and generator), scaffold-app (generator) and pbr-shading skills follow.
+
+### Fixed
+
+- **Aliased bindings under an explicit ComputeShader layout.** Two WGSL vars on one binding (each
+  read by a different kernel) built one entry per var but named them by binding, so
+  `createBindGroup` always threw "missing". The wrap now keeps one name per binding: the
+  kernel's own, else the first reflected; the other alias is dropped like any declared name
+  outside the layout (`wrapBindGroupLayout` takes `entryPoints`). Matches dgpu.
+
+### Migration
+
+- `camera.time` → `time.time`.
+- New: `time.delta`, the frame's delta in seconds.
+- `camera.resolution` → `camera.viewport`.
+- A Mesh shader that declares its own module-scope `time` or `Time` (var, const, override, fn,
+  struct or alias) no longer compiles: the engine declares both, and WGSL module names share one
+  namespace. Rename yours. A function-local `let time = …` still compiles but shadows the
+  engine's; prefer another name. Fullscreen RenderPipelines and ComputeShaders have no engine
+  block and keep passing time in their own uniforms.
+- group(3) is the engine's: a Mesh shader binding its own resource there, `bindGroupLayout(3)` and
+  `mesh.bindGroups[3]` throw. Move group(3) resources to group 2 (or 0).
+- `perDraw.writeCamera(camera, time, width, height)` → `writeCamera(camera, width, height)`.
+- The PerDrawBuffer reserves one slot for time: a `perDrawSize` sized to an exact mesh count
+  needs one more slot (highmeshcount: `(50000 + 2) * 256`).
+
+### Measured
+
+Production builds against 0.16.0 (5850698), headless Chromium on Metal (M1 Pro):
+
+- Read back from a Mesh shader into a 7×5 `rgba32float` target: `time.time` / `time.delta` equal
+  `renderer.time` / `deltaTime` (as f32) after a frame, after setting the clock, through a
+  RecordedGroup's unchanged bundle at two times, after PerDrawBuffer growth and after
+  `forceDeviceLoss()` + restore; `camera.viewport` equals the target size. A second render() at
+  the same time issues no time upload.
+- setBindGroup per frame: group(3) and a shared group 2 once per pass (highmeshcount: one
+  group(1) set per draw, one each for 2 and 3, and likewise in its recorded bundle; two-pass
+  shadowmapping: two each); a pass mixing a RecordedGroup with live meshes sets them once in the
+  bundle and once after `executeBundles`. With meshes owning different group-2 bind groups
+  interleaved with meshes that have none (recorded and live), group 2 is set once per change and
+  the pass validates with correct pixels. After PerDrawBuffer growth (also mid-pass) the bundle
+  re-encodes against the rebuilt `timeBindGroup` and time reads back right.
+- With the clock pinned, every view screenshot-matches 0.16.0 (the time-driven `triangle` and
+  `instancingpicking` pixel-identical) within an A/A envelope of 0.16.0 reshoots; views with boot
+  races (`scenegraph`, `feedback`, `textures`, `msdftext`, `sorttransparency`) land in the same
+  clusters as repeated 0.16.0 shoots. No new console or GPU errors (`ktx` keeps its BC-copy
+  warnings). GaussianSplat sorts give bit-identical orders.
+- `queue.writeBuffer` calls per frame equal 0.16.0's (hellowebgpu 1, highmeshcount 1, shadowmapping
+  2, multicanvas 4): the time slot rides the camera slot's upload (+256 B in frames where the clock
+  moved).
+- Interleaved A/A/B, 6 runs each, run only while no other benchmark used the GPU:
+    - highmeshcount live (1k/10k static, moving, orbit, churn): CPU and wall −3.2 to −0.3 % (A/A
+      −3.5 to +0.4 %); GPU medians (N frames in one submit) within the A/A spread except 1k static
+      +12 % (A/A +10 %) and 10k moving +4.4 % (A/A +2.3 %).
+    - highmeshcount recorded: CPU, wall and GPU within ±1.7 % except 1k churn wall +2.8 % (A/A
+      +1.1 %), 10k churn wall +2.2 % (A/A −3.8 %) and 1k moving GPU +4.8 % (A/A +10 %). A focused
+      1000-mesh recorded rerun: churn CPU +0.9 % (A/A +0.4 %), wall +2.3 % (A/A −1.8 %); static
+      and orbit wall within ±0.5 %; moving GPU +2.5 % (A/A +1.7 %).
+    - Light views, per frame (the timer resolves about 5 µs): shadowmapping (two passes) CPU
+      −1.7 µs, wall +3.3 µs (A/A 0); hellowebgpu wall +6.7 µs (+7.5 %, A/A +5.6 %); instancing
+      wall +6.7 µs (+7.3 %, A/A +5.5 %); multicanvas CPU +3.4 µs; triangle CPU +3.3 µs;
+      particles CPU and wall within A/A. GPU timestamps within the A/A spread.
+
 ## 0.16.0
 
 Breaking. Bind groups come from a new `BindGroupLayout` engine object, `UniformBuffer` backs

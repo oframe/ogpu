@@ -78,6 +78,7 @@ export class MSDFText extends Mesh {
             outline = 0,
             outlineColor = [0, 0, 0, 1],
             depthTest = true,
+            wireframe = false,
             shader,
             label = 'text',
             renderOrder = 0,
@@ -123,6 +124,7 @@ export class MSDFText extends Mesh {
             uPxRange: font.pxRange,
             uEmPx: font.emPx,
         });
+        this.wireframe = wireframe;
         this._applyLayout(layout);
         this.animate({}); // identity "from" state: visible at any progress
     }
@@ -185,6 +187,16 @@ export class MSDFText extends Mesh {
 
     set color(c) {
         this.uniforms.set({ uColor: rgba(c) });
+    }
+
+    // the glyph quads' edges (and the diagonal their triangles share) in place of the glyphs
+    set wireframe(on) {
+        this._wireframe = !!on;
+        this.uniforms.set({ uWireframe: on ? 1 : 0 });
+    }
+
+    get wireframe() {
+        return this._wireframe;
     }
 
     // Configure the reveal. `preset` is a TEXT_PRESETS name or an options object;

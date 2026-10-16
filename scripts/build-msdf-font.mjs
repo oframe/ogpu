@@ -19,9 +19,9 @@ import { mkdirSync } from 'node:fs';
 import { basename, extname, join, relative } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
-const DEFAULT_DIR = join(ROOT, 'public/assets/fonts/instrument-serif');
+const DEFAULT_DIR = join(ROOT, 'public/assets/fonts/fira-sans');
 
-const [font = join(DEFAULT_DIR, 'InstrumentSerif-Regular.ttf'), outDir = DEFAULT_DIR, name] = process.argv.slice(2);
+const [font = join(DEFAULT_DIR, 'FiraSans-Bold.ttf'), outDir = DEFAULT_DIR, name] = process.argv.slice(2);
 const stem = name ?? basename(font, extname(font)).toLowerCase();
 
 // printable ASCII + the typographic punctuation and Latin-1 letters copy tends to use

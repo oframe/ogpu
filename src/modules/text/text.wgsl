@@ -29,6 +29,7 @@ struct Uniforms {
   uEase: u32,
   uSeed: u32,
   uEm: f32,                // world units per em (the layout size)
+  uWireframe: f32,         // 1 = draw the glyph quads' edges, not the glyphs
 }
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
@@ -54,6 +55,7 @@ struct VertexOutput {
   @location(2) unitUv: vec2f,                        // rest position inside the unit box
   @location(3) @interpolate(flat) maskBox: vec4f,
   @location(4) @interpolate(flat) anim: vec3f,       // eased t, opacity, blur
+  @location(5) quad: vec2f,                          // corner of the glyph quad, 0..1
 }
 
 fn pick4(a: vec4f, b: vec4f, c: vec4f, i: u32) -> vec4f {
@@ -144,6 +146,7 @@ fn vs(in: Vertex) -> VertexOutput {
 
   out.position = camera.projectionMatrix * (camera.viewMatrix * (object.modelMatrix * vec4f(animated, 1.0)));
   out.uv = mix(in.atlas.xy, in.atlas.zw, in.position);
+  out.quad = in.position;
   out.local = animated.xy;
   out.unitUv = (p - unitBox.xy) / max(size, vec2f(1e-6));
 
@@ -201,5 +204,21 @@ fn fs(in: VertexOutput) -> @location(0) vec4f {
   let front = in.anim.x * (1.0 + soft);
   let wipe = select(1.0, 1.0 - smoothstep(front - soft, front, along), span > 0.0);
 
-  return vec4f(rgb, alpha * in.anim.y * mask * wipe);
+  // wireframe: the quad's edges plus the diagonal its two triangles share (x + y = 1),
+  // ~1px wide; the overflow mask is skipped so the whole quad shows
+  // (distance / gradient length = screen px; fwidth would overstate a slanted gradient)
+  let q = in.quad;
+  let d = q.x + q.y - 1.0;
+  let gx = max(length(vec2f(dpdx(q.x), dpdy(q.x))), 1e-6);
+  let gy = max(length(vec2f(dpdx(q.y), dpdy(q.y))), 1e-6);
+  let gd = max(length(vec2f(dpdx(d), dpdy(d))), 1e-6);
+  let edgePx = min(min(q.x, 1.0 - q.x) / gx, min(q.y, 1.0 - q.y) / gy);
+  let diagPx = abs(d) / gd;
+  // edges are one-sided (inside the quad), the diagonal two-sided: 0.5px a side keeps it 1px
+  let wire = max(1.0 - clamp(edgePx - 0.5, 0.0, 1.0), 1.0 - clamp(diagPx, 0.0, 1.0));
+  let isWire = uniforms.uWireframe > 0.0;
+  let outRgb = select(rgb, uniforms.uColor.rgb, isWire);
+  let outA = select(alpha * mask, wire * uniforms.uColor.a, isWire);
+
+  return vec4f(outRgb, outA * in.anim.y * wipe);
 }

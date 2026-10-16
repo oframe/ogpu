@@ -555,10 +555,9 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - **class MSDFTextExample**
   - constructor()
   - init()
-  - intro()
   - initGUI()
   - presetParams(name)
-  - replay(texts)
+  - replay()
 
 ### examples/multicanvas/MultiCanvas.js
 - **class MultiCanvas**
@@ -600,6 +599,12 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 - **class Raycasting**
   - constructor()
   - init()
+
+### examples/renderbundle/RenderBundle.js
+- **class RenderBundle**
+  - constructor()
+  - init()
+  - setMode(mode)
 
 ### examples/rendertotexture/RenderToTexture.js
 - **class RenderToTexture**

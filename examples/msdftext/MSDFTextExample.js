@@ -1,33 +1,29 @@
 import { Camera, Renderer, Orbit, GUI, Transform, MSDFFont, MSDFText, TEXT_PRESETS } from 'ogpu';
 
-const FONT = './assets/fonts/instrument-serif/instrumentserif-regular';
-
-const HEADLINE = 'Signed distance\nfields, revealed.';
-const BODY =
-    'Every glyph is one instanced quad sampling a multi-channel distance atlas baked by ' +
-    'msdfgen. The split into chars, words and lines happens once on the CPU; the stagger, ' +
-    'the masks and the clip wipes are evaluated per glyph in the vertex shader, so a reveal ' +
-    'costs one uniform write a frame.';
+// same font, copy and layout as OGL's msdf-text example
+const FONT = './assets/fonts/fira-sans/firasans-bold';
+const TEXT = "don't panic";
 
 const option = (keys) => Object.fromEntries(keys.map((k) => [k, k]));
 
 export class MSDFTextExample {
     constructor() {
+        // built here, not in init(): main.js wires the boot loader to app.renderer synchronously
+        const canvas = document.getElementById('web-gpu-canvas');
+        this.renderer = new Renderer({ canvas, dpr: 2 });
         this.init().catch((e) => console.error('[msdftext] init failed', e));
     }
 
     async init() {
-        const canvas = document.getElementById('web-gpu-canvas');
-        this.renderer = new Renderer({ canvas, dpr: 2 });
         await this.renderer.ready;
         this.gpu = this.renderer.gpu;
-        this.renderer.setClearColor({ r: 0.055, g: 0.05, b: 0.045 });
+        this.renderer.setClearColor({ r: 1, g: 1, b: 1 });
 
         this.camera = new Camera({
             aspect: this.gpu.canvas.width / this.gpu.canvas.height,
-            fov: 35,
+            fov: 45,
         });
-        this.camera.position.set(0, 0, 6);
+        this.camera.position.set(0, 0, 7);
         this.camera.lookAt([0, 0, 0]);
         this.orbit = new Orbit(this.camera, { element: this.gpu.canvas });
 
@@ -36,68 +32,48 @@ export class MSDFTextExample {
         const font = await MSDFFont.load(this.gpu, {
             json: `${FONT}.json`,
             image: `${FONT}.png`,
-            label: 'instrument-serif',
+            label: 'fira-sans-bold',
         });
 
-        this.headline = new MSDFText(this.gpu, {
-            label: 'headline',
+        this.text = new MSDFText(this.gpu, {
+            label: 'text',
             font,
-            text: HEADLINE,
-            size: 0.62,
-            lineHeight: 1.05,
-            letterSpacing: -0.01,
-            anchorY: 'bottom',
-            color: [0.96, 0.93, 0.86, 1],
+            text: TEXT,
+            size: 1,
+            width: 4,
+            align: 'center',
+            letterSpacing: -0.05,
+            lineHeight: 1.1,
+            color: [0, 0, 0, 1],
             outlineColor: [0.9, 0.42, 0.22, 1],
         });
-        this.headline.position.y = 0.05;
-
-        this.body = new MSDFText(this.gpu, {
-            label: 'body',
-            font,
-            text: BODY,
-            size: 0.13,
-            width: 3.6,
-            lineHeight: 1.35,
-            anchorY: 'top',
-            color: [0.78, 0.74, 0.66, 1],
-        });
-        this.body.position.y = -0.2;
-
-        this.scene.addChild(this.headline);
-        this.scene.addChild(this.body);
+        this.scene.addChild(this.text);
 
         this.initGUI();
-        this.intro();
+        this.text.animate('lines-slide').play();
 
         this.renderer.addResizeHandler(this.handleResize);
         this.renderer.add(this.update);
     }
 
-    async intro() {
-        this.headline.animate('lines-slide');
-        this.body.animate('chars-fade-up', { stagger: 0.006, delay: 0.5 });
-        this.body.play();
-        await this.headline.play();
-    }
-
     initGUI() {
-        const gui = new GUI({ title: 'msdf-text' });
+        const gui = new GUI({ title: 'msdf-text', expanded: true });
         const params = (this.params = {
-            target: 'headline',
+            wireframe: false,
             preset: 'lines-slide',
             ...this.presetParams('lines-slide'),
             scrub: 0,
             outline: 0,
-            text: HEADLINE,
+            text: TEXT,
         });
-        const targets = () => (params.target === 'both' ? [this.headline, this.body] : [this[params.target]]);
 
-        gui.add(params, 'target', { options: option(['headline', 'body', 'both']) });
+        gui.add(params, 'wireframe').on('change', ({ value }) => {
+            this.text.wireframe = value;
+        });
         gui.add(params, 'preset', { options: option(Object.keys(TEXT_PRESETS)) }).on('change', () => {
             Object.assign(params, this.presetParams(params.preset));
             gui.pane.refresh();
-            this.replay(targets());
+            this.replay();
         });
 
         const tune = gui.folder('split');
@@ -111,26 +87,25 @@ export class MSDFTextExample {
         });
         tune.add(params, 'duration', { min: 0.1, max: 3, step: 0.05 });
         tune.add(params, 'stagger', { min: 0, max: 0.3, step: 0.002 });
-        tune.pane.on('change', () => this.replay(targets()));
+        tune.pane.on('change', () => this.replay());
 
         const play = gui.folder('playback');
-        play.button('play', () => targets().forEach((t) => t.play()));
-        play.button('reverse', () => targets().forEach((t) => t.reverse()));
-        play.button('replay', () => this.replay(targets()));
+        play.button('play', () => this.text.play());
+        play.button('reverse', () => this.text.reverse());
+        play.button('replay', () => this.replay());
         play.add(params, 'scrub', { min: 0, max: 1, step: 0.001 }).on('change', ({ value }) => {
-            targets().forEach((t) => (t.progress = value));
+            this.text.progress = value;
         });
-        play.monitor(this.headline, 'progress', { label: 'headline' });
-        play.monitor(this.body, 'progress', { label: 'body' });
+        play.monitor(this.text, 'progress');
 
         const look = gui.folder('look', { expanded: false });
         // outline reads the true-sdf alpha channel, so it reaches up to pxRange/2 atlas px
         look.add(params, 'outline', { min: 0, max: 0.12, step: 0.002 }).on('change', ({ value }) => {
-            for (const t of [this.headline, this.body]) t.uniforms.set({ uOutline: value });
+            this.text.uniforms.set({ uOutline: value });
         });
         look.add(params, 'text').on('change', ({ value }) => {
-            this.headline.setText(value.replace(/\\n/g, '\n'));
-            this.replay([this.headline]);
+            this.text.setText(value.replace(/\\n/g, '\n'));
+            this.replay();
         });
 
         this.gui = gui;
@@ -148,13 +123,9 @@ export class MSDFTextExample {
         };
     }
 
-    replay(texts) {
-        const { preset, split, mask, order, ease, duration } = this.params;
-        for (const t of texts) {
-            // body has ~10x the chars of the headline — same total spread, finer stagger
-            const stagger = this.params.stagger * (t === this.body && split === 'chars' ? 0.2 : 1);
-            t.animate(preset, { split, mask, order, ease, duration, stagger }).play();
-        }
+    replay() {
+        const { preset, split, mask, order, ease, duration, stagger } = this.params;
+        this.text.animate(preset, { split, mask, order, ease, duration, stagger }).play();
     }
 
     update = () => {

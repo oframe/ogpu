@@ -9,7 +9,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
   - constructor(device, { layout, entries, names, declared, label, group })
   - createBindGroup(resources = {}, { label } = {})
 - fn `internBindGroupLayout(device, defs, group, entries, label, entryPoints)`
-- fn `wrapBindGroupLayout(device, layout, defs, group, label, { empty = false } = {})`
+- fn `wrapBindGroupLayout(device, layout, defs, group, label, { empty = false, entryPoints = [] } = {})`
 - fn `declaredBindings(defs, group)`
 
 ### src/core/Camera.js

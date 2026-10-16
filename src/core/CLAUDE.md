@@ -516,7 +516,9 @@ rebuild its bind groups. One resource object can feed several kernels' layouts
 per-kernel overrides over it. With an explicit caller `layout`, bindGroupLayout
 wraps that pipeline's raw layout, not interned: its names — and the bindings
 createBindGroup requires — are every binding the module declares in the group,
-so the caller's layout must hold all of them.
+so the caller's layout must hold all of them. Aliases (two vars on one binding)
+get one name per binding: the kernel's own, else the first reflected; the other
+is dropped like any declared name outside the layout.
 
 `dispatch` creates and ends its own compute pass unless you pass an external
 `pass`. The timestamp query set is only allocated when `device.features.has('timestamp-query')`

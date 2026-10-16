@@ -83,11 +83,24 @@ export function internBindGroupLayout(device, defs, group, entries, label, entry
 
 // Wraps a layout the engine didn't derive (a ComputeShader's explicit caller
 // `layout`, a Shader group no entry point reads): names cover every binding the
-// module declares in `group`, nothing is interned.
-export function wrapBindGroupLayout(device, layout, defs, group, label, { empty = false } = {}) {
-    const entries = empty ? [] : declaredBindings(defs, group).map(([, binding]) => ({ binding }));
-    const { names, declared } = bindingNames(defs, group, entries, label);
-    return new BindGroupLayout(device, { layout, entries: deepFreeze(entries), names, declared, label, group });
+// module declares in `group`, nothing is interned. Aliases (two vars on one
+// binding) get one name: the one `entryPoints` read, else the first reflected;
+// the other stays in `declared` and is dropped.
+export function wrapBindGroupLayout(device, layout, defs, group, label, { empty = false, entryPoints = [] } = {}) {
+    const names = Object.create(null);
+    if (!empty) {
+        const used = new Set();
+        for (const ep of entryPoints) {
+            for (const r of defs.entryPoints[ep]?.resources ?? []) if (r.group === group) used.add(r.name);
+        }
+        const byBinding = new Map();
+        for (const [name, binding] of declaredBindings(defs, group)) {
+            if (!byBinding.has(binding) || used.has(name)) byBinding.set(binding, name);
+        }
+        for (const [binding, name] of byBinding) names[name] = binding;
+    }
+    const entries = Object.values(names).map((binding) => ({ binding }));
+    return new BindGroupLayout(device, { layout, entries: deepFreeze(entries), names: Object.freeze(names), declared: declaredOf(defs, group), label, group });
 }
 
 // [name, binding] for every resource the module declares in `group`
@@ -102,20 +115,24 @@ export function declaredBindings(defs, group) {
 
 const KINDS = ['uniforms', 'storages', 'textures', 'samplers', 'storageTextures', 'externalTextures'];
 
+// every name the module declares in `group`, sorted, frozen
+function declaredOf(defs, group) {
+    return Object.freeze(
+        declaredBindings(defs, group)
+            .map(([name]) => name)
+            .sort()
+    );
+}
+
 // names: WGSL name -> binding for this layout's entries (null-proto, frozen),
-// from the resources of the entry points that built it when given (WGSL lets two
-// vars share a binding if no one entry point uses both); declared: every name
-// the module declares in `group`
+// from the resources of the entry points that built it (WGSL lets two vars
+// share a binding if no one entry point uses both); declared: every name the
+// module declares in `group`
 function bindingNames(defs, group, entries, label, entryPoints) {
     const byBinding = new Map();
-    const pairs = declaredBindings(defs, group);
-    const declared = pairs.map(([name]) => name).sort();
-    if (entryPoints) {
-        for (const ep of entryPoints) {
-            for (const r of defs.entryPoints[ep]?.resources ?? []) if (r.group === group) byBinding.set(r.entry.binding, r.name);
-        }
-    } else {
-        for (const [name, binding] of pairs) byBinding.set(binding, name);
+    const declared = declaredOf(defs, group);
+    for (const ep of entryPoints) {
+        for (const r of defs.entryPoints[ep]?.resources ?? []) if (r.group === group) byBinding.set(r.entry.binding, r.name);
     }
     const names = Object.create(null);
     for (const { binding } of entries) {
@@ -123,7 +140,7 @@ function bindingNames(defs, group, entries, label, entryPoints) {
         if (name === undefined) throw new Error(`[${label}] group(${group}) binding ${binding} has no reflected name`);
         names[name] = binding;
     }
-    return { names: Object.freeze(names), declared: Object.freeze(declared) };
+    return { names: Object.freeze(names), declared };
 }
 
 // key-sorted serialisation, so equal entries give equal keys whatever their field order

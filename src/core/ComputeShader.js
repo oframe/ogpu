@@ -144,7 +144,7 @@ export class ComputeShader {
         const layouts = (this._layouts[kernel] ??= []);
         // caller-supplied pipeline layout: wrap lazily, cached until the next build
         if (!layouts[group] && this._buildOpts.layout !== 'auto' && declaredBindings(this.defs, group).length) {
-            layouts[group] = wrapBindGroupLayout(this.gpu.device, this.kernels[kernel].getBindGroupLayout(group), this.defs, group, `${this.label}-${kernel}`);
+            layouts[group] = wrapBindGroupLayout(this.gpu.device, this.kernels[kernel].getBindGroupLayout(group), this.defs, group, `${this.label}-${kernel}`, { entryPoints: [kernel] });
         }
         const layout = layouts[group];
         if (!layout) throw new Error(`[compute ${this.label}] kernel '${kernel}' has no group(${group})`);

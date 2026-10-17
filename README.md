@@ -186,13 +186,13 @@ Composes as `kD · SH-irradiance · albedo + IBL-specular`, applies occlusion/em
 
 ## Browser requirements
 
-Needs a browser with WebGPU. As of late 2025 it ships by default in:
+Needs a browser with WebGPU. As of October 2026 it ships by default in ([current status](https://github.com/gpuweb/gpuweb/wiki/Implementation-Status)):
 
-- **Chrome / Edge** — 113+ (before 135 there is no `Float16Array`: a stand-in is defined only while webgpu-utils loads, and f16 vector/matrix struct fields and plain-number 16float texture data degrade — use f32 fields, a 32float format, or half-float bits in a `Uint16Array` there)
-- **Firefox** — Windows 141+, macOS ARM64 145+ (Linux expected 2026)
+- **Chrome / Edge** — Windows, macOS and ChromeOS 113+; Android 121+ on Android 12+ with ARM, Qualcomm or Intel GPUs, 139+ on Android 16+ with Imagination GPUs; Linux 144+ on Intel Gen12+ GPUs and 147+ on NVIDIA (driver 535.183.01+) under Wayland (other Linux GPUs and Windows on ARM need a flag). Before 135 there is no `Float16Array`: a stand-in is defined only while webgpu-utils loads, and f16 vector/matrix struct fields and plain-number 16float texture data degrade — use f32 fields, a 32float format, or half-float bits in a `Uint16Array` there
+- **Firefox** — Windows 141+, Apple Silicon Macs 145+ on macOS 26 and 147+ on older macOS (Intel Macs and Linux: Nightly only)
 - **Safari** — macOS Tahoe 26 / iOS 26 / iPadOS 26 / visionOS 26
 
-Mobile is still fragmented — Chrome on Android needs recent hardware, Firefox on Android is behind a flag.
+Mobile is still fragmented — Chrome on Android needs one of the GPU and Android version pairs above, Firefox on Android is behind a flag.
 
 ### Testing on a phone (gotcha)
 

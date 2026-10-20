@@ -112,7 +112,7 @@ Terse public-surface index of `src/` for navigation: read a file’s API without
 
 ### src/core/Renderer.js
 - **class Renderer**
-  - constructor({ canvas = null, dpr = null, transparent = false, depth = true, perDrawSize = 1 << 20 } =…)
+  - constructor({ canvas = null, transparent = false, depth = true, perDrawSize = 1 << 20 } = {})
   - initDevice()
   - init(device)
   - createDepthTexture()

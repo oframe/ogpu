@@ -14,9 +14,8 @@ const _scissor = { x: 0, y: 0, width: 0, height: 0 }; // reused per draw, consum
 const tempVec3 = /* @__PURE__ */ new Vec3(0, 0, 0);
 
 export class Renderer {
-    constructor({ canvas = null, dpr = null, transparent = false, depth = true, perDrawSize = 1 << 20 } = {}) {
+    constructor({ canvas = null, transparent = false, depth = true, perDrawSize = 1 << 20 } = {}) {
         this.canvas = canvas;
-        this.dpr = dpr || Math.min(2, devicePixelRatio);
         this.width = 2;
         this.height = 2;
         this.perDrawSize = perDrawSize;
@@ -369,10 +368,16 @@ export class Renderer {
         document.addEventListener('visibilitychange', this.handleVisibilityChange);
     }
 
+    // The canvas is always the display's own pixel grid; render resolution is the app's
+    // (render targets at canvas × scale, the last pass resamples onto the canvas).
+    // devicePixelContentBoxSize is exact (no rounding seam against the CSS box); Safari lacks it.
     handleResize = (entries) => {
         for (const entry of entries) {
-            const width = entry.devicePixelContentBoxSize?.[0].inlineSize || entry.contentBoxSize[0].inlineSize * this.dpr;
-            const height = entry.devicePixelContentBoxSize?.[0].blockSize || entry.contentBoxSize[0].blockSize * this.dpr;
+            const device = entry.devicePixelContentBoxSize?.[0];
+            const box = device || entry.contentBoxSize[0];
+            const scale = device ? 1 : devicePixelRatio;
+            const width = Math.round(box.inlineSize * scale);
+            const height = Math.round(box.blockSize * scale);
             const canvas = entry.target;
             canvas.width = this.width = Math.max(1, Math.min(width, this.gpu.device.limits.maxTextureDimension2D));
             canvas.height = this.height = Math.max(1, Math.min(height, this.gpu.device.limits.maxTextureDimension2D));

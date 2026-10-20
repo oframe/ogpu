@@ -1373,7 +1373,6 @@ export class Skin {
 
 export interface RendererOptions {
     canvas?: HTMLCanvasElement | null;
-    dpr?: number | null;
     transparent?: boolean;
     depth?: boolean;
     /** Starting byte size of the engine's PerDrawBuffer (default 1 MiB); it doubles when full. */
@@ -1414,7 +1413,6 @@ export interface CanvasContextOptions {
 export class Renderer {
     constructor(options?: RendererOptions);
     canvas: HTMLCanvasElement;
-    dpr: number;
     width: number;
     height: number;
     perDrawSize: number;

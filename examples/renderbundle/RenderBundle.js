@@ -20,7 +20,7 @@ const COLORS = [
 export class RenderBundle {
     constructor() {
         const canvas = document.getElementById('web-gpu-canvas');
-        this.renderer = new Renderer({ canvas, dpr: 2, perDrawSize: (GRID * GRID + MOVERS + LIVE + 2) * 256 });
+        this.renderer = new Renderer({ canvas, perDrawSize: (GRID * GRID + MOVERS + LIVE + 2) * 256 });
         this.init();
     }
 

@@ -42,7 +42,7 @@ export class MultiCanvas {
         this.grid.className = 'mc-grid';
         document.body.appendChild(this.grid);
 
-        this.renderer = new Renderer({ canvas: this.pageCanvas, dpr: 2 });
+        this.renderer = new Renderer({ canvas: this.pageCanvas });
         await this.renderer.ready;
         this.gpu = this.renderer.gpu;
         this.renderer.setClearColor({ r: 1, g: 1, b: 1 });
@@ -98,12 +98,12 @@ export class MultiCanvas {
         for (const entry of entries) {
             const cell = this.byCanvas.get(entry.target);
 
-            // devicePixelContentBoxSize is the honest one; contentBoxSize × dpr is the
+            // devicePixelContentBoxSize is the honest one; contentBoxSize × devicePixelRatio is the
             // fallback, and contentRect covers Safari versions that ship neither array.
             const devicePixels = entry.devicePixelContentBoxSize?.[0];
             const cssBox = entry.contentBoxSize?.[0];
-            const width = devicePixels?.inlineSize ?? (cssBox?.inlineSize ?? entry.contentRect.width) * this.renderer.dpr;
-            const height = devicePixels?.blockSize ?? (cssBox?.blockSize ?? entry.contentRect.height) * this.renderer.dpr;
+            const width = devicePixels?.inlineSize ?? (cssBox?.inlineSize ?? entry.contentRect.width) * devicePixelRatio;
+            const height = devicePixels?.blockSize ?? (cssBox?.blockSize ?? entry.contentRect.height) * devicePixelRatio;
 
             entry.target.width = Math.max(1, Math.min(width, maxTextureDimension2D));
             entry.target.height = Math.max(1, Math.min(height, maxTextureDimension2D));

@@ -10,7 +10,7 @@ export class RenderToTexture {
 
     async init(el) {
         const canvas = el || document.getElementById('web-gpu-canvas');
-        this.renderer = new Renderer({ canvas, dpr: 2 });
+        this.renderer = new Renderer({ canvas });
         await this.renderer.ready;
         this.gpu = this.renderer.gpu;
 

@@ -10,7 +10,7 @@ export class MSDFTextExample {
     constructor() {
         // built here, not in init(): main.js wires the boot loader to app.renderer synchronously
         const canvas = document.getElementById('web-gpu-canvas');
-        this.renderer = new Renderer({ canvas, dpr: 2 });
+        this.renderer = new Renderer({ canvas });
         this.init().catch((e) => console.error('[msdftext] init failed', e));
     }
 

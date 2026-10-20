@@ -11,7 +11,7 @@ export class HelloWebGPU {
 
     async init() {
         const canvas = document.getElementById('web-gpu-canvas');
-        this.renderer = new Renderer({ canvas, dpr: 2 });
+        this.renderer = new Renderer({ canvas });
         await this.renderer.ready;
         this.renderer.setClearColor({ r: 1, g: 1, b: 1 });
 

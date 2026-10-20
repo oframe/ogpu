@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.19.0
+
+Breaking. The canvas is always the display's pixel grid; render resolution belongs to the app.
+
+### Breaking
+
+- **`Renderer` has no `dpr`.** The option and `renderer.dpr` are gone. It never applied on
+  Chrome or Edge: `devicePixelContentBoxSize` won over the `dpr` fallback, so only Safari saw
+  it. The canvas is now `devicePixelContentBoxSize` (or `contentBoxSize × devicePixelRatio` on
+  Safari) everywhere. To render cheaper or supersample, render into a target at
+  `canvas × scale` and resample onto the canvas in the last pass. Read `devicePixelRatio`
+  where `renderer.dpr` was used for CSS-px conversions. A passed `dpr` is silently ignored.
+
 ## 0.18.0
 
 Breaking. The public launch release, and the first on `main` since 0.8.0: every change from

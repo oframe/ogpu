@@ -21,11 +21,17 @@ KTX load — all guarded so they don't repeat); every later call re-acquires a
 device and runs `_restore()` instead. KTX is loaded once (`if (!window.ktx)`);
 `TimingHelper` is device-bound and remade each time.
 
-Canvas size: always the display's pixel grid — `devicePixelContentBoxSize`, or
-`contentBoxSize × devicePixelRatio` on Safari. There is no `dpr` option (0.19.0):
-render resolution belongs to the app (render into a target at `canvas × scale`, then
-resample onto the canvas). Headless Chromium's emulated DPR reports the device box in
-CSS px, so test sizing with synthetic `handleResize` entries.
+Canvas size: by default the display's pixel grid — `devicePixelContentBoxSize`, or
+`contentBoxSize × devicePixelRatio` on Safari — and render resolution belongs to the app
+(render into a target at `canvas × scale`, then resample onto the canvas), which keeps
+anything drawn after the resample on the real grid. `dpr` (option, `renderer.dpr = n` at
+runtime, or `?dpr=` in the URL) caps the canvas instead, for apps with no post chain: the
+canvas becomes `min(dpr, display)` px per CSS px and the browser stretches it. The display
+ratio is measured from the observer entry (device box ÷ CSS box), not read from
+`devicePixelRatio` — the two disagree under headless DPR emulation, and `CSS × dpr` there
+lands the canvas above the real grid. A `dpr` at or above the display's ratio keeps the exact
+device box; the setter re-runs the last resize. Headless Chromium's emulated DPR reports the
+device box in CSS px, so test sizing with synthetic `handleResize` entries.
 
 ## Device-loss recovery
 
@@ -246,7 +252,7 @@ you must pass `{data, stride}` explicitly.
 `node.scissor = { x, y, width, height }` clips that node and its whole subtree;
 nested scissors intersect (`Renderer.resolveScissor`), and a draw clipped to
 nothing is skipped before `draw()`. Units are **attachment pixels**: device px on
-the canvas (multiply CSS px by `devicePixelRatio`), texels on a RenderTarget, origin
+the canvas (multiply CSS px by `canvas.width / canvas.clientWidth`, which is `devicePixelRatio` unless `dpr` caps it), texels on a RenderTarget, origin
 top-left. Values are rounded and clamped to the target, so an oversized rect is
 safe; a non-finite field makes that scissor ignored (one warning). Scissor is
 sticky pass state: the renderer only calls `setScissorRect` when the resolved

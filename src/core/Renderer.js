@@ -14,8 +14,12 @@ const _scissor = { x: 0, y: 0, width: 0, height: 0 }; // reused per draw, consum
 const tempVec3 = /* @__PURE__ */ new Vec3(0, 0, 0);
 
 export class Renderer {
-    constructor({ canvas = null, transparent = false, depth = true, perDrawSize = 1 << 20 } = {}) {
+    constructor({ canvas = null, dpr = null, transparent = false, depth = true, perDrawSize = 1 << 20 } = {}) {
         this.canvas = canvas;
+        // cap on the canvas's px per CSS px; null = the display's own grid (render resolution is
+        // then the app's: targets at canvas × scale, the last pass resamples). ?dpr=1.5 overrides.
+        const dprParam = Number(new URLSearchParams(location.search).get('dpr'));
+        this._dpr = dprParam > 0 ? dprParam : dpr > 0 ? dpr : null;
         this.width = 2;
         this.height = 2;
         this.perDrawSize = perDrawSize;
@@ -368,17 +372,32 @@ export class Renderer {
         document.addEventListener('visibilitychange', this.handleVisibilityChange);
     }
 
-    // The canvas is always the display's own pixel grid; render resolution is the app's
-    // (render targets at canvas × scale, the last pass resamples onto the canvas).
+    get dpr() {
+        return this._dpr;
+    }
+
+    // resizes now: a ResizeObserver only fires when the box changes
+    set dpr(value) {
+        this._dpr = value > 0 ? value : null;
+        if (this._lastResize) this.handleResize([this._lastResize]);
+    }
+
+    // The canvas is the display's own pixel grid, or `dpr` px per CSS px when that is lower.
     // devicePixelContentBoxSize is exact (no rounding seam against the CSS box); Safari lacks it.
+    // The display's ratio is measured from the entry, not devicePixelRatio: the two disagree
+    // under headless DPR emulation, and a cap must never land above the real grid.
     handleResize = (entries) => {
         for (const entry of entries) {
+            const css = entry.contentBoxSize[0];
             const device = entry.devicePixelContentBoxSize?.[0];
-            const box = device || entry.contentBoxSize[0];
-            const scale = device ? 1 : devicePixelRatio;
+            const box = device || css;
+            const display = device ? device.inlineSize / css.inlineSize || 1 : devicePixelRatio;
+            const ratio = this._dpr ? Math.min(this._dpr, display) : display;
+            const scale = device ? ratio / display : ratio;
             const width = Math.round(box.inlineSize * scale);
             const height = Math.round(box.blockSize * scale);
             const canvas = entry.target;
+            if (canvas === this.canvas) this._lastResize = entry;
             canvas.width = this.width = Math.max(1, Math.min(width, this.gpu.device.limits.maxTextureDimension2D));
             canvas.height = this.height = Math.max(1, Math.min(height, this.gpu.device.limits.maxTextureDimension2D));
 

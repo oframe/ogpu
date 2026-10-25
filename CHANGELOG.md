@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.20.0
+
+`Renderer` `dpr` is back as an opt-in canvas cap that works on every browser; the default is
+unchanged. Terser README.
+
+### Added
+
+- **`dpr` on `Renderer`** (option, `renderer.dpr = n` at runtime, or `?dpr=` in the URL): caps the
+  canvas at `min(dpr, display)` px per CSS px, and the browser stretches it onto the page. For apps
+  with no post chain to put a render scale in. Unset (the default), the canvas stays the display's
+  pixel grid, as in 0.19.0, and render resolution remains the app's. Unlike the pre-0.19 option it
+  applies on Chrome and Edge too: it scales the device box instead of losing to it. The display's
+  ratio is measured from the resize entry (device box ÷ CSS box), not `devicePixelRatio`, so the
+  cap never lands above the real pixel grid (headless DPR emulation reports the two differently).
+  A `dpr` at or above the display's ratio keeps the exact device box.
+
+### Docs
+
+- README rewritten tersely; the engine-block and pipeline detail now lives only in `AGENTS.md`
+  and `src/core/CLAUDE.md`.
+
 ## 0.19.0
 
 Breaking. The canvas is always the display's pixel grid; render resolution belongs to the app.

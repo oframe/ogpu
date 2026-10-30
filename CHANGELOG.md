@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.20.1
+
+The canvas is sized before `ready` resolves, closing a boot race that left apps reading a
+300×150 canvas.
+
+### Fixed
+
+- **Canvas size at boot.** Until the Renderer's first `ResizeObserver` callback the canvas kept
+  its 300×150 default, and that callback can land after an app has finished `init`. Anything that
+  read `canvas.width`/`height` in between was sized wrong: `renderbundle`'s camera kept a 2:1
+  aspect on a 16:9 canvas (the scene squashed 11%) until the window was resized, and render
+  targets sized there rendered their first frames at 300×150. The Renderer now sizes the canvas
+  and depth texture in `init`, before `ready`, from `getBoundingClientRect()` × `devicePixelRatio`
+  (with the `dpr` cap), rounded like the resize path.
+- **Examples** size from `renderer.addResizeHandler` plus one direct call, instead of
+  `window` `resize` and a `setTimeout(handleResize, 150–350)` that raced the observer.
+
+### Changed
+
+- **`addResizeHandler`** fires only when the canvas backing size actually changes. A resize
+  entry that computes the current size (normally the observer's first callback, now that `init`
+  pre-sizes) no longer re-fires handlers or remakes the depth texture. A handler added after
+  `ready` therefore isn't called until a real resize: call it once yourself to size from the
+  current canvas, as the examples do.
+
 ## 0.20.0
 
 `Renderer` `dpr` is back as an opt-in canvas cap that works on every browser; the default is

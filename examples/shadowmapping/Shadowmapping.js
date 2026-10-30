@@ -136,8 +136,8 @@ export class Shadowmapping {
         this.airplane.setParent(this.scene);
         this.floor.setParent(this.scene);
 
-        addEventListener('resize', this.handleResize);
-        setTimeout(() => this.handleResize(), 150);
+        this.renderer.addResizeHandler(this.handleResize);
+        this.handleResize();
 
         this.gpu.renderer.add(this.update);
     }

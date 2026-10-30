@@ -192,6 +192,11 @@ export class Renderer {
 
         this._createEngineResources();
 
+        // A canvas is 300x150 until the first ResizeObserver callback, which can land
+        // after an app has finished init and drawn its first frames (run-to-run
+        // flake). Size it now, before `ready` resolves, as handleResize would.
+        this._presize();
+
         this.isReady = true;
         this._initialized = true;
 
@@ -382,11 +387,24 @@ export class Renderer {
         if (this._lastResize) this.handleResize([this._lastResize]);
     }
 
+    // handleResize's size from the CSS box now: devicePixelContentBoxSize only comes with an
+    // observer entry, so this is getBoundingClientRect x devicePixelRatio (capped by dpr),
+    // rounded the same way. The first observer callback then finds nothing to change.
+    _presize() {
+        const rect = this.canvas.getBoundingClientRect();
+        const ratio = this._dpr ? Math.min(this._dpr, devicePixelRatio) : devicePixelRatio;
+        const max = this.gpu.device.limits.maxTextureDimension2D;
+        this.canvas.width = this.width = Math.max(1, Math.min(Math.round(rect.width * ratio), max));
+        this.canvas.height = this.height = Math.max(1, Math.min(Math.round(rect.height * ratio), max));
+        this.depth && this.createDepthTexture();
+    }
+
     // The canvas is the display's own pixel grid, or `dpr` px per CSS px when that is lower.
     // devicePixelContentBoxSize is exact (no rounding seam against the CSS box); Safari lacks it.
     // The display's ratio is measured from the entry, not devicePixelRatio: the two disagree
     // under headless DPR emulation, and a cap must never land above the real grid.
     handleResize = (entries) => {
+        let changed = false;
         for (const entry of entries) {
             const css = entry.contentBoxSize[0];
             const device = entry.devicePixelContentBoxSize?.[0];
@@ -398,20 +416,26 @@ export class Renderer {
             const height = Math.round(box.blockSize * scale);
             const canvas = entry.target;
             if (canvas === this.canvas) this._lastResize = entry;
-            canvas.width = this.width = Math.max(1, Math.min(width, this.gpu.device.limits.maxTextureDimension2D));
-            canvas.height = this.height = Math.max(1, Math.min(height, this.gpu.device.limits.maxTextureDimension2D));
+            const w = Math.max(1, Math.min(width, this.gpu.device.limits.maxTextureDimension2D));
+            const h = Math.max(1, Math.min(height, this.gpu.device.limits.maxTextureDimension2D));
+            // already this size (init pre-sized the canvas): nothing changed, so don't
+            // remake the depth texture or tell subscribers a resize happened
+            if (canvas === this.canvas && w === this.width && h === this.height && canvas.width === w && canvas.height === h) continue;
+            canvas.width = this.width = w;
+            canvas.height = this.height = h;
+            changed = true;
 
             this.depth && this.createDepthTexture();
         }
         // Fire after width/height land so subscribers (e.g. camera aspect) see
-        // the real backing size, not the canvas default. This is the first
-        // honest size — no setTimeout race.
-        for (const cb of this.resizeHandlers) cb(this.width, this.height);
+        // the new backing size.
+        if (changed) for (const cb of this.resizeHandlers) cb(this.width, this.height);
     };
 
-    // Fired whenever the canvas backing store resizes (including the first
-    // ResizeObserver callback after boot). Receives (width, height). Returns
-    // an unsubscribe fn.
+    // Fired whenever the canvas backing store changes size. The canvas is already
+    // sized when `ready` resolves, so a handler added then isn't called until a real
+    // resize: call it once yourself to size from the current canvas. Receives
+    // (width, height). Returns an unsubscribe fn.
     addResizeHandler(cb) {
         this.resizeHandlers.add(cb);
         return () => this.resizeHandlers.delete(cb);

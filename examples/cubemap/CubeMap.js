@@ -42,8 +42,8 @@ export class CubeMapExample {
         this.box = makeMesh('box');
         this.scene.addChild(this.box);
 
-        addEventListener('resize', this.handleResize);
-        setTimeout(this.handleResize, 150);
+        this.renderer.addResizeHandler(this.handleResize);
+        this.handleResize();
 
         this.update();
     }

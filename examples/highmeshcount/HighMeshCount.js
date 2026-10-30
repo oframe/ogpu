@@ -52,8 +52,8 @@ export class HighMeshCount {
         gui.add(this, 'mode', { options: { live: 'live', recorded: 'recorded' } }).on('change', (e) => this.setMode(e.value));
         gui.add(this, 'animate');
 
-        addEventListener('resize', this.handleResize);
-        setTimeout(this.handleResize, 150);
+        this.renderer.addResizeHandler(this.handleResize);
+        this.handleResize();
 
         this.gpu.renderer.add(this.update);
     }

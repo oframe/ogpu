@@ -27,8 +27,8 @@ export class Skinning {
 
         this.addCredit('Skinning. Model by <a href="https://artella.lpages.co/artella-lily-snout-giveaway/" target="_blank">Carlos Quintero and Zach Baharov</a>.');
 
-        addEventListener('resize', this.handleResize);
-        setTimeout(this.handleResize, 350);
+        this.renderer.addResizeHandler(this.handleResize);
+        this.handleResize();
 
         const skinData = await loadJSON('./assets/skinning/snout-rig.json');
         const animData = await loadJSON('./assets/skinning/snout-anim.json');

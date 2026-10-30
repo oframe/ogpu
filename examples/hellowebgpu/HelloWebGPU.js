@@ -82,11 +82,8 @@ export class HelloWebGPU {
         this.gui.uniform(this.thirdUniforms, 'uScale', { min: 0, max: 2, step: 0.01 });
         this.gui.uniform(this.thirdUniforms, 'uAlpha', { min: 0, max: 1, step: 0.01 });
 
-        addEventListener('resize', this.handleResize);
-
-        setTimeout((_) => {
-            this.handleResize();
-        }, 150);
+        this.renderer.addResizeHandler(this.handleResize);
+        this.handleResize();
 
         this.update();
     }

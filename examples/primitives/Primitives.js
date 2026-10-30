@@ -50,8 +50,8 @@ export class Primitives {
             return mesh;
         });
 
-        addEventListener('resize', this.handleResize);
-        setTimeout(this.handleResize, 150);
+        this.renderer.addResizeHandler(this.handleResize);
+        this.handleResize();
 
         this.update();
     }

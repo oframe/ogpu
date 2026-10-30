@@ -64,8 +64,8 @@ export class KTX {
         this.mesh.rotation.x = -Math.PI / 2; // stand the XZ plane up to face the camera
         this.scene.addChild(this.mesh);
 
-        addEventListener('resize', this.handleResize);
-        setTimeout(this.handleResize, 150);
+        this.renderer.addResizeHandler(this.handleResize);
+        this.handleResize();
 
         this.update();
     }

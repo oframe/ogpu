@@ -49,8 +49,8 @@ export class MSAA {
         // WebGPU only supports sampleCount 1 or 4 — step:3 snaps the slider to those two.
         gui.add(this.params, 'sampleCount', { label: 'sample-count', min: 1, max: 4, step: 3 }).on('change', ({ value }) => this.buildTarget(value));
 
-        addEventListener('resize', this.handleResize);
-        setTimeout(this.handleResize, 150);
+        this.renderer.addResizeHandler(this.handleResize);
+        this.handleResize();
 
         this.update();
     }

@@ -127,7 +127,7 @@ export class RenderBundle {
             format: (v) => v.toFixed(3),
         });
 
-        addEventListener('resize', this.handleResize);
+        this.renderer.addResizeHandler(this.handleResize);
         this.handleResize();
         this.renderer.add(this.update);
     }

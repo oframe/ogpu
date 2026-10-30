@@ -39,10 +39,8 @@ export class PBRShader {
         await this.initTestScene();
         this.initPane();
 
-        addEventListener('resize', this.handleResize);
-        setTimeout((_) => {
-            this.handleResize();
-        }, 150);
+        this.renderer.addResizeHandler(this.handleResize);
+        this.handleResize();
 
         this.gpu.renderer.add(this.update);
     }

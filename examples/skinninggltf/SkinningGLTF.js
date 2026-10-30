@@ -60,8 +60,8 @@ export class SkinningGLTF {
 
         this.addCredit('Skinning (glTF) + PBR. Animation from <a href="https://www.mixamo.com" target="_blank">Mixamo</a>.');
 
-        addEventListener('resize', this.handleResize);
-        setTimeout(this.handleResize, 350);
+        this.renderer.addResizeHandler(this.handleResize);
+        this.handleResize();
 
         const iblPromise = this.initIBL();
         this.renderer.trackCompile(iblPromise); // hold boot overlay until IBL settles

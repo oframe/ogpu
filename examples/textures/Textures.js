@@ -75,8 +75,8 @@ export class Textures {
             this.scene.addChild(this.videoBox);
         });
 
-        addEventListener('resize', this.handleResize);
-        setTimeout(this.handleResize, 150);
+        this.renderer.addResizeHandler(this.handleResize);
+        this.handleResize();
 
         this.update();
     }

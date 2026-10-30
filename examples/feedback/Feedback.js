@@ -33,8 +33,8 @@ export class FeedbackTrails {
 
         this.t = 0;
 
-        addEventListener('resize', this.handleResize);
-        setTimeout(this.handleResize, 150);
+        this.renderer.addResizeHandler(this.handleResize);
+        this.handleResize();
         this.update();
     }
 

@@ -82,8 +82,8 @@ export class InstancingPicking {
         this.scene.addChild(this.cubes);
 
         addEventListener('mousemove', this.handleMove);
-        addEventListener('resize', this.handleResize);
-        setTimeout(this.handleResize, 150);
+        this.renderer.addResizeHandler(this.handleResize);
+        this.handleResize();
 
         this.gpu.renderer.add(this.update);
     }
